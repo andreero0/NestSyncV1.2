@@ -1,0 +1,56 @@
+# OS
+.DS_Store
+
+# Logs/locks
+*.log
+*.tmp
+*.lock
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Node/Expo/React Native
+node_modules/
+.expo/
+.expo-shared/
+dist/
+build/
+web-build/
+*.tsbuildinfo
+
+# iOS/Android (if present)
+ios/Pods/
+ios/build/
+android/.gradle/
+android/build/
+android/app/build/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+db.sqlite3
+
+# IDE/Tools
+.vscode/
+.idea/
+*.iml
+.claude/
+
+# Supabase temp (if present)
+supabase/.branches
+supabase/.temp
+NestSync-backend/supabase/.branches
+NestSync-backend/supabase/.temp
