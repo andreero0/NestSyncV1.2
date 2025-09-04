@@ -19,6 +19,7 @@ dist/
 build/
 web-build/
 *.tsbuildinfo
+NestSync-frontend/node_modules/
 
 # iOS/Android (if present)
 ios/Pods/
@@ -42,6 +43,7 @@ venv/
 .coverage
 htmlcov/
 db.sqlite3
+NestSync-backend/venv/
 
 # IDE/Tools
 .vscode/
