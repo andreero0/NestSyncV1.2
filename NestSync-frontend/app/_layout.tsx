@@ -22,6 +22,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
   const [appIsReady, setAppIsReady] = useState(false);
+  const [hasSeenSplash, setHasSeenSplash] = useState(false);
 
   // Get theme colors for loading screen
   let loadingColors;
@@ -58,8 +59,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     });
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inSplashScreen = segments[0] === 'splash';
 
-    if (!isAuthenticated && !inAuthGroup) {
+    // Check if user should see splash screen first (first time app launch)
+    if (!hasSeenSplash && !inSplashScreen) {
+      console.log('AuthGuard: Showing splash screen for first time user');
+      setHasSeenSplash(true);
+      router.replace('/splash');
+      return; // Exit early to show splash
+    }
+
+    if (!isAuthenticated && !inAuthGroup && !inSplashScreen) {
       // User is not authenticated and not in auth group, redirect to login
       console.log('AuthGuard: Redirecting to login - user not authenticated');
       router.replace('/(auth)/login');
@@ -132,6 +142,7 @@ function ThemedNavigationWrapper() {
     <ThemeProvider value={actualTheme === 'dark' ? nestSyncDarkTheme : nestSyncLightTheme}>
       <AuthGuard>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="splash" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />

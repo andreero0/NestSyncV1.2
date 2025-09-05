@@ -318,6 +318,138 @@ Testing infrastructure outlined in `requirements.txt` but commented out for prod
 
 This architecture supports a comprehensive Canadian diaper planning application with psychological UX design, PIPEDA compliance, and production-ready development patterns.
 
+## AI Agent Orchestration Framework
+
+### Agent Assignment Strategy
+Claude Code should act as an orchestrator, assigning specialized agents for complex tasks rather than doing all work directly. This improves quality and leverages domain expertise.
+
+**Primary Orchestration Pattern:**
+1. **Analyze Task Complexity** - Use sequential thinking for multi-step problems
+2. **Assign Specialized Agents** - Delegate to domain experts
+3. **Coordinate Research** - Use Context7 for up-to-date documentation
+4. **Validate Results** - Use Playwright MCP server for testing
+
+### When to Use Sequential Thinking
+- Complex problem breakdown requiring multiple steps
+- Debugging issues with unknown root causes
+- Planning multi-phase implementations
+- Analyzing design specification compliance
+- Any task requiring systematic analysis
+
+**Usage Pattern:**
+```
+Use mcp__sequential-thinking__sequentialthinking for:
+- Breaking down complex requirements
+- Debugging multi-component interactions
+- Planning implementation strategies
+- Analyzing failures and root causes
+```
+
+### Specialized Agent Assignments
+
+**QA Test Automation Engineer** - Use for:
+- Playwright MCP server testing and validation
+- Cross-platform functionality verification
+- User interface behavior testing
+- Integration testing between frontend/backend
+- Automated testing strategy development
+
+**Senior Frontend Engineer** - Use for:
+- React Native/Expo implementation issues
+- State management debugging (Zustand, Apollo Client)
+- Animation and UI component development
+- Cross-platform compatibility fixes
+- Performance optimization
+
+**Senior Backend Engineer** - Use for:
+- FastAPI/GraphQL resolver implementation
+- Database schema and migration issues
+- Supabase integration and RLS policies
+- Authentication and PIPEDA compliance
+- API design and optimization
+
+**System Architect** - Use for:
+- Architecture design and planning
+- Technology stack decisions
+- Integration pattern design
+- Scalability and performance planning
+- Cross-component communication design
+
+**UX-UI Designer** - Use for:
+- Design system implementation
+- Psychology-driven UX pattern implementation
+- Accessibility compliance validation
+- Canadian context and PIPEDA UI design
+- User experience optimization
+
+**General Purpose** - Use for:
+- Context7 documentation research
+- Multi-domain knowledge synthesis
+- Initial problem investigation
+- Task coordination and planning
+
+### Context7 Documentation Research
+
+**Always use Context7 for:**
+- React Native and Expo best practices
+- GraphQL and Apollo Client patterns
+- Supabase integration techniques
+- Animation library documentation (Lottie, Reanimated)
+- Cross-platform development patterns
+
+**Context7 Usage Pattern:**
+```
+1. Use mcp__context7__resolve-library-id to find library
+2. Use mcp__context7__get-library-docs with specific topics
+3. Apply documented best practices to implementation
+4. Validate against current project patterns
+```
+
+### Playwright MCP Server Integration
+
+**Mandatory Playwright Testing for:**
+- User interface functionality validation
+- Multi-step user flow testing
+- Cross-platform behavior verification
+- Performance and timing validation
+- Integration testing between components
+
+**Testing Workflow:**
+1. **Navigate** - Use browser_navigate to reach test target
+2. **Snapshot** - Use browser_snapshot for accessibility analysis
+3. **Interact** - Use click, type, wait_for for user simulation
+4. **Validate** - Check expected behavior and timing
+5. **Document** - Record findings for agent assignment
+
+### Task Orchestration Examples
+
+**Complex Debugging (Splash Screen Issue):**
+1. **Sequential Thinking** - Analyze problem systematically
+2. **QA Test Automation Engineer** - Use Playwright to identify failure points
+3. **General Purpose Agent** - Research React Native animation best practices with Context7
+4. **Senior Frontend Engineer** - Implement fixes based on findings
+5. **QA Test Automation Engineer** - Validate complete functionality
+
+**New Feature Implementation:**
+1. **System Architect** - Design technical architecture
+2. **UX-UI Designer** - Create design specifications
+3. **Senior Frontend/Backend Engineers** - Implement components
+4. **QA Test Automation Engineer** - Comprehensive testing validation
+
+### Quality Assurance Standards
+
+**Before Task Completion:**
+- All code must pass Playwright testing validation
+- Context7 research must inform implementation decisions
+- Agent specialization must be properly utilized
+- Sequential thinking must be used for complex problems
+
+**Documentation Requirements:**
+- Update CLAUDE.md with new patterns or discoveries
+- Record agent assignment decisions and outcomes
+- Document Context7 research findings
+- Maintain testing validation records
+
 ## Professional Development Standards
 
 ### Code Quality and Style Guidelines

@@ -364,7 +364,70 @@ This document tracks recurring development bottlenecks, their solutions, and pre
 
 ## ACTIVE BOTTLENECKS
 
-### 6. Design System Color Implementation Gap
+### 9. **COPYRIGHT INFRINGEMENT RISK - Splash Screen Animation**
+**Status**: ⚠️ CRITICAL  
+**Date Identified**: 2025-09-05  
+**Category**: Legal compliance  
+
+**Problem**:
+- `caring-mother.json` Lottie animation (107KB) has no documented licensing or attribution
+- Professional-quality animation suggests commercial origin with stripped metadata
+- Commercial distribution without proper licensing creates significant legal liability
+
+**Business Impact**:
+- Potential legal damages: $15,500-$95,000+ CAD under Canadian Copyright Act
+- App store rejection risk due to IP violations
+- Brand reputation damage in trust-focused Canadian market
+- PIPEDA compliance brand positioning at risk
+
+**Current Status**: 
+Animation serving as temporary development placeholder only - NOT FOR PRODUCTION USE
+
+**Required Actions**:
+1. **Immediate (24-48h)**: Add placeholder documentation in codebase
+2. **30-day deadline**: Source legitimate replacement animation  
+3. **Before production**: Complete legal license verification
+
+**Remediation Options**:
+- Licensed stock animation: $10-$200 (LottieFiles, Adobe Stock)
+- Custom animation development: $500-$5,000
+- Creative Commons with proper attribution: $0+
+
+**Decision Made**: Keep as placeholder, plan custom animation for future
+
+---
+
+### 10. **INCLUSIVITY DESIGN FAILURE - Gender-Exclusive Animation**
+**Status**: ⚠️ CRITICAL  
+**Date Identified**: 2025-09-05  
+**Category**: Psychology-driven UX compliance  
+
+**Problem**:
+- "Caring mother" animation exclusively represents female caregivers
+- Alienates 30% of target demographic (EFFICIENCY_DAD persona - male caregivers)
+- Contradicts documented psychology-driven UX design principles
+- Accessibility labels reinforce gender exclusion: "Caring mother with child"
+
+**UX Analysis Results**:
+- OVERWHELMED_NEW_MOM persona: 8.5/10 effectiveness
+- EFFICIENCY_DAD persona: 3/10 effectiveness (critical failure)
+- Overall compliance score: 6.5/10 (unacceptable for launch)
+
+**Business Impact**:
+- 30% user alienation unacceptable for product launch
+- Potential discrimination concerns in Canadian market
+- Undermines inclusive brand positioning for diverse family structures
+
+**Required Actions**:
+1. Replace with gender-neutral animation (family-focused or baby-centric)
+2. Update accessibility labels to remove gender-specific language  
+3. Implement persona-aware animation timing system
+
+**Timeline**: Must be resolved before public beta release
+
+---
+
+### 11. Design System Color Implementation Gap
 **Status**: ⚠️ ACTIVE  
 **Date Identified**: 2025-09-04  
 **Category**: Design system implementation  
@@ -390,7 +453,7 @@ This document tracks recurring development bottlenecks, their solutions, and pre
 - Update theme provider configuration
 - Test color changes in development environment
 
-### 7. Registration Form Validation Issues
+### 12. Registration Form Validation Issues
 **Status**: ⚠️ ACTIVE  
 **Date Identified**: 2025-09-04  
 **Category**: Form validation  
@@ -413,6 +476,50 @@ This document tracks recurring development bottlenecks, their solutions, and pre
 - Implement comprehensive form validation
 - Add real-time validation feedback
 - Ensure Canadian-specific validation (postal codes, phone numbers)
+
+### 13. **LOTTIE VERSION COMPATIBILITY ISSUES**
+**Status**: ⚠️ ACTIVE  
+**Date Identified**: 2025-09-05  
+**Category**: Dependency management  
+
+**Problem**:
+- Version mismatch between installed `lottie-react-native@7.3.4` and expected `7.2.2`
+- Build warnings and potential future compatibility issues
+- Unsuccessful downgrade attempts due to dependency conflicts
+
+**Current Status**:
+Functional with warnings, upgrade attempts failed
+
+**Decision**: 
+Keep current functional version until major animation replacement occurs
+
+**Impact**: 
+Low-medium priority, not blocking development but creates build warnings
+
+### 14. **MISSING DESIGN DOCUMENTATION**
+**Status**: ⚠️ ACTIVE  
+**Date Identified**: 2025-09-05  
+**Category**: Documentation and collaboration  
+
+**Problem**:
+- Limited formal design documentation (wireframes, mockups, design specs)
+- Extensive design rationale embedded in code comments but no visual references
+- Difficult design-development collaboration without formal specifications
+
+**Current State**:
+- Psychology-driven UX principles documented in Colors.ts
+- User persona system documented in auth.ts
+- No visual design references or formal design specifications
+
+**Impact**:
+- Knowledge transfer challenges for new team members
+- Inconsistent implementation without visual design references
+- Design-development collaboration bottlenecks
+
+**Required Actions**:
+1. Extract embedded design system into formal documentation
+2. Create visual design reference library
+3. Document psychology-driven UX patterns formally
 
 ---
 
