@@ -1,0 +1,110 @@
+# NestSync FastAPI Backend - Railway Configuration
+# Optimized for Canadian compliance and production deployment
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Health check configuration
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Start command (Railway will inject PORT environment variable)
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout-keep-alive 65 --timeout-graceful-shutdown 30"
+
+# Railway deployment settings
+numReplicas = 1  # Start with single replica, scale as needed
+
+[env]
+# Application environment
+ENVIRONMENT = "production"
+PYTHONDONTWRITEBYTECODE = "1"
+PYTHONUNBUFFERED = "1"
+
+# Canadian timezone for compliance
+TZ = "America/Toronto"
+
+# Application configuration
+APP_NAME = "NestSync API"
+API_VERSION = "1.0.0"
+
+# Database connections (Railway will inject these)
+DATABASE_URL = "${{ Postgres.DATABASE_URL }}"
+DATABASE_POOL_SIZE = "20"
+DATABASE_MAX_OVERFLOW = "30"
+
+# Redis configuration (Railway will inject this)
+REDIS_URL = "${{ Redis.REDIS_URL }}"
+REDIS_POOL_SIZE = "10"
+
+# Supabase configuration (from Railway secrets)
+SUPABASE_URL = "${{ secrets.SUPABASE_URL }}"
+SUPABASE_ANON_KEY = "${{ secrets.SUPABASE_ANON_KEY }}"
+SUPABASE_SERVICE_KEY = "${{ secrets.SUPABASE_SERVICE_KEY }}"
+
+# Security configuration (from Railway secrets)
+JWT_SECRET = "${{ secrets.JWT_SECRET }}"
+JWT_EXPIRY_HOURS = "24"
+ENCRYPTION_KEY = "${{ secrets.ENCRYPTION_KEY }}"
+
+# External API keys (from Railway secrets)
+OPENAI_API_KEY = "${{ secrets.OPENAI_API_KEY }}"
+GOOGLE_CLOUD_PROJECT = "${{ secrets.GOOGLE_CLOUD_PROJECT }}"
+GOOGLE_APPLICATION_CREDENTIALS_JSON = "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}"
+AWS_ACCESS_KEY_ID = "${{ secrets.AWS_ACCESS_KEY_ID }}"
+AWS_SECRET_ACCESS_KEY = "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+AWS_REGION = "ca-central-1"  # Canadian region for compliance
+
+# Payment processing (from Railway secrets)
+STRIPE_SECRET_KEY = "${{ secrets.STRIPE_SECRET_KEY }}"
+STRIPE_PUBLISHABLE_KEY = "${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
+STRIPE_WEBHOOK_SECRET = "${{ secrets.STRIPE_WEBHOOK_SECRET }}"
+
+# Notification services (from Railway secrets)
+SENDGRID_API_KEY = "${{ secrets.SENDGRID_API_KEY }}"
+SENDGRID_FROM_EMAIL = "${{ secrets.SENDGRID_FROM_EMAIL }}"
+TWILIO_ACCOUNT_SID = "${{ secrets.TWILIO_ACCOUNT_SID }}"
+TWILIO_AUTH_TOKEN = "${{ secrets.TWILIO_AUTH_TOKEN }}"
+TWILIO_PHONE_NUMBER = "${{ secrets.TWILIO_PHONE_NUMBER }}"
+
+# Monitoring and logging (from Railway secrets)
+SENTRY_DSN = "${{ secrets.SENTRY_DSN }}"
+SENTRY_ENVIRONMENT = "production"
+
+# Canadian compliance
+DATA_REGION = "canada-central"
+DATA_RETENTION_MONTHS = "24"
+PIPEDA_COMPLIANCE = "true"
+
+# Rate limiting
+RATE_LIMIT_REQUESTS_PER_MINUTE = "100"
+RATE_LIMIT_BURST = "200"
+
+# Performance settings
+WORKER_CONNECTIONS = "1000"
+KEEPALIVE_TIMEOUT = "65"
+MAX_REQUEST_SIZE = "100MB"  # For receipt uploads
+
+# File upload settings
+MAX_UPLOAD_SIZE = "50MB"
+ALLOWED_UPLOAD_EXTENSIONS = "jpg,jpeg,png,pdf,webp"
+
+# Canadian retailer API configuration (from Railway secrets)
+AMAZON_ASSOCIATE_TAG = "${{ secrets.AMAZON_ASSOCIATE_TAG }}"
+AMAZON_ACCESS_KEY = "${{ secrets.AMAZON_ACCESS_KEY }}"
+AMAZON_SECRET_KEY = "${{ secrets.AMAZON_SECRET_KEY }}"
+WALMART_API_KEY = "${{ secrets.WALMART_API_KEY }}"
+SHOPPERS_API_KEY = "${{ secrets.SHOPPERS_API_KEY }}"
+
+[build.env]
+# Build-time environment variables
+PYTHONDONTWRITEBYTECODE = "1"
+PIP_NO_CACHE_DIR = "1"
+PIP_DISABLE_PIP_VERSION_CHECK = "1"
+
+[experimental]
+# Enable Railway experimental features if needed
+# configAsCode = true

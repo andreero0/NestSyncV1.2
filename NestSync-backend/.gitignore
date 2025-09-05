@@ -1,0 +1,257 @@
+# NestSync Backend .gitignore
+# PIPEDA-compliant Canadian diaper planning application
+
+# =============================================================================
+# Python Environment
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# =============================================================================
+# Environment Variables & Secrets (CRITICAL for PIPEDA compliance)
+# =============================================================================
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+*.env
+*_secrets.json
+*_credentials.json
+.env.*
+
+# Google Cloud credentials
+google-cloud-credentials.json
+service-account-*.json
+
+# AWS credentials
+.aws/
+aws-credentials.json
+
+# =============================================================================
+# IDE & Editor Files
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =============================================================================
+# Application Logs & Data
+# =============================================================================
+logs/
+*.log
+*.log.*
+log_*.txt
+debug.log
+error.log
+access.log
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# Upload directories (may contain PII - PIPEDA compliance)
+uploads/
+user_uploads/
+receipts/
+profile_images/
+documents/
+
+# =============================================================================
+# Database & Migrations
+# =============================================================================
+*.db
+*.sqlite
+*.sqlite3
+database.sql
+db_backup/
+migrations/__pycache__/
+alembic/versions/__pycache__/
+
+# =============================================================================
+# Testing & Coverage
+# =============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+test-results/
+test_*.db
+test_*.sqlite
+
+# =============================================================================
+# Machine Learning & AI Models
+# =============================================================================
+models/
+*.pkl
+*.pickle
+*.model
+*.h5
+*.pb
+checkpoints/
+
+# =============================================================================
+# Documentation & Reports
+# =============================================================================
+docs/_build/
+site/
+.readthedocs.yml
+
+# Generated documentation
+*_report.html
+*_report.pdf
+
+# =============================================================================
+# Operating System Files
+# =============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# =============================================================================
+# Railway & Deployment
+# =============================================================================
+.railway/
+railway-secrets.json
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# =============================================================================
+# Monitoring & Analytics
+# =============================================================================
+.sentry-native/
+sentry-debug-meta.properties
+
+# =============================================================================
+# Canadian Compliance & PIPEDA
+# =============================================================================
+# Audit logs (keep for compliance, but don't version control)
+audit_logs/
+compliance_reports/
+data_exports/
+user_data_requests/
+deletion_requests/
+
+# PII data exports (NEVER commit these)
+pii_exports/
+personal_data/
+user_profiles_export/
+
+# =============================================================================
+# Application Specific
+# =============================================================================
+# FastAPI
+.pytest_cache/
+celerybeat-schedule
+
+# Uvicorn
+*.pid
+
+# GraphQL
+schema.graphql.bak
+
+# OCR processing temporary files
+ocr_temp/
+tesseract_temp/
+
+# Image processing cache
+image_cache/
+processed_images/
+
+# Background job queues
+celerybeat.pid
+celerybeat-schedule.*
+
+# =============================================================================
+# Security & Certificates
+# =============================================================================
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+ssl_certificates/
+tls/
+
+# =============================================================================
+# Third-party Integrations
+# =============================================================================
+# Supabase local development
+supabase/.branches
+supabase/.temp
+
+# Stripe webhooks local testing
+.stripe/
+
+# Development tools
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =============================================================================
+# Local Development Overrides
+# =============================================================================
+docker-compose.local.yml
+local_settings.py
+dev_config.json

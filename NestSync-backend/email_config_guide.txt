@@ -1,0 +1,39 @@
+
+# Auto-generated SMTP Configuration for NestSync
+# Run this after setting up SendGrid account
+
+# 1. Get your SendGrid API key
+# 2. Go to Supabase Dashboard → Settings → Auth → SMTP Settings
+# 3. Enable Custom SMTP and use these settings:
+#    Host: smtp.sendgrid.net
+#    Port: 587
+#    Username: apikey
+#    Password: [Your SendGrid API Key]
+#    Sender Name: NestSync
+#    Sender Email: noreply@yourdomain.com
+
+# 4. Add these DNS records to your domain:
+# SPF Record: "v=spf1 include:sendgrid.net ~all"
+# DMARC Record: "v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com"
+
+
+{
+  "provider_recommendation": "SendGrid",
+  "setup_steps": [
+    "Create SendGrid account",
+    "Verify sending domain",
+    "Configure SMTP in Supabase Dashboard",
+    "Set up SPF/DKIM records"
+  ],
+  "smtp_settings": {
+    "host": "smtp.sendgrid.net",
+    "port": 587,
+    "username": "apikey",
+    "note": "Password should be your SendGrid API key"
+  },
+  "dns_records": {
+    "spf": "v=spf1 include:sendgrid.net ~all",
+    "dkim": "Configure via SendGrid dashboard",
+    "dmarc": "v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com"
+  }
+}
