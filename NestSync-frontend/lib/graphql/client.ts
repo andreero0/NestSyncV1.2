@@ -14,7 +14,9 @@ import {
 } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
-import SecureStorage from '../storage/SecureStorage';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // GraphQL endpoint configuration
 const GRAPHQL_ENDPOINT = __DEV__
@@ -27,10 +29,55 @@ const httpLink = createHttpLink({
   credentials: 'include', // Include cookies for session management
 });
 
+// Universal token retrieval for cross-platform compatibility
+const getAccessToken = async (): Promise<string | null> => {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem('nestsync_access_token');
+    } else {
+      return await SecureStore.getItemAsync('nestsync_access_token');
+    }
+  } catch (error) {
+    console.error('Failed to get access token:', error);
+    return null;
+  }
+};
+
+const getRefreshToken = async (): Promise<string | null> => {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem('nestsync_refresh_token');
+    } else {
+      return await SecureStore.getItemAsync('nestsync_refresh_token');
+    }
+  } catch (error) {
+    console.error('Failed to get refresh token:', error);
+    return null;
+  }
+};
+
+const clearTokens = async (): Promise<void> => {
+  try {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem('nestsync_access_token');
+      localStorage.removeItem('nestsync_refresh_token');
+      localStorage.removeItem('nestsync_user_session');
+    } else {
+      await Promise.all([
+        SecureStore.deleteItemAsync('nestsync_access_token'),
+        SecureStore.deleteItemAsync('nestsync_refresh_token'),
+        SecureStore.deleteItemAsync('nestsync_user_session'),
+      ]);
+    }
+  } catch (error) {
+    console.error('Failed to clear tokens:', error);
+  }
+};
+
 // Authentication link - adds authorization header
 const authLink = setContext(async (_, { headers }) => {
   try {
-    const accessToken = await SecureStorage.getAccessToken();
+    const accessToken = await getAccessToken();
     
     return {
       headers: {
@@ -64,12 +111,12 @@ const tokenRefreshLink = new ApolloLink((operation, forward) => {
         ) {
           try {
             // Attempt token refresh
-            const refreshToken = await SecureStorage.getRefreshToken();
+            const refreshToken = await getRefreshToken();
             
             if (refreshToken) {
               // Here you would call a refresh token mutation
               // For now, we'll clear the session and let the user re-authenticate
-              await SecureStorage.clearUserSession();
+              await clearTokens();
               
               // Optionally notify the auth store to update UI state
               // This would be handled by the auth service
@@ -99,7 +146,7 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
       // Handle specific error types
       if (extensions?.code === 'UNAUTHENTICATED') {
         // Clear stored session
-        SecureStorage.clearUserSession().catch(console.error);
+        clearTokens().catch(console.error);
       }
       
       if (extensions?.code === 'PIPEDA_COMPLIANCE_ERROR') {
@@ -118,7 +165,7 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
       switch (networkError.statusCode) {
         case 401:
           // Unauthorized - clear session
-          SecureStorage.clearUserSession().catch(console.error);
+          clearTokens().catch(console.error);
           break;
         case 403:
           // Forbidden - user doesn't have permission

@@ -5,7 +5,7 @@
  */
 
 import { apolloClient, clearApolloCache } from '../graphql/client';
-import SecureStorage from '../storage/SecureStorage';
+import { StorageHelpers, BiometricHelpers } from '../../hooks/useUniversalStorage';
 import {
   SIGN_UP_MUTATION,
   SIGN_IN_MUTATION,
@@ -111,7 +111,7 @@ export class AuthService {
 
     try {
       // Check for stored session
-      const storedSession = await SecureStorage.getUserSession();
+      const storedSession = await StorageHelpers.getUserSession();
       
       if (storedSession) {
         // Verify session is still valid by querying current user
@@ -269,7 +269,7 @@ export class AuthService {
   async signInWithBiometrics(): Promise<AuthResponse> {
     try {
       // Check if biometrics is available and enabled
-      const biometricSettings = await SecureStorage.getBiometricSettings();
+      const biometricSettings = await StorageHelpers.getBiometricSettings();
       if (!biometricSettings?.enabled) {
         return {
           success: false,
@@ -278,7 +278,7 @@ export class AuthService {
       }
 
       // Authenticate with biometrics
-      const biometricResult = await SecureStorage.authenticateWithBiometrics();
+      const biometricResult = await BiometricHelpers.authenticateWithBiometrics();
       if (!biometricResult) {
         return {
           success: false,
@@ -287,7 +287,7 @@ export class AuthService {
       }
 
       // Get stored session
-      const storedSession = await SecureStorage.getUserSession();
+      const storedSession = await StorageHelpers.getUserSession();
       if (!storedSession) {
         return {
           success: false,
@@ -466,7 +466,7 @@ export class AuthService {
       
       // Update stored consent version
       if (response?.success) {
-        await SecureStorage.setConsentVersion(input.consentVersion);
+        await StorageHelpers.setConsentVersion(input.consentVersion);
       }
 
       return {
@@ -531,7 +531,7 @@ export class AuthService {
    */
   async setupBiometrics(): Promise<MutationResponse> {
     try {
-      const isAvailable = await SecureStorage.isBiometricAvailable();
+      const isAvailable = await BiometricHelpers.isBiometricAvailable();
       if (!isAvailable) {
         return {
           success: false,
@@ -540,7 +540,7 @@ export class AuthService {
       }
 
       // Test biometric authentication
-      const authResult = await SecureStorage.authenticateWithBiometrics();
+      const authResult = await BiometricHelpers.authenticateWithBiometrics();
       if (!authResult) {
         return {
           success: false,
@@ -554,7 +554,7 @@ export class AuthService {
         enrollmentTimestamp: Date.now(),
       };
 
-      await SecureStorage.setBiometricSettings(settings);
+      await StorageHelpers.setBiometricSettings(settings);
 
       return {
         success: true,
@@ -578,7 +578,7 @@ export class AuthService {
         enabled: false,
       };
 
-      await SecureStorage.setBiometricSettings(settings);
+      await StorageHelpers.setBiometricSettings(settings);
 
       return {
         success: true,
@@ -659,14 +659,14 @@ export class AuthService {
       user,
     };
 
-    await SecureStorage.setUserSession(storedSession);
+    await StorageHelpers.setUserSession(storedSession);
   }
 
   private async clearSession(): Promise<void> {
     this.currentUser = null;
     this.currentSession = null;
     
-    await SecureStorage.clearUserSession();
+    await StorageHelpers.clearUserSession();
     await clearApolloCache();
   }
 

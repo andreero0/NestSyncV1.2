@@ -22,7 +22,7 @@ import {
   PersonaPreferences,
   BiometricSettings,
 } from '../lib/types/auth';
-import SecureStorage from '../lib/storage/SecureStorage';
+import { StorageHelpers, BiometricHelpers } from '../hooks/useUniversalStorage';
 
 // Authentication state interface
 interface AuthState {
@@ -142,8 +142,8 @@ export const useAuthStore = create<AuthState>()(
               let biometricsAvailable = false;
               let biometricSettings = null;
               try {
-                biometricsAvailable = await SecureStorage.isBiometricAvailable();
-                biometricSettings = await SecureStorage.getBiometricSettings();
+                biometricsAvailable = await BiometricHelpers.isBiometricAvailable();
+                biometricSettings = await StorageHelpers.getBiometricSettings();
               } catch (bioError) {
                 console.log('Biometric check failed, defaulting to unavailable:', bioError);
               }
@@ -151,7 +151,7 @@ export const useAuthStore = create<AuthState>()(
               // Get stored consent version (with fallback)
               let consentVersion = null;
               try {
-                consentVersion = await SecureStorage.getConsentVersion();
+                consentVersion = await StorageHelpers.getConsentVersion();
               } catch (consentError) {
                 console.log('Consent version check failed:', consentError);
               }
@@ -193,7 +193,7 @@ export const useAuthStore = create<AuthState>()(
           // Check biometric availability for non-authenticated users (with fallback)
           let biometricsAvailable = false;
           try {
-            biometricsAvailable = await SecureStorage.isBiometricAvailable();
+            biometricsAvailable = await BiometricHelpers.isBiometricAvailable();
           } catch (bioError) {
             console.log('Biometric check failed in fallback mode:', bioError);
           }
@@ -586,14 +586,14 @@ export const useAuthStore = create<AuthState>()(
     setOnboardingStep: (step: number) => {
       set({ onboardingStep: step });
       // Save to local storage for persistence
-      SecureStorage.setOnboardingState({ step, timestamp: Date.now() });
+      StorageHelpers.setOnboardingState({ step, timestamp: Date.now() });
     },
 
     // Complete onboarding
     completeOnboarding: async () => {
       set({ onboardingCompleted: true, onboardingStep: 0 });
       // Clear onboarding state from storage
-      await SecureStorage.clearOnboardingState();
+      await StorageHelpers.clearOnboardingState();
     },
 
     // Update persona preferences
@@ -602,7 +602,7 @@ export const useAuthStore = create<AuthState>()(
       if (current) {
         const updated = { ...current, ...preferences };
         set({ personaPreferences: updated });
-        await SecureStorage.setUserPreferences(updated);
+        await StorageHelpers.setUserPreferences(updated);
       }
     },
   }))
