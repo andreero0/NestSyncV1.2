@@ -196,6 +196,20 @@ export function ComponentName() {
 **Root Cause**: React Native nested TouchableOpacity inside Text rendering issues
 **Solution**: Use `<Text onPress={handler}>` instead of `<TouchableOpacity><Text></TouchableOpacity>`
 
+### Cross-Platform Storage Compatibility Issues
+**Problem**: Web authentication fails with `TypeError: _ExpoSecureStore.default.getValueWithKeyAsync is not a function`
+**Root Cause**: Expo SecureStore API not available in web browsers (platform security limitation)
+**Solution**: Use universal storage hooks from `hooks/useUniversalStorage.ts` with platform detection
+**Pattern**: 
+```typescript
+// CORRECT: Use universal storage hooks
+import { useAccessToken } from '../hooks/useUniversalStorage';
+const [accessToken, setAccessToken] = useAccessToken();
+
+// INCORRECT: Direct SecureStore imports
+import SecureStorage from '../lib/storage/SecureStorage';  // Will fail on web
+```
+
 ## Design System Integration
 
 ### Theme System
@@ -279,6 +293,12 @@ Testing infrastructure outlined in `requirements.txt` but commented out for prod
 - Session management with proper cleanup on logout
 - Rate limiting and security headers via FastAPI middleware
 
+### Cross-Platform Storage Architecture
+- **Universal Storage Pattern**: Uses `useStorageState` from expo-router for cross-platform compatibility
+- **Native Platforms**: Direct access to SecureStore for secure token storage
+- **Web Platform**: Falls back to localStorage with same API surface
+- **Implementation**: `hooks/useUniversalStorage.ts` with platform detection and adaptive storage
+
 ## Development Notes
 
 ### Critical Patterns to Remember
@@ -287,6 +307,8 @@ Testing infrastructure outlined in `requirements.txt` but commented out for prod
 3. **Error Handling**: All GraphQL resolvers must have comprehensive try/catch blocks
 4. **Canadian Context**: Include PIPEDA compliance headers in all API requests
 5. **Development Setup**: Both frontend and backend servers must run simultaneously
+6. **Cross-Platform Storage**: Use universal storage hooks, never direct SecureStore imports
+7. **Platform Testing**: Test authentication on both web and native platforms before committing
 
 ### Performance Considerations
 - Apollo Client configured with `cache-first` policy for optimal performance

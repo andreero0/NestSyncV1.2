@@ -77,6 +77,7 @@ class Settings(BaseSettings):
         default=[
             "http://localhost:3000",
             "http://localhost:19006",
+            "http://localhost:8082",
             "http://localhost:8088",
             "https://*.nestsync.ca"
         ],

@@ -168,6 +168,198 @@ This document tracks recurring development bottlenecks, their solutions, and pre
 - `.env` files - Environment configuration for email settings
 - `email_config_guide.txt` - Production SMTP setup guide
 
+### 6. Cross-Platform Authentication Storage Compatibility
+**Status**: ✅ RESOLVED  
+**Date Resolved**: 2025-09-05  
+**Category**: Cross-platform compatibility  
+
+**Problem**: 
+- Web authentication failing with `TypeError: _ExpoSecureStore.default.getValueWithKeyAsync is not a function`
+- Mobile/simulator authentication working perfectly with same credentials
+- SecureStore API not available in web browsers due to platform security limitations
+- CORS policy blocking web requests from localhost:8082 to backend localhost:8001
+
+**Root Cause**: 
+- **Platform Architecture Differences**: Web browsers implement different security models than native platforms
+  - **Native platforms** (iOS/Android): Direct access to system keychains and secure storage APIs
+  - **Web browsers**: Sandboxed environment with localStorage/sessionStorage only
+- **expo-secure-store** designed for native platforms, doesn't provide web fallbacks
+- Backend CORS configuration missing web frontend port (localhost:8082)
+
+**Technical Analysis (25 Sequential Thoughts Applied)**:
+1. Browser security models fundamentally differ from native platform security
+2. Web browsers cannot access native secure storage APIs for security reasons
+3. This is not a bug but an architectural difference between platforms
+4. Cross-platform apps require different storage strategies per platform
+5. The solution requires platform detection and adaptive storage patterns
+
+**Solution**: 
+- **Universal Storage Implementation**: Created `useUniversalStorage` hook using Expo's `useStorageState` pattern
+- **Platform Detection**: Native platforms use SecureStore, web uses localStorage
+- **GraphQL Client Update**: Updated Apollo Client to use platform-aware token retrieval
+- **CORS Configuration**: Added localhost:8082 to backend CORS origins in `.env` file
+- **Authentication Context**: Created new React Context using universal storage hooks
+
+**Files Created/Modified**:
+- `hooks/useUniversalStorage.ts` - Universal storage hook implementation
+- `contexts/AuthContext.tsx` - Hook-based authentication context
+- `lib/graphql/client.ts` - Updated for cross-platform token management
+- `app/config/settings.py` - Backend CORS configuration
+- `.env` - Added web frontend origin to CORS_ORIGINS
+
+**Prevention**: 
+- Always design for platform differences from the start of cross-platform development
+- Use Expo's recommended patterns (useStorageState) for cross-platform storage
+- Test authentication on both web and native platforms during development
+- Document platform-specific behaviors and their solutions
+
+**Impact Resolution**: 
+- Web authentication now works identically to mobile/simulator
+- Universal storage pattern eliminates platform-specific authentication code
+- Improved development workflow with consistent cross-platform behavior
+
+### 7. GraphQL Client Storage Architecture Inconsistency
+**Status**: ✅ RESOLVED  
+**Date Resolved**: 2025-09-05  
+**Category**: Authentication architecture  
+
+**Problem**: 
+- GraphQL Apollo Client using inconsistent token storage patterns
+- Direct platform checks (`Platform.OS === 'web'`) and storage calls (`localStorage.getItem`, `SecureStore.getItemAsync`) 
+- Different storage access pattern than rest of authentication system using `StorageHelpers`
+- Session persistence issues after browser refresh due to token access inconsistency
+
+**Root Cause**: 
+- GraphQL client implemented before universal storage system was created
+- Token access functions in `lib/graphql/client.ts` not updated to use `StorageHelpers.getAccessToken()`
+- Missing fallback logic that extracts tokens from user session when individual token keys not found
+- Architecture fragmentation across authentication components
+
+**Technical Analysis (Context7 Apollo Client Best Practices)**:
+- Apollo Client docs recommend centralized token management with `setContext` link
+- Token caching and invalidation patterns should be consistent across application
+- Cross-platform storage requires platform-aware abstractions
+- Authentication links should use single source of truth for token access
+
+**Solution**: 
+- Updated GraphQL client to use `StorageHelpers.getAccessToken()` instead of direct storage calls
+- Replaced `clearTokens()` function to use `StorageHelpers.clearUserSession()`  
+- Eliminated duplicate platform detection logic in favor of centralized approach
+- Ensured consistent token access patterns across all authentication components
+
+**Files Modified**:
+- `lib/graphql/client.ts` - Updated token access functions to use StorageHelpers
+- `hooks/useUniversalStorage.ts` - Contains centralized StorageHelpers with fallback logic
+
+**Prevention**: 
+- Always use established storage abstractions instead of direct platform APIs
+- Code review checklist for authentication-related changes
+- Ensure Apollo Client follows application's established storage patterns
+- Document authentication architecture decisions for consistency
+
+**Impact Resolution**: 
+- Session persistence now works consistently across web and native platforms
+- Single token access pattern eliminates maintenance overhead
+- Authentication architecture is now unified and maintainable
+
+---
+
+### 8. User Data Synchronization Issues (Orphaned Backend Users)
+**Status**: ✅ RESOLVED  
+**Date Resolved**: 2025-09-05  
+**Category**: Authentication data synchronization  
+
+**Problem**: 
+- Specific user `andre_ero@yahoo.ca` unable to authenticate despite existing in Supabase dashboard
+- "User not found" error with correct password, "Internal server error" with wrong password
+- Different error messages indicating user exists in Supabase Auth but missing from backend database
+- Data synchronization gap between Supabase Auth and backend PostgreSQL users table
+
+**Root Cause**: 
+- **Orphaned Backend Users**: Users created in backend database but corresponding Supabase Auth records deleted/missing
+- Diagnostic revealed 0 users in Supabase Auth but 3 users in backend database including andre_ero@yahoo.ca  
+- Authentication flow expects both Supabase Auth record AND backend database record to exist
+- No recovery mechanism for users who exist in backend but are missing from Supabase Auth
+
+**Technical Analysis**: 
+1. **Dual Storage System**: Supabase Auth handles authentication, backend database stores user profile data
+2. **Sync Dependencies**: Backend auth middleware validates Supabase JWT then fetches user from local database  
+3. **Failure Scenario**: If Supabase record missing, user cannot generate valid JWT to access backend
+4. **Data Integrity**: Backend users become inaccessible without corresponding Supabase Auth records
+
+**Solution**: 
+- **Enhanced Sign-Up Resolver**: Modified to detect existing backend users during new registration attempts
+- **Automatic User Sync**: Updates existing backend users with new Supabase Auth IDs instead of failing
+- **User Recovery Mechanism**: Allows users to re-register with same email to recover orphaned accounts
+- **Diagnostic Tool**: Created `diagnose_user_sync.py` to identify and categorize sync issues
+- **Data Preservation**: Existing user data, children, and consent records maintained during sync
+
+**Files Created/Modified**:
+- `app/graphql/auth_resolvers.py` - Enhanced sign_up resolver with orphaned user detection
+- `diagnose_user_sync.py` - Comprehensive user sync diagnostic and monitoring tool
+- Backend database - Updated user records with proper Supabase Auth ID mapping
+
+**Prevention**: 
+- Implement monitoring for user sync status between Supabase Auth and backend
+- Create automated health checks for authentication system integrity  
+- Add logging for user creation/deletion operations in both systems
+- Design authentication flows to handle edge cases and data recovery scenarios
+
+**Recovery Process for Affected Users**:
+1. User attempts to register again with same email address
+2. System detects existing backend record and preserves all user data
+3. Backend user updated with new Supabase Auth ID for future authentication
+4. User can now authenticate normally with preserved data and settings
+
+---
+
+### 9. Authentication Architecture Fragmentation
+**Status**: ✅ RESOLVED  
+**Date Resolved**: 2025-09-05  
+**Category**: System architecture  
+
+**Problem**: 
+- Multiple different authentication patterns scattered across codebase
+- AuthStore using StorageHelpers while GraphQL client using direct storage calls  
+- AuthService, AuthContext, and GraphQL client all implementing different token management approaches
+- Inconsistent error handling and session persistence behavior
+
+**Root Cause**: 
+- Authentication system evolved incrementally without architectural oversight
+- Cross-platform compatibility fixes applied piecemeal to individual components
+- No centralized authentication architecture documentation or patterns
+- Different developers implementing authentication features with different approaches
+
+**Holistic Analysis (Using Context7 Apollo Client Documentation)**:
+- Apollo Client best practices emphasize centralized authentication link configuration
+- Token management should use consistent caching and invalidation patterns
+- Cross-platform authentication requires unified storage abstraction layer
+- Authentication state should be managed through single source of truth
+
+**Solution**: 
+- **Unified Storage Pattern**: All authentication components now use StorageHelpers
+- **Centralized Token Management**: GraphQL client uses same token access patterns as AuthStore
+- **Consistent Error Handling**: Authentication errors handled uniformly across components
+- **Architectural Documentation**: Created comprehensive authentication flow documentation
+
+**Components Unified**:
+- `stores/authStore.ts` - Uses StorageHelpers for cross-platform storage
+- `lib/graphql/client.ts` - Updated to use StorageHelpers token access
+- `lib/auth/AuthService.ts` - Integrated with StorageHelpers pattern
+- `hooks/useUniversalStorage.ts` - Central storage abstraction for all components
+
+**Prevention**: 
+- Establish authentication architecture guidelines for all developers
+- Code review process to ensure consistent authentication patterns
+- Create authentication component templates and examples
+- Regular architecture reviews to prevent fragmentation
+
+**Long-term Impact**: 
+- Maintainable authentication system with single source of truth
+- Consistent user experience across all platforms and components
+- Easier debugging and troubleshooting of authentication issues
+- Foundation for future authentication feature development
+
 ---
 
 ## ACTIVE BOTTLENECKS
@@ -321,5 +513,5 @@ This document tracks recurring development bottlenecks, their solutions, and pre
 
 ---
 
-**Last Updated**: 2025-09-04  
-**Next Review**: 2025-09-11
+**Last Updated**: 2025-09-05  
+**Next Review**: 2025-09-12
