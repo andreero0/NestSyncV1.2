@@ -14,9 +14,7 @@ import {
 } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StorageHelpers } from '../../hooks/useUniversalStorage';
 
 // GraphQL endpoint configuration
 const GRAPHQL_ENDPOINT = __DEV__
@@ -29,49 +27,17 @@ const httpLink = createHttpLink({
   credentials: 'include', // Include cookies for session management
 });
 
-// Universal token retrieval for cross-platform compatibility
+// Token access functions using centralized StorageHelpers
 const getAccessToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('nestsync_access_token');
-    } else {
-      return await SecureStore.getItemAsync('nestsync_access_token');
-    }
-  } catch (error) {
-    console.error('Failed to get access token:', error);
-    return null;
-  }
+  return await StorageHelpers.getAccessToken();
 };
 
 const getRefreshToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('nestsync_refresh_token');
-    } else {
-      return await SecureStore.getItemAsync('nestsync_refresh_token');
-    }
-  } catch (error) {
-    console.error('Failed to get refresh token:', error);
-    return null;
-  }
+  return await StorageHelpers.getRefreshToken();
 };
 
 const clearTokens = async (): Promise<void> => {
-  try {
-    if (Platform.OS === 'web') {
-      localStorage.removeItem('nestsync_access_token');
-      localStorage.removeItem('nestsync_refresh_token');
-      localStorage.removeItem('nestsync_user_session');
-    } else {
-      await Promise.all([
-        SecureStore.deleteItemAsync('nestsync_access_token'),
-        SecureStore.deleteItemAsync('nestsync_refresh_token'),
-        SecureStore.deleteItemAsync('nestsync_user_session'),
-      ]);
-    }
-  } catch (error) {
-    console.error('Failed to clear tokens:', error);
-  }
+  await StorageHelpers.clearUserSession();
 };
 
 // Authentication link - adds authorization header

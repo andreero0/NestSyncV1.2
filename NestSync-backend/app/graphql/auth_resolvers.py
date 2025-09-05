@@ -126,57 +126,110 @@ class AuthMutations:
                 )
             
             try:
-                # Create user
-                user = User(
-                    email=input.email,
-                    supabase_user_id=uuid.UUID(auth_result["user"]["id"]),
-                    first_name=input.first_name,
-                    last_name=input.last_name,
-                    timezone=input.timezone,
-                    language=input.language,
-                    province=input.province,
-                    status=UserStatus.PENDING_VERIFICATION,
-                    privacy_policy_accepted=input.accept_privacy_policy,
-                    privacy_policy_accepted_at=datetime.now(timezone.utc),
-                    terms_of_service_accepted=input.accept_terms_of_service,
-                    terms_of_service_accepted_at=datetime.now(timezone.utc),
-                    marketing_consent=input.marketing_consent,
-                    analytics_consent=input.analytics_consent,
-                    consent_version=settings.consent_version,
-                    consent_granted_at=datetime.now(timezone.utc),
-                    consent_ip_address=context.ip_address,
-                    consent_user_agent=context.user_agent,
-                    created_by=None  # Self-registration
+                # Check if user already exists in backend (orphaned backend user scenario)
+                existing_user_query = await session.execute(
+                    select(User).where(
+                        User.email == input.email,
+                        User.is_deleted == False
+                    )
                 )
+                existing_user = existing_user_query.scalar_one_or_none()
                 
-                session.add(user)
-                await session.flush()  # Get user ID
-                
-                # Create default consent records
-                consent_records = create_default_consent_records(
-                    user.id, 
-                    settings.consent_version
-                )
-                
-                for record in consent_records:
-                    # Grant required consents
-                    if record.consent_type in ["privacy_policy", "terms_of_service"]:
-                        record.grant_consent(
-                            context.ip_address,
-                            context.user_agent,
-                            {"registration": True}
-                        )
-                    # Grant optional consents based on user choice
-                    elif record.consent_type == "marketing" and input.marketing_consent:
-                        record.grant_consent(context.ip_address, context.user_agent)
-                    elif record.consent_type == "analytics" and input.analytics_consent:
-                        record.grant_consent(context.ip_address, context.user_agent)
+                if existing_user:
+                    # Update existing user with new Supabase Auth ID
+                    logger.info(f"Found existing backend user for {input.email}, updating Supabase Auth ID")
+                    existing_user.supabase_user_id = uuid.UUID(auth_result["user"]["id"])
+                    existing_user.status = UserStatus.PENDING_VERIFICATION
+                    existing_user.email_verified = False
                     
-                    session.add(record)
+                    # Update profile information if provided
+                    if input.first_name:
+                        existing_user.first_name = input.first_name
+                    if input.last_name:
+                        existing_user.last_name = input.last_name
+                    if input.timezone:
+                        existing_user.timezone = input.timezone
+                    if input.language:
+                        existing_user.language = input.language
+                    if input.province:
+                        existing_user.province = input.province
+                    
+                    # Update consents
+                    existing_user.privacy_policy_accepted = input.accept_privacy_policy
+                    existing_user.privacy_policy_accepted_at = datetime.now(timezone.utc)
+                    existing_user.terms_of_service_accepted = input.accept_terms_of_service
+                    existing_user.terms_of_service_accepted_at = datetime.now(timezone.utc)
+                    existing_user.marketing_consent = input.marketing_consent
+                    existing_user.analytics_consent = input.analytics_consent
+                    existing_user.consent_version = settings.consent_version
+                    existing_user.consent_granted_at = datetime.now(timezone.utc)
+                    existing_user.consent_ip_address = context.ip_address
+                    existing_user.consent_user_agent = context.user_agent
+                    
+                    user = existing_user
+                    await session.flush()
+                else:
+                    # Create new user
+                    user = User(
+                        email=input.email,
+                        supabase_user_id=uuid.UUID(auth_result["user"]["id"]),
+                        first_name=input.first_name,
+                        last_name=input.last_name,
+                        timezone=input.timezone,
+                        language=input.language,
+                        province=input.province,
+                        status=UserStatus.PENDING_VERIFICATION,
+                        privacy_policy_accepted=input.accept_privacy_policy,
+                        privacy_policy_accepted_at=datetime.now(timezone.utc),
+                        terms_of_service_accepted=input.accept_terms_of_service,
+                        terms_of_service_accepted_at=datetime.now(timezone.utc),
+                        marketing_consent=input.marketing_consent,
+                        analytics_consent=input.analytics_consent,
+                        consent_version=settings.consent_version,
+                        consent_granted_at=datetime.now(timezone.utc),
+                        consent_ip_address=context.ip_address,
+                        consent_user_agent=context.user_agent,
+                        created_by=None  # Self-registration
+                    )
+                    
+                    session.add(user)
+                    await session.flush()  # Get user ID
+                
+                # Handle consent records (only create new ones if this is a new user)
+                if not existing_user:
+                    # Create default consent records for new users
+                    consent_records = create_default_consent_records(
+                        user.id, 
+                        settings.consent_version
+                    )
+                    
+                    for record in consent_records:
+                        # Grant required consents
+                        if record.consent_type in ["privacy_policy", "terms_of_service"]:
+                            record.grant_consent(
+                                context.ip_address,
+                                context.user_agent,
+                                {"registration": True}
+                            )
+                        # Grant optional consents based on user choice
+                        elif record.consent_type == "marketing" and input.marketing_consent:
+                            record.grant_consent(context.ip_address, context.user_agent)
+                        elif record.consent_type == "analytics" and input.analytics_consent:
+                            record.grant_consent(context.ip_address, context.user_agent)
+                        
+                        session.add(record)
+                else:
+                    # For existing users, just update consent fields (already done above)
+                    logger.info(f"Updated consents for existing user {user.id}")
                 
                 await session.commit()
                 
-                logger.info(f"User created successfully: {user.id}")
+                if existing_user:
+                    logger.info(f"User synced successfully: {user.id}")
+                    message = "Account synced successfully. Please check your email for verification."
+                else:
+                    logger.info(f"User created successfully: {user.id}")
+                    message = "Account created successfully. Please check your email for verification."
                 
                 # Return response with session if available
                 session_data = None
@@ -189,7 +242,7 @@ class AuthMutations:
                 
                 return AuthResponse(
                     success=True,
-                    message="Account created successfully. Please check your email for verification.",
+                    message=message,
                     user=user_to_graphql(user),
                     session=session_data
                 )
