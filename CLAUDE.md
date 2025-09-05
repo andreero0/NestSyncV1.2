@@ -476,3 +476,42 @@ Use mcp__sequential-thinking__sequentialthinking for:
 - Reference design-documentation/ for approved visual elements
 - Follow the psychology-driven UX patterns outlined in design documentation
 - Maintain consistency with Canadian context and PIPEDA compliance requirements
+
+## Feature Integration Workflow - "Maybe" Keyword Automation
+
+### Trigger: "Maybe" Keyword Usage
+When user says "maybe" in context of merging/integrating completed features:
+
+**Auto-execute enhanced squash merge workflow:**
+1. Stage all changes with `git add .`
+2. Switch to main branch with `git checkout main` 
+3. Perform squash merge with `git merge --squash [feature-branch]`
+4. Generate comprehensive commit message including:
+   - Implementation summary with key features
+   - Development journey: bugs discovered, solutions applied, learning points
+   - Architecture decisions made and rationale
+   - Critical issues identified with severity levels
+   - Quality assurance results and validation status
+   - Files added/modified with descriptions
+   - References to bottlenecks.md and other documentation
+   - Next actions required for production readiness
+5. Push to remote and clean up feature branch
+
+### Enhanced Commit Message Template
+Use comprehensive format that preserves learning context:
+- ## Implementation Summary: Core features delivered
+- ## Development Journey & Learning Points: Bugs, fixes, discoveries
+- ## Architecture Decisions Made: Technical choices and rationale  
+- ## Critical Issues Identified & Documented: P0/P1/P2 classification
+- ## Quality Assurance Results: Test results and validation status
+- ## References & Documentation: Links to analysis and roadmaps
+
+### Benefits of This Approach
+- **Clean History**: Single commit per feature on main branch
+- **Preserved Learning**: Complete development story captured in commit message
+- **Searchable Context**: Git log contains both summary and detailed journey
+- **Cross-Referenced**: Links to bottlenecks.md for deeper technical analysis
+- **Automated Workflow**: "Maybe" keyword streamlines integration process
+- **Knowledge Transfer**: Future developers understand decision-making process
+
+This workflow balances clean main branch history with comprehensive learning context preservation.
