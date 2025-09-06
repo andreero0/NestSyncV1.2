@@ -101,7 +101,7 @@ export interface UpdateProfileInput {
 
 export interface ConsentUpdateInput {
   consentType: ConsentType;
-  grant: boolean;
+  granted: boolean;
   consentVersion: string;
 }
 

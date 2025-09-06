@@ -396,7 +396,7 @@ export interface UpdateConsentMutationData {
 export interface UpdateConsentMutationVariables {
   input: {
     consentType: string;
-    grant: boolean;
+    granted: boolean;
     consentVersion: string;
   };
 }

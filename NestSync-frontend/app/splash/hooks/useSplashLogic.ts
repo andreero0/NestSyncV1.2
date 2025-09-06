@@ -108,9 +108,8 @@ const useSplashLogic = (): UseSplashLogicReturn => {
       }));
       announceToScreenReader('Loading complete');
       
-      // Navigate to consent flow (or login for now)
-      // TODO: Replace with privacy consent flow when implemented
-      router.replace('/(auth)/login');
+      // Navigate to consent flow
+      router.replace('/consent');
     }, 3500);
 
     // Cleanup timers

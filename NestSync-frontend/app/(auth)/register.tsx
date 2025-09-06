@@ -110,7 +110,7 @@ export default function RegisterScreen() {
       acceptPrivacyPolicy: false,
       acceptTermsOfService: false,
       marketingConsent: false,
-      analyticsConsent: true, // Default to true for better user experience
+      analyticsConsent: false, // Optional consent must be opt-in
     },
   });
 

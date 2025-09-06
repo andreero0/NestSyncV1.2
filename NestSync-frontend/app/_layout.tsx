@@ -10,9 +10,11 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeProvider as NestSyncThemeProvider, useNestSyncTheme } from '../contexts/ThemeContext';
+import { JITConsentProvider } from '../contexts/JITConsentContext';
 import { Colors } from '../constants/Colors';
 import apolloClient from '../lib/graphql/client';
 import { useAuthStore } from '../stores/authStore';
+import { JITConsentModal } from '../components/consent/JITConsentModal';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -69,8 +71,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       return; // Exit early to show splash
     }
 
+
     if (!isAuthenticated && !inAuthGroup && !inSplashScreen) {
-      // User is not authenticated and not in auth group, redirect to login
+      // User is not authenticated and not in protected screens, redirect to login
       console.log('AuthGuard: Redirecting to login - user not authenticated');
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
@@ -148,6 +151,7 @@ function ThemedNavigationWrapper() {
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style={actualTheme === 'dark' ? 'light' : 'dark'} />
+        <JITConsentModal />
       </AuthGuard>
     </ThemeProvider>
   );
@@ -174,7 +178,9 @@ export default function RootLayout() {
   return (
     <ApolloProvider client={apolloClient}>
       <NestSyncThemeProvider defaultTheme="system">
-        <ThemedNavigationWrapper />
+        <JITConsentProvider>
+          <ThemedNavigationWrapper />
+        </JITConsentProvider>
       </NestSyncThemeProvider>
     </ApolloProvider>
   );
