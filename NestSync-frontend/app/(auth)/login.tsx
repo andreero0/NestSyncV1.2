@@ -239,7 +239,7 @@ export default function LoginScreen() {
       {/* Privacy Notice */}
       <View style={[styles.privacyNotice, { borderTopColor: colors.border }]}>
         <Text style={[styles.privacyText, { color: colors.textSecondary }]}>
-          🇨🇦 Your data is securely stored in Canada and protected under PIPEDA
+          Your data is securely stored in Canada and protected under PIPEDA
         </Text>
         <Text style={[styles.privacySubText, { color: colors.textSecondary }]}>
           Trusted by Canadian families nationwide

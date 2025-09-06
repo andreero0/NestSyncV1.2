@@ -5,6 +5,7 @@
 
 export { NestSyncButton } from './NestSyncButton';
 export { NestSyncInput } from './NestSyncInput';
+export { WeightInput } from './WeightInput';
 export { NestSyncCard } from './NestSyncCard';
 export { NestSyncThemeToggle } from './NestSyncThemeToggle';
 
@@ -18,6 +19,10 @@ export type {
 export type { 
   NestSyncInputProps 
 } from './NestSyncInput';
+
+export type { 
+  WeightInputProps 
+} from './WeightInput';
 
 export type { 
   NestSyncCardProps, 

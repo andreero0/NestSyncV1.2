@@ -67,6 +67,9 @@ interface AuthState {
   setOnboardingStep: (step: number) => void;
   completeOnboarding: () => Promise<void>;
   updatePersonaPreferences: (preferences: Partial<PersonaPreferences>) => Promise<void>;
+  
+  // Development-only methods
+  resetOnboardingForDev: () => Promise<MutationResponse>;
 }
 
 // Create the authentication store
@@ -603,6 +606,65 @@ export const useAuthStore = create<AuthState>()(
         const updated = { ...current, ...preferences };
         set({ personaPreferences: updated });
         await StorageHelpers.setUserPreferences(updated);
+      }
+    },
+
+    // Development-only method to reset onboarding status
+    resetOnboardingForDev: async () => {
+      // Only allow in development mode
+      if (!__DEV__) {
+        console.warn('resetOnboardingForDev is only available in development mode');
+        return {
+          success: false,
+          error: 'This function is only available in development mode',
+        };
+      }
+
+      const currentUser = get().user;
+      if (!currentUser) {
+        return {
+          success: false,
+          error: 'No authenticated user found',
+        };
+      }
+
+      set({ isLoading: true, error: null });
+
+      try {
+        // For development, we'll reset local state only
+        // This will force the user to go through onboarding again
+        // The backend will still have onboardingCompleted = true, but locally we'll treat it as false
+        
+        // Update local state to mark onboarding as incomplete
+        const updatedUser = { ...currentUser, onboardingCompleted: false };
+        
+        set({
+          user: updatedUser,
+          onboardingCompleted: false,
+          onboardingStep: 0,
+          isLoading: false,
+        });
+
+        // Clear onboarding state from storage
+        await StorageHelpers.clearOnboardingState();
+
+        console.log('[DEV] Onboarding status reset successfully (local state only)');
+        console.log('[DEV] Note: Backend still shows onboarding as completed, but app will show onboarding flow');
+        
+        return {
+          success: true,
+          message: 'Onboarding status reset successfully! The app will now show the onboarding flow.',
+        };
+      } catch (error) {
+        console.error('[DEV] Error resetting onboarding status:', error);
+        set({
+          error: 'Failed to reset onboarding status. Please try again.',
+          isLoading: false,
+        });
+        return {
+          success: false,
+          error: 'Failed to reset onboarding status. Please try again.',
+        };
       }
     },
   }))

@@ -5,8 +5,9 @@ Canadian Diaper Planning Application with PIPEDA Compliance
 
 import os
 import logging
+import socket
 from contextlib import asynccontextmanager
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +36,45 @@ logger = logging.getLogger(__name__)
 APP_NAME = settings.app_name
 API_VERSION = settings.api_version  
 ENVIRONMENT = settings.environment
+
+
+def get_local_ip_address() -> str:
+    """
+    Get the local IP address of the machine for development mode
+    This helps with cross-platform mobile testing
+    """
+    try:
+        # Connect to a remote address to determine local IP
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+
+
+def get_development_cors_origins() -> List[str]:
+    """
+    Get CORS origins for development including dynamic IP detection
+    """
+    base_origins = settings.cors_origins.copy()
+    
+    if ENVIRONMENT == "development":
+        local_ip = get_local_ip_address()
+        logger.info(f"Detected local IP address: {local_ip}")
+        
+        # Add dynamic IP-based origins for mobile development
+        dynamic_origins = [
+            f"http://{local_ip}:8001",
+            f"http://{local_ip}:8082",
+            f"http://{local_ip}:19006",
+            f"http://{local_ip}:3000"
+        ]
+        
+        base_origins.extend(dynamic_origins)
+        logger.info(f"Development CORS origins: {base_origins}")
+    
+    return base_origins
+
 
 
 @asynccontextmanager
@@ -109,24 +149,28 @@ app = FastAPI(
 )
 
 # CORS middleware configuration (PIPEDA compliant)
+cors_origins = get_development_cors_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# Trusted host middleware
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=[
-        "localhost",
-        "*.railway.app", 
-        "*.nestsync.ca",
-        "127.0.0.1"
-    ]
-)
+# Trusted host middleware - only in production for security
+if ENVIRONMENT == "production":
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=[
+            "localhost",
+            "*.railway.app", 
+            "*.nestsync.ca"
+        ]
+    )
+else:
+    # In development, skip TrustedHostMiddleware to allow flexible IP access
+    logger.info("Development mode: TrustedHostMiddleware disabled for flexible IP access")
 
 # Add comprehensive security middleware for PIPEDA compliance
 setup_security_middleware(app)
@@ -285,6 +329,11 @@ async def internal_server_error_handler(request, exc):
 # =============================================================================
 # GraphQL Endpoint Configuration
 # =============================================================================
+
+# Add specific OPTIONS handler for GraphQL endpoint BEFORE mounting router
+@app.options("/graphql")
+async def graphql_options():
+    return {"message": "OK"}
 
 # Configure GraphQL router with custom context
 graphql_app = GraphQLRouter(

@@ -78,6 +78,7 @@ class Settings(BaseSettings):
             "http://localhost:3000",
             "http://localhost:19006",
             "http://localhost:8082",
+            "http://localhost:8083",
             "http://localhost:8088",
             "https://*.nestsync.ca"
         ],
@@ -87,7 +88,23 @@ class Settings(BaseSettings):
     @validator("cors_origins", pre=True)
     def validate_cors_origins(cls, v):
         if isinstance(v, str):
-            return v.split(",")
+            # Handle JSON array format from environment variables
+            if v.startswith('[') and v.endswith(']'):
+                import json
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    # Fallback to manual parsing for malformed JSON
+                    v = v.strip('[]')
+                    origins = []
+                    for item in v.split(','):
+                        item = item.strip().strip('"').strip("'")
+                        if item:
+                            origins.append(item)
+                    return origins
+            else:
+                # Handle comma-separated format
+                return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
     
     # =============================================================================

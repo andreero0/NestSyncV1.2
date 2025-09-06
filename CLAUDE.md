@@ -318,6 +318,20 @@ Testing infrastructure outlined in `requirements.txt` but commented out for prod
 
 This architecture supports a comprehensive Canadian diaper planning application with psychological UX design, PIPEDA compliance, and production-ready development patterns.
 
+## Test Credentials
+
+### Development Testing Account
+For consistent development and testing access across the team:
+
+**Email**: andre_ero@yahoo.ca  
+**Password**: Shazam11#
+
+**Usage Notes**:
+- Use these credentials for authentication testing across all platforms (web, iOS, Android)
+- This account should have completed onboarding for testing post-login flows
+- Available for automated testing scenarios and manual QA validation
+- Stored here for team reference and CI/CD pipeline usage
+
 ## AI Agent Orchestration Framework
 
 ### Agent Assignment Strategy

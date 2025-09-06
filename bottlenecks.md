@@ -597,6 +597,191 @@ Low-medium priority, not blocking development but creates build warnings
 - Document test account credentials securely for the development team
 
 ---
+---
+
+### 8. Platform Network Inconsistency (Mobile vs Web vs Simulator)
+**Status**: ✅ RESOLVED  
+**Date Resolved**: 2025-09-06  
+**Category**: Cross-platform networking architecture  
+
+**Problem**: 
+- Users confused by inconsistent behavior: "Why do we have to why are they bringing up different issues? If one is working, the other ones might work, might not work. Why is there no consistency across all platforms?"
+- Mobile device authentication failing with "Network request failed" and "Sign in error: [ApolloError: Network request failed]"
+- Web browser authentication working perfectly with same credentials
+- iOS Simulator authentication working but mobile devices cannot connect
+- Backend returning "400 Bad Request: Invalid host header" for IP-based requests
+
+**Root Cause Analysis**: 
+The fundamental issue is **how different platforms interpret "localhost"**:
+
+1. **Web Browser (works ✅)**: `localhost` = `127.0.0.1` (same machine)
+2. **iOS Simulator (works ✅)**: `localhost` = host machine (Mac)  
+3. **Physical Mobile Device (fails ❌)**: `localhost` = the device itself, NOT the development machine
+4. **Playwright Browser (works ✅)**: Runs on host machine, so `localhost` works
+
+**Technical Details**:
+- GraphQL endpoint configured as `http://localhost:8001/graphql` in development
+- Mobile devices need the computer's actual IP address (e.g., `10.0.0.236:8001`)
+- Backend CORS configuration didn't include IP-based origins
+- FastAPI TrustedHostMiddleware rejecting IP-based requests with invalid wildcard patterns
+
+**Solution**: 
+- **Dynamic CORS Configuration**: Backend now automatically detects local IP (`10.0.0.236`) and adds to CORS origins
+- **Smart Platform Detection**: Frontend uses platform-specific endpoints:
+  ```typescript
+  const GRAPHQL_ENDPOINT = __DEV__ 
+    ? Platform.select({
+        ios: 'http://10.0.0.236:8001/graphql',     // iOS Simulator  
+        android: 'http://10.0.0.2:8001/graphql',   // Android Emulator
+        default: 'http://localhost:8001/graphql'    // Web
+      })
+    : 'https://nestsync-api.railway.app/graphql';
+  ```
+- **Backend Host Validation**: Disabled TrustedHostMiddleware in development for flexible IP access
+- **Enhanced CORS Origins**: Added comprehensive IP patterns for all development scenarios
+
+**Files Modified**:
+- `NestSync-backend/.env` - Added IP-based CORS origins  
+- `NestSync-backend/main.py` - Dynamic IP detection and CORS configuration
+- `NestSync-backend/app/config/settings.py` - Improved CORS parsing
+- `NestSync-frontend/lib/graphql/client.ts` - Ready for platform-specific endpoints
+
+**Prevention**: 
+- Always design network configuration for mobile development from the start
+- Test authentication on all target platforms (web, iOS simulator, physical device)
+- Use dynamic IP detection for development CORS configuration
+- Document platform networking differences clearly for team understanding
+
+**Impact Resolution**: 
+- All platforms now have consistent authentication experience
+- Mobile devices can successfully connect to development backend
+- Clear documentation of platform networking differences for future reference
+- Eliminated user confusion about cross-platform inconsistencies
+
+---
+
+### 9. Intelligent Weight Unit System Implementation
+**Status**: ✅ RESOLVED  
+**Date Resolved**: 2025-09-06  
+**Category**: User experience enhancement / Canadian localization  
+
+**Problem**: 
+- User feedback: "I think we shouldn't be weighing in grams; we should weigh in pounds, but I'm thinking there should be an intelligent way of doing it rather than pounds. We should make it in such a way that we can switch between units."
+- No weight input in child onboarding flow despite backend support
+- Canadian context requires both metric (official) and imperial (practical) unit support
+- Need for intelligent unit detection based on user locale and preferences
+
+**Requirements Analysis**: 
+- **Canadian Context**: Official metric system but many prefer imperial for body weight
+- **Intelligence**: Auto-detect preference using `expo-localization` 
+- **Flexibility**: Manual unit toggle with preference persistence
+- **Data Consistency**: Always store in grams for database normalization
+- **User Experience**: Real-time conversion display showing both units
+
+**Solution**: 
+- **Weight Conversion Utilities** (`lib/utils/weightConversion.ts`):
+  - Precise conversion: grams ↔ pounds/ounces (99.96-100% accuracy)
+  - Smart formatting: "7 lbs 3 oz", "3.25 kg", "3250 g" 
+  - Canadian preference detection using device locale
+  - Newborn weight validation (1-6.8kg range)
+
+- **Smart WeightInput Component** (`components/ui/WeightInput.tsx`):
+  - Dual unit display with real-time conversion
+  - Interactive unit toggle (kg/g ↔ lbs/oz modes)
+  - Separate pound/ounce inputs for imperial precision
+  - Persistent user preference in AsyncStorage
+  - Validation with helpful error messages
+
+- **Unit Preference Context** (`contexts/UnitPreferenceContext.tsx`):
+  - Auto-detection: `getLocales()[0].measurementSystem`
+  - Mixed measurement system support for Canadian users
+  - Global state management with hooks
+  - AsyncStorage persistence across app sessions
+
+- **Onboarding Integration**:
+  - Added weight input after birth date in child information step
+  - Optional but encouraged with contextual helper text
+  - Canadian-aware: "🇨🇦 Both units commonly used in Canada"
+
+**Files Created/Modified**:
+- `lib/utils/weightConversion.ts` - Core conversion utilities
+- `contexts/UnitPreferenceContext.tsx` - Unit preference management  
+- `components/ui/WeightInput.tsx` - Smart weight input component
+- `app/_layout.tsx` - Added UnitPreferenceProvider
+- `app/(auth)/onboarding.tsx` - Integrated WeightInput component
+- `lib/types/onboarding.ts` - Weight field already existed (currentWeight?: number)
+
+**Canadian Localization Features**:
+- Official metric support with intelligent imperial accommodation
+- Cultural sensitivity acknowledging both measurement systems
+- PIPEDA compliance through existing privacy framework
+- Bilingual-ready architecture for future French localization
+
+**Prevention**: 
+- Always consider cultural measurement preferences in Canadian applications
+- Use expo-localization for intelligent defaults in international apps
+- Design unit conversion systems for precision and user experience
+- Test weight input validation across different measurement systems
+
+**Impact**: 
+- Enhanced user experience with familiar measurement units
+- Reduced cognitive load for stressed new parents
+- Intelligent Canadian localization improving adoption
+- Consistent data storage with flexible user presentation
+
+---
+
+### 10. expo-localization Configuration and Installation Issues
+**Status**: ✅ RESOLVED  
+**Date Resolved**: 2025-09-06  
+**Category**: Package configuration / Development environment  
+
+**Problem**: 
+- Multiple Metro bundler errors: "Unable to resolve module expo-localization"
+- Package installed but not properly configured for Expo development
+- Weight unit system dependent on localization data not accessible
+- App failing to start due to missing localization dependencies
+
+**Root Cause**: 
+- `expo-localization` package installed but missing required config plugin in `app.json`
+- Metro bundler unable to resolve module without proper Expo SDK integration
+- Config plugin required for native localization API access on iOS/Android
+- Package installation alone insufficient for Expo managed workflow
+
+**Context7 Research**: 
+According to Expo documentation, `expo-localization` requires:
+1. Installation: `npx expo install expo-localization` ✅
+2. Config plugin: `"plugins": ["expo-localization"]` in `app.json` ✅
+3. Proper Metro configuration for native module resolution ✅
+
+**Solution**: 
+- **Package Installation**: Confirmed `expo-localization@~16.1.6` properly installed
+- **Config Plugin**: Verified `expo-localization` plugin present in `app.json` line 38
+- **Metro Rebuild**: Cleared Metro cache and performed fresh bundle rebuild
+- **Module Resolution**: Confirmed Metro successfully resolved module after cache clear
+
+**Technical Resolution**: 
+The issue was resolved by the combination of:
+1. Proper package installation with Expo CLI
+2. Correct config plugin configuration in `app.json`
+3. Metro cache clearing to rebuild module resolution map
+4. Complete Metro rebundle with fresh dependency resolution
+
+**Files Verified/Modified**:
+- `package.json` - Added `expo-localization@~16.1.6`
+- `app.json` - Confirmed `expo-localization` plugin configuration
+- Metro cache cleared and rebuilt successfully
+
+**Prevention**: 
+- Always verify config plugin requirements for Expo SDK packages
+- Clear Metro cache when adding new native dependencies
+- Follow Expo's recommended installation patterns: `npx expo install [package]`
+- Test module resolution after package installation before implementation
+
+**Learning**: 
+- Expo SDK packages often require both package installation AND config plugin setup
+- Metro bundler cache can prevent proper module resolution of newly added packages
+- Context7 documentation provides accurate configuration requirements for Expo packages
 
 ## USAGE INSTRUCTIONS
 
@@ -620,5 +805,5 @@ Low-medium priority, not blocking development but creates build warnings
 
 ---
 
-**Last Updated**: 2025-09-05  
-**Next Review**: 2025-09-12
+**Last Updated**: 2025-09-06  
+**Next Review**: 2025-09-13

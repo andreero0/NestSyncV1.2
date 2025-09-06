@@ -11,6 +11,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeProvider as NestSyncThemeProvider, useNestSyncTheme } from '../contexts/ThemeContext';
 import { JITConsentProvider } from '../contexts/JITConsentContext';
+import { UnitPreferenceProvider } from '../contexts/UnitPreferenceContext';
 import { Colors } from '../constants/Colors';
 import apolloClient from '../lib/graphql/client';
 import { useAuthStore } from '../stores/authStore';
@@ -178,9 +179,11 @@ export default function RootLayout() {
   return (
     <ApolloProvider client={apolloClient}>
       <NestSyncThemeProvider defaultTheme="system">
-        <JITConsentProvider>
-          <ThemedNavigationWrapper />
-        </JITConsentProvider>
+        <UnitPreferenceProvider>
+          <JITConsentProvider>
+            <ThemedNavigationWrapper />
+          </JITConsentProvider>
+        </UnitPreferenceProvider>
       </NestSyncThemeProvider>
     </ApolloProvider>
   );

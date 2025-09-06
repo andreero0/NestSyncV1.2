@@ -14,10 +14,20 @@ type IconSymbolName = keyof typeof MAPPING;
  * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
 const MAPPING = {
+  // Original mappings
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  
+  // Professional emoji replacements for NestSync
+  'figure.child': 'child-care',           // 👶 Baby/Child icon
+  'shippingbox.fill': 'inventory',        // 📦 Package/Inventory icon
+  'bell.fill': 'notifications',           // 🔔 Notification bell icon
+  'moon.zzz': 'bedtime',                  // 😴 Sleep/rest icon (overwhelmed persona)
+  'bolt.fill': 'flash-on',                // ⚡ Energy/efficiency icon
+  'checkmark.circle.fill': 'check-circle', // 🎉 Success/celebration icon
+  'shield.checkered': 'security',         // Privacy/security icon (alternative to 🇨🇦)
 } as IconMapping;
 
 /**

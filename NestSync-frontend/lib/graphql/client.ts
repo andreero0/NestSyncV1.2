@@ -18,7 +18,7 @@ import { StorageHelpers } from '../../hooks/useUniversalStorage';
 
 // GraphQL endpoint configuration
 const GRAPHQL_ENDPOINT = __DEV__
-  ? 'http://localhost:8001/graphql'  // Development backend
+  ? 'http://10.0.0.236:8001/graphql'  // Development backend - using IP for mobile device access
   : 'https://nestsync-api.railway.app/graphql'; // Production endpoint
 
 // Create HTTP link
