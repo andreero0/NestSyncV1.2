@@ -27,6 +27,7 @@ from .types import (
     OnboardingWizardStep,
     MutationResponse,
     ChildConnection,
+    ChildEdge,
     PageInfo,
     DiaperSizeType,
     GenderType
@@ -37,12 +38,33 @@ logger = logging.getLogger(__name__)
 
 def child_to_graphql(child: Child) -> ChildProfile:
     """Convert Child model to GraphQL ChildProfile type"""
+    # Convert string values from database back to GraphQL enum types
+    gender_enum = None
+    if child.gender:
+        try:
+            gender_enum = GenderType(child.gender)
+        except ValueError:
+            logger.warning(f"Invalid gender value in database: {child.gender}")
+            gender_enum = None
+    
+    diaper_size_enum = None
+    if child.current_diaper_size:
+        try:
+            diaper_size_enum = DiaperSizeType(child.current_diaper_size)
+        except ValueError:
+            logger.warning(f"Invalid diaper size value in database: {child.current_diaper_size}")
+            # Default to SIZE_1 if invalid value found
+            diaper_size_enum = DiaperSizeType.SIZE_1
+    else:
+        # Default diaper size if None
+        diaper_size_enum = DiaperSizeType.SIZE_1
+    
     return ChildProfile(
         id=str(child.id),
         name=child.name,
         date_of_birth=child.date_of_birth,
-        gender=child.gender,
-        current_diaper_size=child.current_diaper_size,
+        gender=gender_enum,
+        current_diaper_size=diaper_size_enum,
         current_weight_kg=child.current_weight_kg,
         current_height_cm=child.current_height_cm,
         daily_usage_count=child.daily_usage_count,
@@ -68,12 +90,27 @@ class ChildMutations:
         """
         Create new child profile during onboarding
         """
+        from graphql import GraphQLError
+        
         try:
-            # In full implementation, get current user from auth dependency
-            # For now, using placeholder logic
-            request = info.context["request"]
-            # user = await get_current_user(request)  # Would use dependency
+            # Get authenticated user from context (throws GraphQLError if not authenticated)
+            from app.graphql.context import require_context_user
+            current_user = await require_context_user(info)
             
+        except GraphQLError as auth_error:
+            # Handle GraphQL authentication errors specifically
+            logger.error(f"Authentication error in create_child: {auth_error}")
+            # Re-raise GraphQL errors with proper extensions
+            from graphql import GraphQLError as GQLError
+            raise GQLError(
+                message="Authentication required to create child profile",
+                extensions={
+                    "code": "UNAUTHENTICATED",
+                    "category": "AUTHENTICATION_ERROR"
+                }
+            )
+        
+        try:
             # Validate child data
             if not input.name or not input.name.strip():
                 return CreateChildResponse(
@@ -81,10 +118,13 @@ class ChildMutations:
                     error="Child name is required"
                 )
             
-            if input.date_of_birth >= date.today():
+            # Validate date of birth - allow future dates for expectant parents (up to 9 months)
+            from datetime import timedelta
+            max_future_date = date.today() + timedelta(days=270)  # ~9 months for pregnancy planning
+            if input.date_of_birth > max_future_date:
                 return CreateChildResponse(
                     success=False,
-                    error="Date of birth must be in the past"
+                    error="Due date cannot be more than 9 months in the future"
                 )
             
             if input.daily_usage_count < 1 or input.daily_usage_count > 20:
@@ -95,16 +135,19 @@ class ChildMutations:
             
             # Create child record
             async for session in get_async_session():
-                # For now, using a placeholder parent_id
-                # In full implementation: parent_id = user.id
-                parent_id = uuid.uuid4()  # Placeholder
+                # Use the authenticated user's ID as parent_id
+                parent_id = current_user.id
+                
+                # Ensure enum values are properly converted to strings
+                diaper_size = str(input.current_diaper_size.value) if input.current_diaper_size else None
+                gender_value = str(input.gender.value) if input.gender else None
                 
                 child = Child(
                     parent_id=parent_id,
                     name=input.name.strip(),
                     date_of_birth=input.date_of_birth,
-                    gender=input.gender,
-                    current_diaper_size=input.current_diaper_size,
+                    gender=gender_value,
+                    current_diaper_size=diaper_size,
                     current_weight_kg=input.current_weight_kg,
                     current_height_cm=input.current_height_cm,
                     daily_usage_count=input.daily_usage_count,
@@ -120,8 +163,8 @@ class ChildMutations:
                             "data": {
                                 "name": input.name,
                                 "date_of_birth": input.date_of_birth.isoformat(),
-                                "gender": input.gender,
-                                "current_diaper_size": input.current_diaper_size,
+                                "gender": gender_value,
+                                "current_diaper_size": diaper_size,
                                 "weight_kg": input.current_weight_kg,
                                 "height_cm": input.current_height_cm
                             }
@@ -129,9 +172,25 @@ class ChildMutations:
                     }
                 )
                 
-                # Set recommended daily usage if not specified
+                # Set default daily usage if not specified
                 if not input.daily_usage_count:
-                    child.daily_usage_count = child.get_recommended_daily_usage()
+                    # Calculate age in weeks manually to avoid method issues
+                    age_in_days = (date.today() - input.date_of_birth).days
+                    age_in_weeks = age_in_days // 7
+                    
+                    # Age-based usage recommendations
+                    if age_in_weeks < 4:  # Newborn
+                        child.daily_usage_count = 12
+                    elif age_in_weeks < 12:  # 0-3 months
+                        child.daily_usage_count = 10
+                    elif age_in_weeks < 26:  # 3-6 months
+                        child.daily_usage_count = 8
+                    elif age_in_weeks < 52:  # 6-12 months
+                        child.daily_usage_count = 7
+                    elif age_in_weeks < 104:  # 12-24 months
+                        child.daily_usage_count = 6
+                    else:  # 24+ months
+                        child.daily_usage_count = 5
                 
                 session.add(child)
                 await session.commit()
@@ -163,16 +222,31 @@ class ChildMutations:
         Update existing child profile
         """
         try:
-            # Get current user (placeholder)
-            # user = await get_current_user(request)
+            # Get authenticated user from context (throws GraphQLError if not authenticated)
+            from app.graphql.context import require_context_user
+            current_user = await require_context_user(info)
             
+        except GraphQLError as auth_error:
+            # Handle GraphQL authentication errors specifically
+            logger.error(f"Authentication error in update_child: {auth_error}")
+            # Re-raise GraphQL errors with proper extensions
+            from graphql import GraphQLError as GQLError
+            raise GQLError(
+                message="Authentication required to update child profile",
+                extensions={
+                    "code": "UNAUTHENTICATED",
+                    "category": "AUTHENTICATION_ERROR"
+                }
+            )
+        
+        try:
             async for session in get_async_session():
                 # Get child
                 result = await session.execute(
                     select(Child).where(
                         Child.id == uuid.UUID(child_id),
-                        Child.is_deleted == False
-                        # Child.parent_id == user.id  # Ensure user owns child
+                        Child.is_deleted == False,
+                        Child.parent_id == current_user.id  # Ensure user owns child
                     )
                 )
                 child = result.scalar_one_or_none()
@@ -187,7 +261,9 @@ class ChildMutations:
                 if input.name is not None:
                     child.name = input.name.strip()
                 if input.current_diaper_size is not None:
-                    child.update_diaper_size(input.current_diaper_size)
+                    # Convert enum to string before saving
+                    new_size_str = str(input.current_diaper_size.value)
+                    child.update_diaper_size(new_size_str)
                 if input.current_weight_kg is not None:
                     child.add_weight_measurement(input.current_weight_kg)
                 if input.current_height_cm is not None:
@@ -274,13 +350,41 @@ class ChildMutations:
     ) -> MutationResponse:
         """
         Set initial diaper inventory from onboarding wizard
+        Creates actual InventoryItem records in the database
         """
+        from graphql import GraphQLError
+        
         try:
+            # Get authenticated user from context (throws GraphQLError if not authenticated)
+            from app.graphql.context import require_context_user
+            current_user = await require_context_user(info)
+            
+        except GraphQLError as auth_error:
+            # Handle GraphQL authentication errors specifically
+            logger.error(f"Authentication error in set_initial_inventory: {auth_error}")
+            # Re-raise GraphQL errors with proper extensions
+            from graphql import GraphQLError as GQLError
+            raise GQLError(
+                message="Authentication required to set inventory",
+                extensions={
+                    "code": "UNAUTHENTICATED",
+                    "category": "AUTHENTICATION_ERROR"
+                }
+            )
+        
+        try:
+            # Import InventoryItem model
+            from app.models import InventoryItem
+            from decimal import Decimal
+            
             async for session in get_async_session():
-                # Get child
+                child_uuid = uuid.UUID(child_id)
+                
+                # Verify child exists and belongs to authenticated user
                 result = await session.execute(
                     select(Child).where(
-                        Child.id == uuid.UUID(child_id),
+                        Child.id == child_uuid,
+                        Child.parent_id == current_user.id,  # Ensure user owns child
                         Child.is_deleted == False
                     )
                 )
@@ -289,14 +393,58 @@ class ChildMutations:
                 if not child:
                     return MutationResponse(
                         success=False,
-                        error="Child not found"
+                        error="Child not found or access denied"
                     )
                 
-                # Process inventory items
+                # Validate input
+                if not inventory_items or len(inventory_items) == 0:
+                    return MutationResponse(
+                        success=False,
+                        error="At least one inventory item is required"
+                    )
+                
+                # Create actual InventoryItem records
+                created_items = []
+                total_diapers = 0
+                
+                for item in inventory_items:
+                    # Validate each item
+                    if item.quantity <= 0:
+                        return MutationResponse(
+                            success=False,
+                            error=f"Invalid quantity for {item.brand}: must be greater than 0"
+                        )
+                    
+                    # Create inventory item record
+                    inventory_item = InventoryItem(
+                        child_id=child_uuid,
+                        product_type="diaper",  # Initial inventory is always diapers
+                        brand=item.brand,
+                        product_name=f"{item.brand} Diapers",
+                        size=str(item.diaper_size.value),  # Convert enum to string value
+                        quantity_total=item.quantity,
+                        quantity_remaining=item.quantity,
+                        quantity_reserved=0,
+                        purchase_date=item.purchase_date or datetime.now(timezone.utc).date(),
+                        expiry_date=item.expiry_date,
+                        cost_cad=None,  # Cost not provided in initial inventory
+                        storage_location=None,
+                        is_opened=False,
+                        opened_date=None,
+                        notes=f"Added during onboarding for {child.name}",
+                        quality_rating=None,
+                        would_rebuy=None
+                    )
+                    
+                    session.add(inventory_item)
+                    created_items.append(inventory_item)
+                    total_diapers += item.quantity
+                
+                # Also update child's wizard data for completeness
                 inventory_data = []
                 for item in inventory_items:
                     inventory_data.append({
-                        "diaper_size": item.diaper_size,
+                        "diaper_size": str(item.diaper_size.value),  # Convert enum to string value
                         "brand": item.brand,
                         "quantity": item.quantity,
                         "purchase_date": item.purchase_date.isoformat() if item.purchase_date else None,
@@ -304,20 +452,24 @@ class ChildMutations:
                         "added_at": datetime.now(timezone.utc).isoformat()
                     })
                 
-                # Set initial inventory
+                # Set initial inventory in wizard data
                 child.set_initial_inventory({"items": inventory_data})
                 
                 # Mark inventory step as completed
                 child.complete_onboarding_step("initial_inventory", {
                     "inventory_count": len(inventory_items),
-                    "total_diapers": sum(item.quantity for item in inventory_items)
+                    "total_diapers": total_diapers,
+                    "items_created": len(created_items)
                 })
                 
+                # Commit all changes
                 await session.commit()
+                
+                logger.info(f"Created {len(created_items)} inventory items for child {child_uuid} with {total_diapers} total diapers")
                 
                 return MutationResponse(
                     success=True,
-                    message="Initial inventory set successfully"
+                    message=f"Initial inventory set successfully: {len(created_items)} items with {total_diapers} diapers"
                 )
                 
         except Exception as e:
@@ -382,33 +534,120 @@ class ChildQueries:
         after: Optional[str] = None
     ) -> ChildConnection:
         """
-        Get current user's children
+        Get current user's children with proper GraphQL Connection pattern
         """
+        from graphql import GraphQLError
+        from base64 import b64encode, b64decode
+        
         try:
-            # Get current user (placeholder)
-            # user = await get_current_user(request)
+            # Get authenticated user from context
+            from app.graphql.context import require_context_user
+            current_user = await require_context_user(info)
             
+        except GraphQLError as auth_error:
+            logger.error(f"Authentication error in my_children: {auth_error}")
+            # For queries, we return empty data but don't raise errors to allow partial responses
+            return ChildConnection(
+                page_info=PageInfo(
+                    has_next_page=False,
+                    has_previous_page=False,
+                    start_cursor=None,
+                    end_cursor=None,
+                    total_count=0
+                ),
+                edges=[]
+            )
+        
+        try:
             async for session in get_async_session():
-                # For now, returning empty connection
-                # In full implementation, query user's children
-                return ChildConnection(
-                    edges=[],
-                    page_info=PageInfo(
-                        has_next_page=False,
-                        has_previous_page=False,
-                        total_count=0
+                # Query user's children
+                from sqlalchemy import func
+                
+                # Get total count
+                count_result = await session.execute(
+                    select(func.count(Child.id)).where(
+                        Child.parent_id == current_user.id,
+                        Child.is_deleted == False
                     )
+                )
+                total_count = count_result.scalar() or 0
+                
+                # Handle cursor-based pagination
+                offset = 0
+                if after:
+                    try:
+                        # Decode cursor (base64 encoded "child:{id}")
+                        cursor_data = b64decode(after.encode('ascii')).decode('ascii')
+                        if cursor_data.startswith('child:'):
+                            after_id = cursor_data.split(':')[1]
+                            # Find offset of this child
+                            offset_result = await session.execute(
+                                select(func.count(Child.id)).where(
+                                    Child.parent_id == current_user.id,
+                                    Child.is_deleted == False,
+                                    Child.id > uuid.UUID(after_id)
+                                ).order_by(Child.created_at.desc())
+                            )
+                            offset = offset_result.scalar() or 0
+                    except (ValueError, TypeError, AttributeError) as cursor_error:
+                        logger.warning(f"Invalid cursor in my_children: {after}, error: {cursor_error}")
+                        offset = 0
+                
+                # Get children with pagination - fetch one extra to detect if there's a next page
+                query = select(Child).where(
+                    Child.parent_id == current_user.id,
+                    Child.is_deleted == False
+                ).order_by(Child.created_at.desc()).limit(first + 1).offset(offset)
+                
+                result = await session.execute(query)
+                children = result.scalars().all()
+                
+                # Check if there are more items
+                has_next_page = len(children) > first
+                if has_next_page:
+                    # Remove the extra item we fetched
+                    children = children[:-1]
+                
+                # Build edges with proper cursor encoding
+                edges = []
+                for child in children:
+                    cursor = b64encode(f"child:{child.id}".encode('ascii')).decode('ascii')
+                    edges.append(ChildEdge(
+                        node=child_to_graphql(child),
+                        cursor=cursor
+                    ))
+                
+                # Calculate start and end cursors
+                start_cursor = edges[0].cursor if edges else None
+                end_cursor = edges[-1].cursor if edges else None
+                
+                # Determine if there's a previous page
+                has_previous_page = offset > 0
+                
+                logger.info(f"Retrieved {len(edges)} children for user {current_user.id} (total: {total_count})")
+                
+                return ChildConnection(
+                    page_info=PageInfo(
+                        has_next_page=has_next_page,
+                        has_previous_page=has_previous_page,
+                        start_cursor=start_cursor,
+                        end_cursor=end_cursor,
+                        total_count=total_count
+                    ),
+                    edges=edges
                 )
                 
         except Exception as e:
             logger.error(f"Error getting children: {e}")
             return ChildConnection(
-                edges=[],
                 page_info=PageInfo(
                     has_next_page=False,
                     has_previous_page=False,
+                    start_cursor=None,
+                    end_cursor=None,
                     total_count=0
-                )
+                ),
+                edges=[]
             )
     
     @strawberry.field
@@ -446,20 +685,80 @@ class ChildQueries:
         """
         Get current user's onboarding status
         """
+        from graphql import GraphQLError
+        
         try:
-            # Get current user (placeholder)
-            # user = await get_current_user(request)
+            # Get authenticated user from context
+            from app.graphql.context import require_context_user
+            current_user = await require_context_user(info)
             
-            # For now, returning basic status
-            # In full implementation, check user and children onboarding status
+        except GraphQLError as auth_error:
+            logger.error(f"Authentication error in onboarding_status: {auth_error}")
+            # For queries, we return safe default data but don't raise errors
             return OnboardingStatusResponse(
                 user_onboarding_completed=False,
-                current_step="welcome",
+                current_step="authentication_required",
                 completed_steps=[],
                 children_count=0,
                 required_consents_given=False
             )
-            
+        
+        try:
+            async for session in get_async_session():
+                # Get user's children count
+                from sqlalchemy import func
+                
+                children_count_result = await session.execute(
+                    select(func.count(Child.id)).where(
+                        Child.parent_id == current_user.id,
+                        Child.is_deleted == False
+                    )
+                )
+                children_count = children_count_result.scalar() or 0
+                
+                # Get user's onboarding status from their profile
+                user_onboarding_completed = current_user.onboarding_completed
+                
+                # Determine current step based on status
+                current_step = "welcome"
+                if user_onboarding_completed:
+                    current_step = "completed"
+                elif children_count > 0:
+                    current_step = "final_setup"
+                else:
+                    current_step = "child_setup"
+                
+                # Build completed steps (simplified)
+                completed_steps = []
+                if children_count > 0:
+                    completed_steps.append(OnboardingWizardStep(
+                        step_name="child_setup",
+                        completed=True,
+                        completed_at=datetime.now(timezone.utc),
+                        data={"children_created": children_count}
+                    ))
+                
+                if user_onboarding_completed:
+                    completed_steps.append(OnboardingWizardStep(
+                        step_name="onboarding_complete",
+                        completed=True,
+                        completed_at=datetime.now(timezone.utc),
+                        data={"completed": True}
+                    ))
+                
+                # For now, assume consents are given if user completed onboarding
+                required_consents_given = user_onboarding_completed
+                
+                logger.info(f"Onboarding status for user {current_user.id}: completed={user_onboarding_completed}, children={children_count}")
+                
+                return OnboardingStatusResponse(
+                    user_onboarding_completed=user_onboarding_completed,
+                    current_step=current_step,
+                    completed_steps=completed_steps,
+                    children_count=children_count,
+                    required_consents_given=required_consents_given
+                )
+                
         except Exception as e:
             logger.error(f"Error getting onboarding status: {e}")
             return OnboardingStatusResponse(

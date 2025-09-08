@@ -35,7 +35,7 @@ export function AnalyticsInsightsComponent() {
       feature="Analytics Dashboard"
       title="Unlock Usage Insights"
       description="See how your diaper usage compares to other Canadian families and get personalized tips."
-      icon="📊"
+      icon="chart"
     >
       <View style={[styles.protectedContent, { backgroundColor: colors.surface }]}>
         <Text style={[styles.contentTitle, { color: colors.textEmphasis }]}>
@@ -83,7 +83,7 @@ export function NewsletterSignupComponent() {
   return (
     <View style={[styles.component, { backgroundColor: colors.surface }]}>
       <Text style={[styles.componentTitle, { color: colors.textEmphasis }]}>
-        Stay Connected 📨
+        Stay Connected
       </Text>
       <Text style={[styles.componentText, { color: colors.text }]}>
         Get weekly tips from Canadian parenting experts and early access to new features.
@@ -114,7 +114,7 @@ export function PersonalizedRecommendationsComponent() {
       feature="Smart Recommendations"
       title="Get Personalized Recommendations"
       description="Let us analyze your usage patterns to predict the perfect time for size changes and reorders."
-      icon="🎯"
+      icon="target"
     >
       <PersonalizedContent />
     </ConsentGuard>
@@ -132,7 +132,7 @@ function PersonalizedContent() {
       </Text>
       <View style={styles.recommendationCard}>
         <Text style={[styles.recommendationTitle, { color: colors.textEmphasis }]}>
-          🎯 Size Transition Alert
+          Size Transition Alert
         </Text>
         <Text style={[styles.recommendationText, { color: colors.text }]}>
           Based on Emma's growth pattern, we recommend transitioning to Size 3 in the next 5-7 days.
@@ -141,7 +141,7 @@ function PersonalizedContent() {
       </View>
       <View style={styles.recommendationCard}>
         <Text style={[styles.recommendationTitle, { color: colors.textEmphasis }]}>
-          📦 Smart Reorder Suggestion
+          Smart Reorder Suggestion
         </Text>
         <Text style={[styles.recommendationText, { color: colors.text }]}>
           You typically run low on Size 2 every 12 days. Order now to avoid running out this weekend.
@@ -184,7 +184,7 @@ export function CreateChildProfileExample() {
   return (
     <View style={[styles.component, { backgroundColor: colors.surface }]}>
       <Text style={[styles.componentTitle, { color: colors.textEmphasis }]}>
-        Create Child Profile 👶
+        Create Child Profile
       </Text>
       <Text style={[styles.componentText, { color: colors.text }]}>
         Set up your child's profile to start tracking diapers and get personalized insights.

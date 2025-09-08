@@ -45,7 +45,9 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
         setThemeModeState('system');
       }
     } catch (error) {
-      console.error('Error loading theme preference:', error);
+      if (__DEV__) {
+        console.error('Error loading theme preference:', error);
+      }
       // Fallback to system preference
       setThemeModeState('system');
     } finally {
@@ -58,7 +60,9 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
       await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
       setThemeModeState(mode);
     } catch (error) {
-      console.error('Error saving theme preference:', error);
+      if (__DEV__) {
+        console.error('Error saving theme preference:', error);
+      }
     }
   };
 

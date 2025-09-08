@@ -113,7 +113,9 @@ export const useConsentStore = create<ConsentStore>()(
         const key = `optional_${consentType}` as keyof ConsentState;
         set({ [key]: value, error: null });
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        console.log(`Consent updated: ${consentType} = ${value}`);
+        if (__DEV__) {
+          console.log(`Consent updated: ${consentType} = ${value}`);
+        }
       },
       
       resetConsents: () => {
@@ -123,7 +125,9 @@ export const useConsentStore = create<ConsentStore>()(
           hasCompletedConsentFlow: false,
           currentConsentScreen: 0,
         });
-        console.log('Consent preferences reset to defaults');
+        if (__DEV__) {
+          console.log('Consent preferences reset to defaults');
+        }
       },
       
       // Flow completion
@@ -185,10 +189,13 @@ export const useConsentStore = create<ConsentStore>()(
           });
           
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          console.log('Consent flow completed successfully');
+          if (__DEV__) {
+            console.log('Consent flow completed successfully');
+          }
           return true;
           
         } catch (error) {
+          // Critical consent error - should be logged in production
           console.error('Error completing consent flow:', error);
           set({ 
             error: 'Network error. Please check your connection and try again.',
@@ -237,7 +244,9 @@ export const useConsentStore = create<ConsentStore>()(
         consentTimestamp: state.consentTimestamp,
       }),
       onRehydrateStorage: () => (state) => {
-        console.log('Consent store rehydrated:', state?.hasCompletedConsentFlow ? 'completed' : 'pending');
+        if (__DEV__) {
+          console.log('Consent store rehydrated:', state?.hasCompletedConsentFlow ? 'completed' : 'pending');
+        }
       },
     }
   )

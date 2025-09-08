@@ -11,10 +11,12 @@ import strawberry
 from strawberry.types import Info
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from graphql import GraphQLError
 
 from app.auth import supabase_auth, get_request_context, RequestContext
 from app.config.database import get_async_session
 from app.config.settings import settings
+from app.graphql.context import require_context_user
 from app.models import User, ConsentRecord, create_default_consent_records, UserStatus
 from app.services.user_service import UserService
 from app.services.consent_service import ConsentService
@@ -84,10 +86,11 @@ class AuthMutations:
         """
         try:
             # Get request context for audit trail
-            request = info.context["request"]
-            context = info.context.get("request_context")
-            if not context:
-                context = await get_request_context(request)
+            request = info.context.request
+            
+            # Create RequestContext object for compatibility with existing code
+            from app.auth import RequestContext
+            context = RequestContext(request)
             
             # Validate required consents
             if not input.accept_privacy_policy or not input.accept_terms_of_service:
@@ -117,143 +120,137 @@ class AuthMutations:
                     error=auth_result["error"]
                 )
             
-            # Get database session from context
-            session = info.context.get("session")
-            if not session:
-                return AuthResponse(
-                    success=False,
-                    error="Database session not available"
-                )
-            
-            try:
-                # Check if user already exists in backend (orphaned backend user scenario)
-                existing_user_query = await session.execute(
-                    select(User).where(
-                        User.email == input.email,
-                        User.is_deleted == False
+            # Use database session via async generator (same pattern as child resolvers)
+            async for session in get_async_session():
+                try:
+                    # Check if user already exists in backend (orphaned backend user scenario)
+                    existing_user_query = await session.execute(
+                        select(User).where(
+                            User.email == input.email,
+                            User.is_deleted == False
+                        )
                     )
-                )
-                existing_user = existing_user_query.scalar_one_or_none()
+                    existing_user = existing_user_query.scalar_one_or_none()
                 
-                if existing_user:
-                    # Update existing user with new Supabase Auth ID
-                    logger.info(f"Found existing backend user for {input.email}, updating Supabase Auth ID")
-                    existing_user.supabase_user_id = uuid.UUID(auth_result["user"]["id"])
-                    existing_user.status = UserStatus.PENDING_VERIFICATION
-                    existing_user.email_verified = False
-                    
-                    # Update profile information if provided
-                    if input.first_name:
-                        existing_user.first_name = input.first_name
-                    if input.last_name:
-                        existing_user.last_name = input.last_name
-                    if input.timezone:
-                        existing_user.timezone = input.timezone
-                    if input.language:
-                        existing_user.language = input.language
-                    if input.province:
-                        existing_user.province = input.province
-                    
-                    # Update consents
-                    existing_user.privacy_policy_accepted = input.accept_privacy_policy
-                    existing_user.privacy_policy_accepted_at = datetime.now(timezone.utc)
-                    existing_user.terms_of_service_accepted = input.accept_terms_of_service
-                    existing_user.terms_of_service_accepted_at = datetime.now(timezone.utc)
-                    existing_user.marketing_consent = input.marketing_consent
-                    existing_user.analytics_consent = input.analytics_consent
-                    existing_user.consent_version = settings.consent_version
-                    existing_user.consent_granted_at = datetime.now(timezone.utc)
-                    existing_user.consent_ip_address = context.ip_address
-                    existing_user.consent_user_agent = context.user_agent
-                    
-                    user = existing_user
-                    await session.flush()
-                else:
-                    # Create new user
-                    user = User(
-                        email=input.email,
-                        supabase_user_id=uuid.UUID(auth_result["user"]["id"]),
-                        first_name=input.first_name,
-                        last_name=input.last_name,
-                        timezone=input.timezone,
-                        language=input.language,
-                        province=input.province,
-                        status=UserStatus.PENDING_VERIFICATION,
-                        privacy_policy_accepted=input.accept_privacy_policy,
-                        privacy_policy_accepted_at=datetime.now(timezone.utc),
-                        terms_of_service_accepted=input.accept_terms_of_service,
-                        terms_of_service_accepted_at=datetime.now(timezone.utc),
-                        marketing_consent=input.marketing_consent,
-                        analytics_consent=input.analytics_consent,
-                        consent_version=settings.consent_version,
-                        consent_granted_at=datetime.now(timezone.utc),
-                        consent_ip_address=context.ip_address,
-                        consent_user_agent=context.user_agent,
-                        created_by=None  # Self-registration
-                    )
-                    
-                    session.add(user)
-                    await session.flush()  # Get user ID
-                
-                # Handle consent records (only create new ones if this is a new user)
-                if not existing_user:
-                    # Create default consent records for new users
-                    consent_records = create_default_consent_records(
-                        user.id, 
-                        settings.consent_version
-                    )
-                    
-                    for record in consent_records:
-                        # Grant required consents
-                        if record.consent_type in ["privacy_policy", "terms_of_service"]:
-                            record.grant_consent(
-                                context.ip_address,
-                                context.user_agent,
-                                {"registration": True}
-                            )
-                        # Grant optional consents based on user choice
-                        elif record.consent_type == "marketing" and input.marketing_consent:
-                            record.grant_consent(context.ip_address, context.user_agent)
-                        elif record.consent_type == "analytics" and input.analytics_consent:
-                            record.grant_consent(context.ip_address, context.user_agent)
+                    if existing_user:
+                        # Update existing user with new Supabase Auth ID
+                        logger.info(f"Found existing backend user for {input.email}, updating Supabase Auth ID")
+                        existing_user.supabase_user_id = uuid.UUID(auth_result["user"]["id"])
+                        existing_user.status = UserStatus.PENDING_VERIFICATION
+                        existing_user.email_verified = False
                         
-                        session.add(record)
-                else:
-                    # For existing users, just update consent fields (already done above)
-                    logger.info(f"Updated consents for existing user {user.id}")
-                
-                await session.commit()
-                
-                if existing_user:
-                    logger.info(f"User synced successfully: {user.id}")
-                    message = "Account synced successfully. Please check your email for verification."
-                else:
-                    logger.info(f"User created successfully: {user.id}")
-                    message = "Account created successfully. Please check your email for verification."
-                
-                # Return response with session if available
-                session_data = None
-                if auth_result.get("session"):
-                    session_data = UserSession(
-                        access_token=auth_result["session"]["access_token"],
-                        refresh_token=auth_result["session"]["refresh_token"],
-                        expires_in=auth_result["session"]["expires_in"]
+                        # Update profile information if provided
+                        if input.first_name:
+                            existing_user.first_name = input.first_name
+                        if input.last_name:
+                            existing_user.last_name = input.last_name
+                        if input.timezone:
+                            existing_user.timezone = input.timezone
+                        if input.language:
+                            existing_user.language = input.language
+                        if input.province:
+                            existing_user.province = input.province
+                        
+                        # Update consents
+                        existing_user.privacy_policy_accepted = input.accept_privacy_policy
+                        existing_user.privacy_policy_accepted_at = datetime.now(timezone.utc)
+                        existing_user.terms_of_service_accepted = input.accept_terms_of_service
+                        existing_user.terms_of_service_accepted_at = datetime.now(timezone.utc)
+                        existing_user.marketing_consent = input.marketing_consent
+                        existing_user.analytics_consent = input.analytics_consent
+                        existing_user.consent_version = settings.consent_version
+                        existing_user.consent_granted_at = datetime.now(timezone.utc)
+                        existing_user.consent_ip_address = context.ip_address
+                        existing_user.consent_user_agent = context.user_agent
+                        
+                        user = existing_user
+                        await session.flush()
+                    else:
+                        # Create new user
+                        user = User(
+                            email=input.email,
+                            supabase_user_id=uuid.UUID(auth_result["user"]["id"]),
+                            first_name=input.first_name,
+                            last_name=input.last_name,
+                            timezone=input.timezone,
+                            language=input.language,
+                            province=input.province,
+                            status=UserStatus.PENDING_VERIFICATION,
+                            privacy_policy_accepted=input.accept_privacy_policy,
+                            privacy_policy_accepted_at=datetime.now(timezone.utc),
+                            terms_of_service_accepted=input.accept_terms_of_service,
+                            terms_of_service_accepted_at=datetime.now(timezone.utc),
+                            marketing_consent=input.marketing_consent,
+                            analytics_consent=input.analytics_consent,
+                            consent_version=settings.consent_version,
+                            consent_granted_at=datetime.now(timezone.utc),
+                            consent_ip_address=context.ip_address,
+                            consent_user_agent=context.user_agent,
+                            created_by=None  # Self-registration
+                        )
+                        
+                        session.add(user)
+                        await session.flush()  # Get user ID
+                    
+                    # Handle consent records (only create new ones if this is a new user)
+                    if not existing_user:
+                        # Create default consent records for new users
+                        consent_records = create_default_consent_records(
+                            user.id, 
+                            settings.consent_version
+                        )
+                        
+                        for record in consent_records:
+                            # Grant required consents
+                            if record.consent_type in ["privacy_policy", "terms_of_service"]:
+                                record.grant_consent(
+                                    context.ip_address,
+                                    context.user_agent,
+                                    {"registration": True}
+                                )
+                            # Grant optional consents based on user choice
+                            elif record.consent_type == "marketing" and input.marketing_consent:
+                                record.grant_consent(context.ip_address, context.user_agent)
+                            elif record.consent_type == "analytics" and input.analytics_consent:
+                                record.grant_consent(context.ip_address, context.user_agent)
+                            
+                            session.add(record)
+                    else:
+                        # For existing users, just update consent fields (already done above)
+                        logger.info(f"Updated consents for existing user {user.id}")
+                    
+                    await session.commit()
+                    
+                    if existing_user:
+                        logger.info(f"User synced successfully: {user.id}")
+                        message = "Account synced successfully. Please check your email for verification."
+                    else:
+                        logger.info(f"User created successfully: {user.id}")
+                        message = "Account created successfully. Please check your email for verification."
+                    
+                    # Return response with session if available
+                    session_data = None
+                    if auth_result.get("session"):
+                        session_data = UserSession(
+                            access_token=auth_result["session"]["access_token"],
+                            refresh_token=auth_result["session"]["refresh_token"],
+                            expires_in=auth_result["session"]["expires_in"]
+                        )
+                    
+                    return AuthResponse(
+                        success=True,
+                        message=message,
+                        user=user_to_graphql(user),
+                        session=session_data
                     )
                 
-                return AuthResponse(
-                    success=True,
-                    message=message,
-                    user=user_to_graphql(user),
-                    session=session_data
-                )
-                
-            except Exception as db_error:
-                logger.error(f"Database error during user creation: {db_error}")
-                # Rollback will be handled automatically by session lifecycle
-                return AuthResponse(
-                    success=False,
-                    error="Failed to create user account. Please try again."
-                )
+                except Exception as db_error:
+                    logger.error(f"Database error during user creation: {db_error}")
+                    # Rollback will be handled automatically by session lifecycle
+                    return AuthResponse(
+                        success=False,
+                        error="Failed to create user account. Please try again."
+                    )
                 
         except Exception as e:
             logger.error(f"Error during sign up: {e}")
@@ -273,7 +270,7 @@ class AuthMutations:
         """
         try:
             # Get request context
-            request = info.context["request"]
+            request = info.context.request
             context = await get_request_context(request)
             
             # Authenticate with Supabase
@@ -300,6 +297,14 @@ class AuthMutations:
                         success=False,
                         error="User not found"
                     )
+                
+                # Update user status and verification on successful authentication
+                # If user successfully authenticated with Supabase, they're verified
+                if user.status == UserStatus.PENDING_VERIFICATION:
+                    user.status = UserStatus.ACTIVE
+                    user.email_verified = True
+                    user.email_verified_at = datetime.now(timezone.utc)
+                    logger.info(f"User {user.id} status updated to ACTIVE and email verified")
                 
                 # Record login attempt
                 user.record_login_attempt(
@@ -337,7 +342,7 @@ class AuthMutations:
         """
         try:
             # Get access token from request headers
-            request = info.context["request"]
+            request = info.context.request
             auth_header = request.headers.get("Authorization")
             
             if auth_header and auth_header.startswith("Bearer "):
@@ -404,7 +409,7 @@ class AuthMutations:
         """
         try:
             # Get access token from request headers
-            request = info.context["request"]
+            request = info.context.request
             auth_header = request.headers.get("Authorization")
             
             if not auth_header or not auth_header.startswith("Bearer "):
@@ -446,7 +451,7 @@ class AuthMutations:
         try:
             # This would use the get_current_user dependency
             # For now, implementing basic version
-            request = info.context["request"]
+            request = info.context.request
             # Get current user from token (simplified)
             # In full implementation, use dependency injection
             
@@ -473,7 +478,7 @@ class AuthMutations:
         """
         try:
             # Get request context
-            request = info.context["request"]
+            request = info.context.request
             context = await get_request_context(request)
             
             # This would get current user and update consent
@@ -490,6 +495,92 @@ class AuthMutations:
                 success=False,
                 error="Consent update failed"
             )
+    
+    @strawberry.mutation
+    async def refresh_token(
+        self,
+        refresh_token: str,
+        info: Info
+    ) -> AuthResponse:
+        """
+        Refresh access token using refresh token
+        """
+        try:
+            logger.info("Processing token refresh request")
+            
+            # Use existing Supabase refresh_token method
+            result = await supabase_auth.refresh_token(refresh_token)
+            
+            if result["success"]:
+                # Create session response
+                session_data = UserSession(
+                    access_token=result["session"]["access_token"],
+                    refresh_token=result["session"]["refresh_token"],
+                    expires_in=result["session"]["expires_in"]
+                )
+                
+                logger.info("Token refreshed successfully")
+                return AuthResponse(
+                    success=True,
+                    message="Token refreshed successfully",
+                    session=session_data
+                )
+            else:
+                logger.warning(f"Token refresh failed: {result['error']}")
+                return AuthResponse(
+                    success=False,
+                    error=result["error"]
+                )
+                
+        except Exception as e:
+            logger.error(f"Error during token refresh: {e}")
+            return AuthResponse(
+                success=False,
+                error="Token refresh failed. Please sign in again."
+            )
+    
+    @strawberry.mutation
+    async def complete_onboarding(
+        self,
+        info: Info
+    ) -> MutationResponse:
+        """
+        Mark user onboarding as completed
+        """
+        try:
+            logger.info("Processing onboarding completion request")
+            
+            # Get current authenticated user
+            user = await require_context_user(info)
+            
+            # Use UserService to complete onboarding
+            async for session in get_async_session():
+                from app.services.user_service import UserService
+                user_service = UserService(session)
+                
+                # Reload user in current session to avoid session persistence issues
+                session_user = await user_service.get_user_by_id(user.id)
+                if not session_user:
+                    raise ValueError("User not found")
+                
+                # Complete onboarding in database
+                updated_user = await user_service.complete_onboarding(session_user)
+                
+                logger.info(f"Onboarding completed for user: {updated_user.id}")
+                return MutationResponse(
+                    success=True,
+                    message="Onboarding completed successfully"
+                )
+                
+        except GraphQLError:
+            # Re-raise GraphQL authentication errors
+            raise
+        except Exception as e:
+            logger.error(f"Error completing onboarding: {e}")
+            return MutationResponse(
+                success=False,
+                error="Failed to complete onboarding. Please try again."
+            )
 
 
 @strawberry.type
@@ -502,8 +593,8 @@ class AuthQueries:
         Get current user profile
         """
         try:
-            # Get current user from context
-            current_user = info.context.get("current_user")
+            # Get current user from context using proper async method
+            current_user = await info.context.get_user()
             
             if current_user:
                 return user_to_graphql(current_user)

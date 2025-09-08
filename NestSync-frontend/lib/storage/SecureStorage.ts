@@ -42,7 +42,8 @@ export class SecureStorage {
         SECURE_STORE_OPTIONS
       );
     } catch (error) {
-      console.error('Failed to store access token:', error);
+      // Critical storage error - should be logged in production
+      console.error(' Failed to store access token:', error);
       throw new Error('Failed to store authentication token');
     }
   }
@@ -57,7 +58,8 @@ export class SecureStorage {
         SECURE_STORE_OPTIONS
       );
     } catch (error) {
-      console.error('Failed to retrieve access token:', error);
+      // Critical storage error - should be logged in production
+      console.error(' Failed to retrieve access token:', error);
       return null;
     }
   }
@@ -73,7 +75,8 @@ export class SecureStorage {
         SECURE_STORE_OPTIONS
       );
     } catch (error) {
-      console.error('Failed to store refresh token:', error);
+      // Critical storage error - should be logged in production
+      console.error(' Failed to store refresh token:', error);
       throw new Error('Failed to store refresh token');
     }
   }
@@ -88,7 +91,8 @@ export class SecureStorage {
         SECURE_STORE_OPTIONS
       );
     } catch (error) {
-      console.error('Failed to retrieve refresh token:', error);
+      // Critical storage error - should be logged in production
+      console.error(' Failed to retrieve refresh token:', error);
       return null;
     }
   }
@@ -105,7 +109,8 @@ export class SecureStorage {
         SECURE_STORE_OPTIONS
       );
     } catch (error) {
-      console.error('Failed to store user session:', error);
+      // Critical storage error - should be logged in production
+      console.error(' Failed to store user session:', error);
       throw new Error('Failed to store user session');
     }
   }
@@ -132,7 +137,8 @@ export class SecureStorage {
       
       return session;
     } catch (error) {
-      console.error('Failed to retrieve user session:', error);
+      // Critical storage error - should be logged in production
+      console.error(' Failed to retrieve user session:', error);
       return null;
     }
   }
@@ -148,7 +154,8 @@ export class SecureStorage {
         SecureStore.deleteItemAsync(STORAGE_KEYS.USER_SESSION),
       ]);
     } catch (error) {
-      console.error('Failed to clear user session:', error);
+      // Critical storage error - should be logged in production
+      console.error(' Failed to clear user session:', error);
       // Continue execution even if clearing fails
     }
   }
@@ -162,7 +169,9 @@ export class SecureStorage {
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
       return hasHardware && isEnrolled;
     } catch (error) {
-      console.error('Failed to check biometric availability:', error);
+      if (__DEV__) {
+        console.error(' Failed to check biometric availability:', error);
+      }
       return false;
     }
   }
@@ -175,7 +184,9 @@ export class SecureStorage {
       const settingsData = JSON.stringify(settings);
       await AsyncStorage.setItem(STORAGE_KEYS.BIOMETRIC_SETTINGS, settingsData);
     } catch (error) {
-      console.error('Failed to store biometric settings:', error);
+      if (__DEV__) {
+        console.error(' Failed to store biometric settings:', error);
+      }
       throw new Error('Failed to store biometric settings');
     }
   }
@@ -190,7 +201,9 @@ export class SecureStorage {
       
       return JSON.parse(settingsData) as BiometricSettings;
     } catch (error) {
-      console.error('Failed to retrieve biometric settings:', error);
+      if (__DEV__) {
+        console.error(' Failed to retrieve biometric settings:', error);
+      }
       return null;
     }
   }
@@ -220,7 +233,9 @@ export class SecureStorage {
 
       return result.success;
     } catch (error) {
-      console.error('Biometric authentication failed:', error);
+      if (__DEV__) {
+        console.error(' Biometric authentication failed:', error);
+      }
       return false;
     }
   }
@@ -232,7 +247,9 @@ export class SecureStorage {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.CONSENT_VERSION, version);
     } catch (error) {
-      console.error('Failed to store consent version:', error);
+      if (__DEV__) {
+        console.error(' Failed to store consent version:', error);
+      }
     }
   }
 
@@ -243,7 +260,9 @@ export class SecureStorage {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.CONSENT_VERSION);
     } catch (error) {
-      console.error('Failed to retrieve consent version:', error);
+      if (__DEV__) {
+        console.error(' Failed to retrieve consent version:', error);
+      }
       return null;
     }
   }
@@ -256,7 +275,9 @@ export class SecureStorage {
       const stateData = JSON.stringify(state);
       await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_STATE, stateData);
     } catch (error) {
-      console.error('Failed to store onboarding state:', error);
+      if (__DEV__) {
+        console.error(' Failed to store onboarding state:', error);
+      }
     }
   }
 
@@ -270,7 +291,9 @@ export class SecureStorage {
       
       return JSON.parse(stateData);
     } catch (error) {
-      console.error('Failed to retrieve onboarding state:', error);
+      if (__DEV__) {
+        console.error(' Failed to retrieve onboarding state:', error);
+      }
       return null;
     }
   }
@@ -282,7 +305,9 @@ export class SecureStorage {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_STATE);
     } catch (error) {
-      console.error('Failed to clear onboarding state:', error);
+      if (__DEV__) {
+        console.error(' Failed to clear onboarding state:', error);
+      }
     }
   }
 
@@ -294,7 +319,9 @@ export class SecureStorage {
       const preferencesData = JSON.stringify(preferences);
       await AsyncStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, preferencesData);
     } catch (error) {
-      console.error('Failed to store user preferences:', error);
+      if (__DEV__) {
+        console.error(' Failed to store user preferences:', error);
+      }
     }
   }
 
@@ -308,7 +335,9 @@ export class SecureStorage {
       
       return JSON.parse(preferencesData);
     } catch (error) {
-      console.error('Failed to retrieve user preferences:', error);
+      if (__DEV__) {
+        console.error(' Failed to retrieve user preferences:', error);
+      }
       return null;
     }
   }
@@ -334,9 +363,12 @@ export class SecureStorage {
         AsyncStorage.removeItem(STORAGE_KEYS.USER_PREFERENCES),
       ]);
 
-      console.log('All user data cleared successfully');
+      if (__DEV__) {
+        console.log(' All user data cleared successfully');
+      }
     } catch (error) {
-      console.error('Failed to clear all user data:', error);
+      // Critical storage error - should be logged in production
+      console.error(' Failed to clear all user data:', error);
       throw new Error('Failed to clear user data');
     }
   }
@@ -370,7 +402,9 @@ export class SecureStorage {
         consentVersion,
       };
     } catch (error) {
-      console.error('Failed to get storage info:', error);
+      if (__DEV__) {
+        console.error(' Failed to get storage info:', error);
+      }
       return {
         hasSecureData: false,
         hasPreferences: false,

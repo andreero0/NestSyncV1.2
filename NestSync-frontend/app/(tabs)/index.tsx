@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, StyleSheet, View, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery } from '@apollo/client';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { ChildSelector } from '@/components/ui/ChildSelector';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 import DevOnboardingReset from '@/components/dev/DevOnboardingReset';
+import { MY_CHILDREN_QUERY, GET_USAGE_LOGS_QUERY } from '@/lib/graphql/queries';
+import { GET_DASHBOARD_STATS_QUERY, LOG_DIAPER_CHANGE_MUTATION } from '@/lib/graphql/mutations';
+import { QuickLogModal } from '@/components/modals/QuickLogModal';
+import { AddInventoryModal } from '@/components/modals/AddInventoryModal';
+import { AddChildModal } from '@/components/modals/AddChildModal';
 
 const { width } = Dimensions.get('window');
 
@@ -38,64 +46,203 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  // Sample dashboard data - in real app, this would come from GraphQL/Apollo
-  const [dashboardStats] = useState<DashboardStats>({
-    daysRemaining: 12,
-    diapersLeft: 24,
-    lastChange: '2 hours ago',
-    todayChanges: 5,
-    currentSize: 'Size 2'
+  // State for selected child with persistence
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
+  
+  // Modal state
+  const [quickLogModalVisible, setQuickLogModalVisible] = useState(false);
+  const [addInventoryModalVisible, setAddInventoryModalVisible] = useState(false);
+  const [addChildModalVisible, setAddChildModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  
+  // GraphQL queries
+  const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
+    variables: { first: 10 },
   });
 
-  const [recentActivity] = useState<RecentActivity[]>([
-    {
-      id: '1',
-      time: '2 hours ago',
-      type: 'diaper-change',
-      description: 'Diaper changed - wet'
-    },
-    {
-      id: '2',
-      time: '5 hours ago',
-      type: 'diaper-change',
-      description: 'Diaper changed - soiled'
-    },
-    {
-      id: '3',
-      time: '1 day ago',
-      type: 'inventory-update',
-      description: 'Restocked Size 2 diapers'
-    }
-  ]);
+  const { 
+    data: dashboardData, 
+    loading: dashboardLoading, 
+    error: dashboardError 
+  } = useQuery(GET_DASHBOARD_STATS_QUERY, {
+    variables: { childId: selectedChildId },
+    skip: !selectedChildId,
+    pollInterval: 30000, // Poll every 30 seconds for real-time updates
+  });
 
+  const { 
+    data: usageLogsData, 
+    loading: usageLogsLoading 
+  } = useQuery(GET_USAGE_LOGS_QUERY, {
+    variables: { 
+      childId: selectedChildId,
+      usageType: 'DIAPER_CHANGE',
+      daysBack: 7,
+      limit: 10 
+    },
+    skip: !selectedChildId,
+    pollInterval: 30000, // Poll every 30 seconds
+  });
+
+  // Initialize selected child from storage or default to first child
+  useEffect(() => {
+    if (childrenData?.myChildren?.edges?.length > 0) {
+      const children = childrenData.myChildren.edges;
+      
+      // Try to use stored child ID first
+      if (storedChildId && children.find(edge => edge.node.id === storedChildId)) {
+        if (selectedChildId !== storedChildId) {
+          setSelectedChildId(storedChildId);
+        }
+      } else if (!selectedChildId && children.length > 0) {
+        // Default to first child if no stored selection
+        const firstChildId = children[0].node.id;
+        setSelectedChildId(firstChildId);
+        setStoredChildId(firstChildId);
+      }
+    }
+  }, [childrenData, selectedChildId, storedChildId, setStoredChildId]);
+
+  // Handle child selection with persistence
+  const handleChildSelect = async (childId: string) => {
+    setSelectedChildId(childId);
+    await setStoredChildId(childId);
+  };
+
+  // Process dashboard stats with fallback
+  const dashboardStats: DashboardStats = dashboardData?.getDashboardStats ? {
+    daysRemaining: dashboardData.getDashboardStats.daysRemaining || 0,
+    diapersLeft: dashboardData.getDashboardStats.diapersLeft || 0,
+    lastChange: dashboardData.getDashboardStats.lastChange || 'No data',
+    todayChanges: dashboardData.getDashboardStats.todayChanges || 0,
+    currentSize: dashboardData.getDashboardStats.currentSize || 'Unknown'
+  } : {
+    // Fallback data when loading or no child selected
+    daysRemaining: dashboardLoading ? 0 : 12,
+    diapersLeft: dashboardLoading ? 0 : 24,
+    lastChange: dashboardLoading ? 'Loading...' : '2 hours ago',
+    todayChanges: dashboardLoading ? 0 : 5,
+    currentSize: dashboardLoading ? 'Loading...' : 'Size 2'
+  };
+
+  // Process recent activity from usage logs
+  const recentActivity: RecentActivity[] = usageLogsData?.getUsageLogs?.edges?.map((log, index) => ({
+    id: log.id || `activity-${index}`,
+    time: formatTimeAgo(log.loggedAt),
+    type: 'diaper-change' as const,
+    description: getChangeDescription(log.wasWet, log.wasSoiled, log.notes)
+  })) || [];
+
+  // Show loading message when no data is available
+  // Enhanced state management
+  const showEmptyState = !usageLogsLoading && recentActivity.length === 0;
+  const showLoadingState = usageLogsLoading && selectedChildId;
+  const noChildrenState = !childrenLoading && (!childrenData?.myChildren?.edges || childrenData.myChildren.edges.length === 0);
+  const hasMultipleChildren = childrenData?.myChildren?.edges && childrenData.myChildren.edges.length > 1;
+
+  // Helper function to format time ago
+  function formatTimeAgo(dateString: string): string {
+    const now = new Date();
+    const logDate = new Date(dateString);
+    const diffMs = now.getTime() - logDate.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 60) {
+      return diffMinutes <= 1 ? 'Just now' : `${diffMinutes} minutes ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    }
+  }
+
+  // Helper function to get change description
+  function getChangeDescription(wasWet?: boolean, wasSoiled?: boolean, notes?: string): string {
+    let description = 'Diaper changed';
+    
+    if (wasWet && wasSoiled) {
+      description += ' - wet + soiled';
+    } else if (wasWet) {
+      description += ' - wet';
+    } else if (wasSoiled) {
+      description += ' - soiled';
+    }
+    
+    if (notes) {
+      description += ` (${notes})`;
+    }
+    
+    return description;
+  }
+
+  // Handle success messages from modals
+  const handleModalSuccess = (message: string) => {
+    setSuccessMessage(message);
+    // Clear success message after 3 seconds
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  // Determine if actions should be disabled
+  const actionsDisabled = !selectedChildId || childrenLoading || dashboardLoading;
+
+  // Quick Actions with better state handling
   const quickActions: QuickAction[] = [
     {
       id: 'log-change',
       title: 'Log Change',
       icon: 'plus.circle.fill',
-      color: colors.tint,
-      onPress: () => console.log('Log diaper change')
+      color: actionsDisabled ? colors.textSecondary : colors.tint,
+      onPress: () => {
+        if (actionsDisabled) {
+          Alert.alert(
+            'Please Wait',
+            selectedChildId ? 'Loading child data...' : 'Please select a child first',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        setQuickLogModalVisible(true);
+      }
     },
     {
       id: 'add-inventory',
       title: 'Add Stock',
       icon: 'cube.box.fill',
-      color: colors.success,
-      onPress: () => console.log('Add inventory')
+      color: actionsDisabled ? colors.textSecondary : colors.success,
+      onPress: () => {
+        if (actionsDisabled) {
+          Alert.alert(
+            'Please Wait',
+            selectedChildId ? 'Loading child data...' : 'Please select a child first',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        setAddInventoryModalVisible(true);
+      }
     },
     {
       id: 'view-timeline',
       title: 'Timeline',
       icon: 'clock.fill',
-      color: colors.accent,
-      onPress: () => console.log('View timeline')
+      color: actionsDisabled ? colors.textSecondary : colors.accent,
+      onPress: () => {
+        if (actionsDisabled) return;
+        Alert.alert('Coming Soon', 'Timeline view will be available in a future update!');
+      }
     },
     {
       id: 'size-check',
       title: 'Size Guide',
       icon: 'ruler.fill',
-      color: colors.premium,
-      onPress: () => console.log('Size guide')
+      color: actionsDisabled ? colors.textSecondary : colors.premium,
+      onPress: () => {
+        if (actionsDisabled) return;
+        Alert.alert('Coming Soon', 'Diaper size guide will be available in a future update!');
+      }
     }
   ];
 
@@ -133,18 +280,94 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Success Message */}
+          {successMessage && (
+            <View style={[styles.successMessage, { backgroundColor: colors.success }]}>
+              <IconSymbol name="checkmark.circle.fill" size={20} color="#FFFFFF" />
+              <ThemedText style={styles.successMessageText}>
+                {successMessage}
+              </ThemedText>
+            </View>
+          )}
+
           {/* Header */}
           <ThemedView style={styles.header}>
-            <ThemedText type="title" style={styles.headerTitle}>
-              Good morning!
-            </ThemedText>
-            <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Here's how your little one is doing
-            </ThemedText>
+            <View style={styles.headerTop}>
+              <View style={styles.headerTextContainer}>
+                <ThemedText type="title" style={styles.headerTitle}>
+                  Good morning!
+                </ThemedText>
+                <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
+                  {childrenLoading ? 'Loading child information...' : 
+                   selectedChildId && childrenData?.myChildren?.edges?.length > 0 ? 
+                   (() => {
+                     const selectedChild = childrenData.myChildren.edges.find(edge => edge.node.id === selectedChildId);
+                     return selectedChild ? `Here's how ${selectedChild.node.name} is doing` : "Here's how your little one is doing";
+                   })() :
+                   "Here's how your little one is doing"}
+                </ThemedText>
+              </View>
+              
+              {/* Child Selector - only show if multiple children */}
+              {hasMultipleChildren && (
+                <View style={styles.childSelectorContainer}>
+                  <ChildSelector
+                    children={childrenData.myChildren.edges.map(edge => edge.node)}
+                    selectedChildId={selectedChildId}
+                    onChildSelect={handleChildSelect}
+                    loading={childrenLoading}
+                    disabled={childrenLoading}
+                  />
+                </View>
+              )}
+            </View>
           </ThemedView>
 
-          {/* Stats Overview */}
+          {/* No Children State */}
+          {noChildrenState && (
+            <ThemedView style={[styles.noChildrenContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <IconSymbol name="figure.2.and.child.holdinghands" size={48} color={colors.textSecondary} />
+              <ThemedText type="title" style={[styles.noChildrenTitle, { color: colors.text }]}>
+                No Children Added
+              </ThemedText>
+              <ThemedText style={[styles.noChildrenText, { color: colors.textSecondary }]}>
+                You haven't added any children to your account yet. Complete the onboarding process to add your first child and start tracking diaper usage.
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.noChildrenButton, { backgroundColor: colors.tint }]}
+                onPress={() => setAddChildModalVisible(true)}
+              >
+                <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
+                <ThemedText style={styles.noChildrenButtonText}>
+                  Add Child
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          )}
+
+          {/* Stats Overview - only show when children exist */}
+          {!noChildrenState && (
           <ThemedView style={styles.statsContainer}>
+            {/* Loading state for dashboard */}
+            {(childrenLoading || dashboardLoading) && (
+              <View style={[styles.loadingContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <ActivityIndicator size="small" color={colors.tint} />
+                <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+                  Loading dashboard data...
+                </ThemedText>
+              </View>
+            )}
+            
+            {/* Error state */}
+            {dashboardError && (
+              <View style={[styles.errorContainer, { backgroundColor: colors.surface, borderColor: colors.error }]}>
+                <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.error} />
+                <ThemedText style={[styles.errorText, { color: colors.error }]}>
+                  Unable to load dashboard data. Please try again.
+                </ThemedText>
+              </View>
+            )}
+            
             <View style={styles.statsGrid}>
               {/* Days Remaining Card */}
               <View style={[
@@ -197,9 +420,10 @@ export default function HomeScreen() {
               </View>
             </View>
           </ThemedView>
+          )}
 
-          {/* Quick Actions */}
           <ThemedView style={styles.section}>
+            {/* Quick Actions Section */}
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Quick Actions
             </ThemedText>
@@ -226,6 +450,31 @@ export default function HomeScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Recent Activity
             </ThemedText>
+            
+            {/* Loading state for recent activity */}
+            {showLoadingState && (
+              <View style={[styles.activityLoadingContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <ActivityIndicator size="small" color={colors.tint} />
+                <ThemedText style={[styles.activityLoadingText, { color: colors.textSecondary }]}>
+                  Loading recent activity...
+                </ThemedText>
+              </View>
+            )}
+            
+            {/* Empty state */}
+            {showEmptyState && (
+              <View style={[styles.emptyActivityContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <IconSymbol name="clock.fill" size={24} color={colors.textSecondary} />
+                <ThemedText type="defaultSemiBold" style={[styles.emptyActivityTitle, { color: colors.text }]}>
+                  No recent activity
+                </ThemedText>
+                <ThemedText style={[styles.emptyActivityText, { color: colors.textSecondary }]}>
+                  Start logging diaper changes to see activity here
+                </ThemedText>
+              </View>
+            )}
+            
+            {/* Activity items */}
             {recentActivity.map((activity) => (
               <View
                 key={activity.id}
@@ -249,16 +498,18 @@ export default function HomeScreen() {
               </View>
             ))}
 
-            <TouchableOpacity
-              style={[styles.viewAllButton, { borderColor: colors.border }]}
-              accessibilityRole="button"
-              accessibilityLabel="View all activity"
-            >
-              <ThemedText style={[styles.viewAllText, { color: colors.tint }]}>
-                View All Activity
-              </ThemedText>
-              <IconSymbol name="chevron.right" size={16} color={colors.tint} />
-            </TouchableOpacity>
+            {recentActivity.length > 0 && (
+              <TouchableOpacity
+                style={[styles.viewAllButton, { borderColor: colors.border }]}
+                accessibilityRole="button"
+                accessibilityLabel="View all activity"
+              >
+                <ThemedText style={[styles.viewAllText, { color: colors.tint }]}>
+                  View All Activity
+                </ThemedText>
+                <IconSymbol name="chevron.right" size={16} color={colors.tint} />
+              </TouchableOpacity>
+            )}
           </ThemedView>
 
           {/* Current Status */}
@@ -288,6 +539,27 @@ export default function HomeScreen() {
           {/* Bottom spacing for tab bar */}
           <View style={{ height: 100 }} />
         </ScrollView>
+        
+        {/* Modals */}
+        <QuickLogModal
+          visible={quickLogModalVisible}
+          onClose={() => setQuickLogModalVisible(false)}
+          onSuccess={handleModalSuccess}
+          childId={selectedChildId}
+        />
+        
+        <AddInventoryModal
+          visible={addInventoryModalVisible}
+          onClose={() => setAddInventoryModalVisible(false)}
+          onSuccess={handleModalSuccess}
+          childId={selectedChildId}
+        />
+        
+        <AddChildModal
+          visible={addChildModalVisible}
+          onClose={() => setAddChildModalVisible(false)}
+          onSuccess={handleModalSuccess}
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -307,6 +579,16 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 10,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  headerTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
@@ -315,6 +597,10 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     marginBottom: 20,
+  },
+  childSelectorContainer: {
+    paddingTop: 4,
+    minWidth: 120,
   },
   statsContainer: {
     marginBottom: 24,
@@ -452,5 +738,110 @@ const styles = StyleSheet.create({
   trustText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  successMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  successMessageText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  activityLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 12,
+  },
+  activityLoadingText: {
+    fontSize: 14,
+  },
+  emptyActivityContainer: {
+    alignItems: 'center',
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 8,
+  },
+  emptyActivityTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyActivityText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // No children state
+  noChildrenContainer: {
+    alignItems: 'center',
+    padding: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginVertical: 20,
+    gap: 16,
+  },
+  noChildrenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  noChildrenText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    maxWidth: 300,
+  },
+  noChildrenButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
+    marginTop: 8,
+  },
+  noChildrenButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

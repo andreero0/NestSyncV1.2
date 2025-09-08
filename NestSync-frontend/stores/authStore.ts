@@ -96,14 +96,18 @@ export const useAuthStore = create<AuthState>()(
       set({ isLoading: true, error: null });
 
       try {
-        console.log('Starting auth initialization...');
+        if (__DEV__) {
+          console.log('Starting auth initialization...');
+        }
         
         // Create a timeout wrapper for the auth service initialization
         const initializeWithTimeout = async (): Promise<boolean> => {
           return new Promise(async (resolve, reject) => {
             // Set 10-second timeout
             const timeoutId = setTimeout(() => {
-              console.log('Auth service initialization timed out');
+              if (__DEV__) {
+                console.log('Auth service initialization timed out');
+              }
               reject(new Error('Authentication initialization timed out'));
             }, 10000);
 
@@ -124,9 +128,13 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           isAuthenticated = await initializeWithTimeout();
-          console.log('Auth service initialized successfully, isAuthenticated:', isAuthenticated);
+          if (__DEV__) {
+            console.log('Auth service initialized successfully, isAuthenticated:', isAuthenticated);
+          }
         } catch (error) {
-          console.log('Auth service initialization failed, falling back to offline mode:', error);
+          if (__DEV__) {
+            console.log('Auth service initialization failed, falling back to offline mode:', error);
+          }
           initError = error as Error;
           // Continue with fallback logic even if initialization fails
         }
@@ -148,7 +156,9 @@ export const useAuthStore = create<AuthState>()(
                 biometricsAvailable = await BiometricHelpers.isBiometricAvailable();
                 biometricSettings = await StorageHelpers.getBiometricSettings();
               } catch (bioError) {
-                console.log('Biometric check failed, defaulting to unavailable:', bioError);
+                if (__DEV__) {
+                  console.log('Biometric check failed, defaulting to unavailable:', bioError);
+                }
               }
 
               // Get stored consent version (with fallback)
@@ -156,10 +166,14 @@ export const useAuthStore = create<AuthState>()(
               try {
                 consentVersion = await StorageHelpers.getConsentVersion();
               } catch (consentError) {
-                console.log('Consent version check failed:', consentError);
+                if (__DEV__) {
+                  console.log('Consent version check failed:', consentError);
+                }
               }
 
-              console.log('Setting authenticated state with user data');
+              if (__DEV__) {
+                console.log('Setting authenticated state with user data');
+              }
               set({
                 user,
                 session,
@@ -174,7 +188,9 @@ export const useAuthStore = create<AuthState>()(
                 isLoading: false,
               });
             } else {
-              console.log('No valid user/session found, setting unauthenticated state');
+              if (__DEV__) {
+                console.log('No valid user/session found, setting unauthenticated state');
+              }
               set({
                 isAuthenticated: false,
                 isInitialized: true,
@@ -182,7 +198,9 @@ export const useAuthStore = create<AuthState>()(
               });
             }
           } catch (userError) {
-            console.log('Failed to get current user, proceeding as unauthenticated:', userError);
+            if (__DEV__) {
+              console.log('Failed to get current user, proceeding as unauthenticated:', userError);
+            }
             set({
               isAuthenticated: false,
               isInitialized: true,
@@ -191,14 +209,18 @@ export const useAuthStore = create<AuthState>()(
           }
         } else {
           // Not authenticated or initialization failed - fallback mode
-          console.log('Initializing in fallback mode (offline/unauthenticated)');
+          if (__DEV__) {
+            console.log('Initializing in fallback mode (offline/unauthenticated)');
+          }
           
           // Check biometric availability for non-authenticated users (with fallback)
           let biometricsAvailable = false;
           try {
             biometricsAvailable = await BiometricHelpers.isBiometricAvailable();
           } catch (bioError) {
-            console.log('Biometric check failed in fallback mode:', bioError);
+            if (__DEV__) {
+              console.log('Biometric check failed in fallback mode:', bioError);
+            }
           }
 
           set({
@@ -210,6 +232,7 @@ export const useAuthStore = create<AuthState>()(
           });
         }
       } catch (error) {
+        // Critical auth error - should be logged in production
         console.error('Critical auth initialization error:', error);
         
         // Always ensure initialization completes to prevent infinite loading
@@ -221,7 +244,9 @@ export const useAuthStore = create<AuthState>()(
         });
       }
       
-      console.log('Auth initialization completed');
+      if (__DEV__) {
+        console.log('Auth initialization completed');
+      }
     },
 
     // Sign up new user
@@ -369,6 +394,7 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         });
       } catch (error) {
+        // Critical auth error - should be logged in production
         console.error('Sign out error:', error);
         // Clear local state even if server call fails
         set({
@@ -572,6 +598,7 @@ export const useAuthStore = create<AuthState>()(
 
         set({ isLoading: false });
       } catch (error) {
+        // Critical auth error - should be logged in production
         console.error('Refresh user error:', error);
         set({ 
           error: 'Failed to refresh user data',
@@ -613,7 +640,9 @@ export const useAuthStore = create<AuthState>()(
     resetOnboardingForDev: async () => {
       // Only allow in development mode
       if (!__DEV__) {
-        console.warn('resetOnboardingForDev is only available in development mode');
+        if (__DEV__) {
+          console.warn('resetOnboardingForDev is only available in development mode');
+        }
         return {
           success: false,
           error: 'This function is only available in development mode',
@@ -648,15 +677,21 @@ export const useAuthStore = create<AuthState>()(
         // Clear onboarding state from storage
         await StorageHelpers.clearOnboardingState();
 
-        console.log('[DEV] Onboarding status reset successfully (local state only)');
-        console.log('[DEV] Note: Backend still shows onboarding as completed, but app will show onboarding flow');
+        if (__DEV__) {
+          console.log('[DEV] Onboarding status reset successfully (local state only)');
+        }
+        if (__DEV__) {
+          console.log('[DEV] Note: Backend still shows onboarding as completed, but app will show onboarding flow');
+        }
         
         return {
           success: true,
           message: 'Onboarding status reset successfully! The app will now show the onboarding flow.',
         };
       } catch (error) {
-        console.error('[DEV] Error resetting onboarding status:', error);
+        if (__DEV__) {
+          console.error('[DEV] Error resetting onboarding status:', error);
+        }
         set({
           error: 'Failed to reset onboarding status. Please try again.',
           isLoading: false,

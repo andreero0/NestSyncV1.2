@@ -14,7 +14,9 @@ interface TestResult {
 
 export async function testGraphQLConnection(): Promise<TestResult> {
   try {
-    console.log('Testing GraphQL connection to backend...');
+    if (__DEV__) {
+      console.log(' Testing GraphQL connection to backend...');
+    }
     
     const { data } = await apolloClient.query({
       query: HEALTH_CHECK_QUERY,
@@ -34,7 +36,9 @@ export async function testGraphQLConnection(): Promise<TestResult> {
       };
     }
   } catch (error) {
-    console.error('GraphQL connection test failed:', error);
+    if (__DEV__) {
+      console.error(' GraphQL connection test failed:', error);
+    }
     return {
       success: false,
       message: `GraphQL connection failed: ${error}`,
@@ -45,7 +49,9 @@ export async function testGraphQLConnection(): Promise<TestResult> {
 
 export async function testAPIInfo(): Promise<TestResult> {
   try {
-    console.log('Testing API info endpoint...');
+    if (__DEV__) {
+      console.log(' Testing API info endpoint...');
+    }
     
     const { data } = await apolloClient.query({
       query: API_INFO_QUERY,
@@ -65,7 +71,9 @@ export async function testAPIInfo(): Promise<TestResult> {
       };
     }
   } catch (error) {
-    console.error('API info test failed:', error);
+    if (__DEV__) {
+      console.error(' API info test failed:', error);
+    }
     return {
       success: false,
       message: `API info failed: ${error}`,
@@ -84,7 +92,9 @@ export async function runAllTests(): Promise<{
     success: boolean;
   };
 }> {
-  console.log('Running authentication system tests...');
+  if (__DEV__) {
+    console.log(' Running authentication system tests...');
+  }
   
   const graphqlConnection = await testGraphQLConnection();
   const apiInfo = await testAPIInfo();
@@ -100,7 +110,9 @@ export async function runAllTests(): Promise<{
     success: failed === 0,
   };
   
-  console.log('Test Summary:', summary);
+  if (__DEV__) {
+    console.log(' Test Summary:', summary);
+  }
   
   return {
     graphqlConnection,

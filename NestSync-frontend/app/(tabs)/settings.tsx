@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Switch, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Switch, Alert, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 
 interface SettingItem {
   id: string;
@@ -28,6 +29,47 @@ export default function SettingsScreen() {
   const [analyticsOptIn, setAnalyticsOptIn] = useState(false);
   const [marketingEmails, setMarketingEmails] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
+
+  // Inventory preferences state
+  const [inventoryPreferences, setInventoryPreferences] = useAsyncStorage('nestsync_inventory_preferences');
+  const [lowStockThreshold, setLowStockThreshold] = useState(5);
+  const [criticalStockThreshold, setCriticalStockThreshold] = useState(2);
+  const [inventoryNotifications, setInventoryNotifications] = useState(true);
+  const [autoReorderSuggestions, setAutoReorderSuggestions] = useState(true);
+  const [showThresholdModal, setShowThresholdModal] = useState(false);
+  const [editingThreshold, setEditingThreshold] = useState<'low' | 'critical' | null>(null);
+  const [tempThresholdValue, setTempThresholdValue] = useState('');
+
+  // Load inventory preferences on mount
+  useEffect(() => {
+    if (inventoryPreferences) {
+      try {
+        const prefs = JSON.parse(inventoryPreferences);
+        setLowStockThreshold(prefs.lowStockThreshold || 5);
+        setCriticalStockThreshold(prefs.criticalStockThreshold || 2);
+        setInventoryNotifications(prefs.inventoryNotifications !== false);
+        setAutoReorderSuggestions(prefs.autoReorderSuggestions !== false);
+      } catch (error) {
+        console.error('Failed to parse inventory preferences:', error);
+      }
+    }
+  }, [inventoryPreferences]);
+
+  // Save inventory preferences
+  const saveInventoryPreferences = async (newPrefs: Partial<{
+    lowStockThreshold: number;
+    criticalStockThreshold: number;
+    inventoryNotifications: boolean;
+    autoReorderSuggestions: boolean;
+  }>) => {
+    try {
+      const currentPrefs = inventoryPreferences ? JSON.parse(inventoryPreferences) : {};
+      const updatedPrefs = { ...currentPrefs, ...newPrefs };
+      await setInventoryPreferences(JSON.stringify(updatedPrefs));
+    } catch (error) {
+      console.error('Failed to save inventory preferences:', error);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -71,6 +113,50 @@ export default function SettingsScreen() {
         }
       ]
     );
+  };
+
+  // Threshold editing handlers
+  const handleEditThreshold = (type: 'low' | 'critical') => {
+    setEditingThreshold(type);
+    setTempThresholdValue(String(type === 'low' ? lowStockThreshold : criticalStockThreshold));
+    setShowThresholdModal(true);
+  };
+
+  const handleSaveThreshold = async () => {
+    const value = parseInt(tempThresholdValue);
+    if (isNaN(value) || value < 1) {
+      Alert.alert('Invalid Value', 'Please enter a number greater than 0');
+      return;
+    }
+
+    if (editingThreshold === 'low') {
+      if (value <= criticalStockThreshold) {
+        Alert.alert('Invalid Value', 'Low stock threshold must be greater than critical stock threshold');
+        return;
+      }
+      setLowStockThreshold(value);
+      await saveInventoryPreferences({ lowStockThreshold: value });
+    } else if (editingThreshold === 'critical') {
+      if (value >= lowStockThreshold) {
+        Alert.alert('Invalid Value', 'Critical stock threshold must be less than low stock threshold');
+        return;
+      }
+      setCriticalStockThreshold(value);
+      await saveInventoryPreferences({ criticalStockThreshold: value });
+    }
+
+    setShowThresholdModal(false);
+    setEditingThreshold(null);
+  };
+
+  const handleInventoryNotificationToggle = async (value: boolean) => {
+    setInventoryNotifications(value);
+    await saveInventoryPreferences({ inventoryNotifications: value });
+  };
+
+  const handleAutoReorderToggle = async (value: boolean) => {
+    setAutoReorderSuggestions(value);
+    await saveInventoryPreferences({ autoReorderSuggestions: value });
   };
 
   const accountSettings: SettingItem[] = [
@@ -128,6 +214,43 @@ export default function SettingsScreen() {
       type: 'toggle',
       value: marketingEmails,
       onToggle: setMarketingEmails
+    }
+  ];
+
+  const inventorySettings: SettingItem[] = [
+    {
+      id: 'low-stock-threshold',
+      title: 'Low Stock Alert',
+      description: `Alert when ${lowStockThreshold} or fewer diapers remain`,
+      icon: 'exclamationmark.triangle',
+      type: 'navigation',
+      onPress: () => handleEditThreshold('low')
+    },
+    {
+      id: 'critical-stock-threshold',
+      title: 'Critical Stock Alert',
+      description: `Emergency alert at ${criticalStockThreshold} diapers`,
+      icon: 'exclamationmark.octagon',
+      type: 'navigation',
+      onPress: () => handleEditThreshold('critical')
+    },
+    {
+      id: 'inventory-notifications',
+      title: 'Stock Notifications',
+      description: 'Receive alerts when stock is running low',
+      icon: 'bell.badge',
+      type: 'toggle',
+      value: inventoryNotifications,
+      onToggle: handleInventoryNotificationToggle
+    },
+    {
+      id: 'auto-reorder',
+      title: 'Reorder Suggestions',
+      description: 'Get smart suggestions for restocking',
+      icon: 'cart.badge.plus',
+      type: 'toggle',
+      value: autoReorderSuggestions,
+      onToggle: handleAutoReorderToggle
     }
   ];
 
@@ -223,6 +346,20 @@ export default function SettingsScreen() {
             {accountSettings.map(renderSettingItem)}
           </ThemedView>
 
+          {/* Inventory Section */}
+          <ThemedView style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Inventory & Notifications
+            </ThemedText>
+            <ThemedView style={[styles.inventoryNotice, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <IconSymbol name="cube.box" size={20} color={colors.tint} />
+              <ThemedText style={[styles.inventoryNoticeText, { color: colors.textSecondary }]}>
+                Set up automatic alerts to help you stay ahead of running out of diapers.
+              </ThemedText>
+            </ThemedView>
+            {inventorySettings.map(renderSettingItem)}
+          </ThemedView>
+
           {/* Privacy Section */}
           <ThemedView style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -307,6 +444,83 @@ export default function SettingsScreen() {
           {/* Bottom spacing for tab bar */}
           <View style={{ height: 100 }} />
         </ScrollView>
+
+        {/* Threshold Editing Modal */}
+        <Modal
+          visible={showThresholdModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowThresholdModal(false)}
+        >
+          <Pressable 
+            style={styles.modalOverlay}
+            onPress={() => setShowThresholdModal(false)}
+          >
+            <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+              <Pressable onPress={(e) => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                  <ThemedText type="subtitle" style={styles.modalTitle}>
+                    {editingThreshold === 'low' ? 'Low Stock Alert' : 'Critical Stock Alert'}
+                  </ThemedText>
+                  <TouchableOpacity
+                    onPress={() => setShowThresholdModal(false)}
+                    style={[styles.modalCloseButton, { backgroundColor: colors.surface }]}
+                  >
+                    <IconSymbol name="xmark" size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <ThemedText style={[styles.modalDescription, { color: colors.textSecondary }]}>
+                  {editingThreshold === 'low' 
+                    ? 'Set the number of diapers remaining when you want to receive a low stock alert.'
+                    : 'Set the critical threshold for emergency stock alerts. This should be less than your low stock alert.'}
+                </ThemedText>
+
+                <View style={styles.inputContainer}>
+                  <ThemedText style={[styles.inputLabel, { color: colors.text }]}>
+                    Number of diapers:
+                  </ThemedText>
+                  <TextInput
+                    style={[
+                      styles.thresholdInput,
+                      { 
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        color: colors.text
+                      }
+                    ]}
+                    value={tempThresholdValue}
+                    onChangeText={setTempThresholdValue}
+                    keyboardType="numeric"
+                    placeholder="Enter number"
+                    placeholderTextColor={colors.textSecondary}
+                    autoFocus
+                    selectTextOnFocus
+                  />
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.surface }]}
+                    onPress={() => setShowThresholdModal(false)}
+                  >
+                    <ThemedText style={[styles.buttonText, { color: colors.text }]}>
+                      Cancel
+                    </ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.tint }]}
+                    onPress={handleSaveThreshold}
+                  >
+                    <ThemedText style={[styles.buttonText, { color: '#FFFFFF' }]}>
+                      Save
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -430,5 +644,101 @@ const styles = StyleSheet.create({
   versionSubtext: {
     fontSize: 12,
     fontStyle: 'italic',
+  },
+  // Inventory section styles
+  inventoryNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 12,
+  },
+  inventoryNoticeText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  inputContainer: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  thresholdInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    // Style handled by backgroundColor from colors
+  },
+  saveButton: {
+    // Style handled by backgroundColor from colors
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

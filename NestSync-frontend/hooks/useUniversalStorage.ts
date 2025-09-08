@@ -47,6 +47,7 @@ export function useUniversalStorage(
         
         setData(value);
       } catch (error) {
+        // Critical storage error - should be logged in production
         console.error(`Failed to load ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
       } finally {
         setLoading(false);
@@ -80,6 +81,7 @@ export function useUniversalStorage(
       
       setData(value);
     } catch (error) {
+      // Critical storage error - should be logged in production
       console.error(`Failed to set ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
       throw error;
     }
@@ -146,6 +148,7 @@ export const StorageHelpers = {
         await AsyncStorage.setItem(key, value);
       }
     } catch (error) {
+      // Critical storage error - should be logged in production
       console.error(`Failed to set ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
       throw error;
     }
@@ -161,6 +164,7 @@ export const StorageHelpers = {
         return await AsyncStorage.getItem(key);
       }
     } catch (error) {
+      // Critical storage error - should be logged in production
       console.error(`Failed to get ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
       return null;
     }
@@ -176,6 +180,7 @@ export const StorageHelpers = {
         await AsyncStorage.removeItem(key);
       }
     } catch (error) {
+      // Critical storage error - should be logged in production
       console.error(`Failed to remove ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
     }
   },
@@ -198,7 +203,9 @@ export const StorageHelpers = {
         return session.accessToken || null;
       }
     } catch (error) {
-      console.error('Failed to extract access token from session:', error);
+      if (__DEV__) {
+        console.error('Failed to extract access token from session:', error);
+      }
     }
     
     return null;
@@ -221,7 +228,9 @@ export const StorageHelpers = {
         return session.refreshToken || null;
       }
     } catch (error) {
-      console.error('Failed to extract refresh token from session:', error);
+      if (__DEV__) {
+        console.error('Failed to extract refresh token from session:', error);
+      }
     }
     
     return null;
@@ -246,7 +255,9 @@ export const StorageHelpers = {
       
       return session;
     } catch (error) {
-      console.error('Failed to parse user session:', error);
+      if (__DEV__) {
+        console.error('Failed to parse user session:', error);
+      }
       return null;
     }
   },
@@ -269,7 +280,9 @@ export const StorageHelpers = {
       if (!settingsData) return null;
       return JSON.parse(settingsData);
     } catch (error) {
-      console.error('Failed to parse biometric settings:', error);
+      if (__DEV__) {
+        console.error('Failed to parse biometric settings:', error);
+      }
       return null;
     }
   },
@@ -292,7 +305,9 @@ export const StorageHelpers = {
       if (!stateData) return null;
       return JSON.parse(stateData);
     } catch (error) {
-      console.error('Failed to parse onboarding state:', error);
+      if (__DEV__) {
+        console.error('Failed to parse onboarding state:', error);
+      }
       return null;
     }
   },
@@ -311,7 +326,9 @@ export const StorageHelpers = {
       if (!preferencesData) return null;
       return JSON.parse(preferencesData);
     } catch (error) {
-      console.error('Failed to parse user preferences:', error);
+      if (__DEV__) {
+        console.error('Failed to parse user preferences:', error);
+      }
       return null;
     }
   },
@@ -354,7 +371,9 @@ export const StorageHelpers = {
         consentVersion,
       };
     } catch (error) {
-      console.error('Failed to get storage info:', error);
+      if (__DEV__) {
+        console.error('Failed to get storage info:', error);
+      }
       return {
         hasSecureData: false,
         hasPreferences: false,
@@ -378,14 +397,18 @@ export const BiometricHelpers = {
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
       return hasHardware && isEnrolled;
     } catch (error) {
-      console.error('Failed to check biometric availability:', error);
+      if (__DEV__) {
+        console.error('Failed to check biometric availability:', error);
+      }
       return false;
     }
   },
 
   async authenticateWithBiometrics(): Promise<boolean> {
     if (Platform.OS === 'web') {
-      console.log('Biometric authentication not available on web');
+      if (__DEV__) {
+        console.log('Biometric authentication not available on web');
+      }
       return false;
     }
 
@@ -411,7 +434,9 @@ export const BiometricHelpers = {
 
       return result.success;
     } catch (error) {
-      console.error('Biometric authentication failed:', error);
+      if (__DEV__) {
+        console.error('Biometric authentication failed:', error);
+      }
       return false;
     }
   },

@@ -41,10 +41,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     // Initialize authentication state
     const initializeAuth = async () => {
       try {
-        console.log('AuthGuard: Starting authentication initialization...');
+        if (__DEV__) {
+          console.log('AuthGuard: Starting authentication initialization...');
+        }
         await initialize();
-        console.log('AuthGuard: Authentication initialization completed');
+        if (__DEV__) {
+          console.log('AuthGuard: Authentication initialization completed');
+        }
       } catch (error) {
+        // Critical auth error - should be logged in production
         console.error('AuthGuard: Error during auth initialization:', error);
       }
     };
@@ -55,18 +60,22 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isInitialized) return; // Wait for auth to initialize
 
-    console.log('AuthGuard: Auth initialized, handling navigation...', {
-      isAuthenticated,
-      segments,
-      userOnboardingCompleted: user?.onboardingCompleted
-    });
+    if (__DEV__) {
+      console.log('AuthGuard: Auth initialized, handling navigation...', {
+        isAuthenticated,
+        segments,
+        userOnboardingCompleted: user?.onboardingCompleted
+      });
+    }
 
     const inAuthGroup = segments[0] === '(auth)';
     const inSplashScreen = segments[0] === 'splash';
 
     // Check if user should see splash screen first (first time app launch)
     if (!hasSeenSplash && !inSplashScreen) {
-      console.log('AuthGuard: Showing splash screen for first time user');
+      if (__DEV__) {
+        console.log('AuthGuard: Showing splash screen for first time user');
+      }
       setHasSeenSplash(true);
       router.replace('/splash');
       return; // Exit early to show splash
@@ -75,26 +84,37 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated && !inAuthGroup && !inSplashScreen) {
       // User is not authenticated and not in protected screens, redirect to login
-      console.log('AuthGuard: Redirecting to login - user not authenticated');
+      if (__DEV__) {
+        console.log('AuthGuard: Redirecting to login - user not authenticated');
+      }
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
       // User is authenticated but in auth group
       if (user?.onboardingCompleted) {
         // Redirect to main app if onboarding is complete
-        console.log('AuthGuard: Redirecting to main app - onboarding completed');
+        if (__DEV__) {
+          console.log('AuthGuard: Redirecting to main app - onboarding completed');
+        }
         router.replace('/(tabs)');
       } else {
         // Redirect to onboarding if not complete
-        console.log('AuthGuard: Redirecting to onboarding - not completed');
+        if (__DEV__) {
+          console.log('AuthGuard: Redirecting to onboarding - not completed');
+        }
         router.replace('/(auth)/onboarding');
       }
     }
 
     // Mark app as ready once navigation is determined
     if (!appIsReady) {
-      console.log('AuthGuard: App is ready, hiding splash screen');
+      if (__DEV__) {
+        console.log('AuthGuard: App is ready, hiding splash screen');
+      }
       setAppIsReady(true);
-      SplashScreen.hideAsync().catch(console.error);
+      SplashScreen.hideAsync().catch((error) => {
+        // Critical error - should be logged in production
+        console.error('Failed to hide splash screen:', error);
+      });
     }
   }, [isAuthenticated, isInitialized, user?.onboardingCompleted, segments, appIsReady]);
 
@@ -165,9 +185,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (error) {
+      // Critical font loading error - should be logged in production
       console.error('Font loading error:', error);
       // Hide splash screen even if fonts fail to load to prevent infinite loading
-      SplashScreen.hideAsync().catch(console.error);
+      SplashScreen.hideAsync().catch((error) => {
+        // Critical error - should be logged in production
+        console.error('Failed to hide splash screen after font error:', error);
+      });
     }
   }, [error]);
 

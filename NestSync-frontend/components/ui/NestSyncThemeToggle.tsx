@@ -33,19 +33,19 @@ const THEME_OPTIONS: ThemeOption[] = [
   {
     mode: 'light',
     label: 'Light',
-    icon: '☀️',
+    icon: 'light',
     description: 'Always use light theme'
   },
   {
     mode: 'dark',
     label: 'Dark',
-    icon: '🌙',
+    icon: 'dark',
     description: 'Always use dark theme'
   },
   {
     mode: 'system',
     label: 'Auto',
-    icon: '⚙️',
+    icon: 'auto',
     description: 'Follow system preference'
   },
 ];

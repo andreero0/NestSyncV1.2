@@ -92,7 +92,9 @@ export function JITConsentProvider({ children }: JITConsentProviderProps) {
         consentCacheRef.current = validCache;
       }
     } catch (error) {
-      console.error('Error loading consent cache:', error);
+      if (__DEV__) {
+        console.error('Error loading consent cache:', error);
+      }
       consentCacheRef.current = {};
     }
   };
@@ -102,7 +104,9 @@ export function JITConsentProvider({ children }: JITConsentProviderProps) {
       await AsyncStorage.setItem(CONSENT_CACHE_KEY, JSON.stringify(cache));
       consentCacheRef.current = cache;
     } catch (error) {
-      console.error('Error saving consent cache:', error);
+      if (__DEV__) {
+        console.error('Error saving consent cache:', error);
+      }
     }
   };
 
@@ -122,17 +126,23 @@ export function JITConsentProvider({ children }: JITConsentProviderProps) {
 
     // Check if we already have this consent
     if (hasConsent(consentType)) {
-      console.log(`JIT Consent: ${consentType} already granted for ${feature}`);
+      if (__DEV__) {
+        console.log(`JIT Consent: ${consentType} already granted for ${feature}`);
+      }
       return true;
     }
 
     // Required consents should never be requested via JIT (they're handled at signup)
     if (consentType === ConsentType.PRIVACY_POLICY || consentType === ConsentType.TERMS_OF_SERVICE) {
-      console.warn(`JIT Consent: Attempted to request required consent ${consentType} - this should be handled at signup`);
+      if (__DEV__) {
+        console.warn(`JIT Consent: Attempted to request required consent ${consentType} - this should be handled at signup`);
+      }
       return true;
     }
 
-    console.log(`JIT Consent: Requesting ${consentType} for ${feature} - Purpose: ${purpose}`);
+    if (__DEV__) {
+      console.log(`JIT Consent: Requesting ${consentType} for ${feature} - Purpose: ${purpose}`);
+    }
 
     return new Promise((resolve) => {
       resolverRef.current = resolve;
@@ -159,15 +169,19 @@ export function JITConsentProvider({ children }: JITConsentProviderProps) {
             };
             await saveConsentCache(newCache);
 
-            console.log(`JIT Consent: ${consentType} granted and cached for ${feature}`);
+            if (__DEV__) {
+              console.log(`JIT Consent: ${consentType} granted and cached for ${feature}`);
+            }
             setState(prev => ({ ...prev, isVisible: false, consentType: null, purpose: '', dataCategories: [], onGrant: null, onDecline: null }));
             resolve(true);
           } else {
+            // Critical consent error - should be logged in production
             console.error(`JIT Consent: Failed to save ${consentType}:`, response.error);
             setState(prev => ({ ...prev, isVisible: false, consentType: null, purpose: '', dataCategories: [], onGrant: null, onDecline: null }));
             resolve(false);
           }
         } catch (error) {
+          // Critical consent error - should be logged in production
           console.error(`JIT Consent: Error granting ${consentType}:`, error);
           setState(prev => ({ ...prev, isVisible: false, consentType: null, purpose: '', dataCategories: [], onGrant: null, onDecline: null }));
           resolve(false);
@@ -196,9 +210,12 @@ export function JITConsentProvider({ children }: JITConsentProviderProps) {
             };
             await saveConsentCache(newCache);
 
-            console.log(`JIT Consent: ${consentType} declined and cached for ${feature}`);
+            if (__DEV__) {
+              console.log(`JIT Consent: ${consentType} declined and cached for ${feature}`);
+            }
           }
         } catch (error) {
+          // Critical consent error - should be logged in production
           console.error(`JIT Consent: Error declining ${consentType}:`, error);
         }
 

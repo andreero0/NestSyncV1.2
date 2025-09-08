@@ -148,7 +148,7 @@ export default function LoginScreen() {
       {/* Biometric Login Button */}
       {biometricsAvailable && biometricsEnabled && (
         <NestSyncButton
-          title={Platform.OS === 'ios' ? '🔐 Use Face ID / Touch ID' : '🔐 Use Fingerprint'}
+          title={Platform.OS === 'ios' ? 'Use Face ID / Touch ID' : 'Use Fingerprint'}
           onPress={handleBiometricLogin}
           variant="outline"
           disabled={isLoading}

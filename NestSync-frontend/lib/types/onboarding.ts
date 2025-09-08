@@ -6,7 +6,7 @@
 export interface ChildInfo {
   name: string;
   birthDate: Date;
-  gender: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+  gender: 'BOY' | 'GIRL' | 'OTHER' | 'PREFER_NOT_TO_SAY';
   currentWeight?: number; // in grams
   notes?: string;
 }
@@ -37,10 +37,10 @@ export interface OnboardingData {
   currentPhase: number;
 }
 
-// Gender options for forms
+// Gender options for forms (matching backend GraphQL GenderType enum)
 export const GENDER_OPTIONS = [
-  { value: 'MALE', label: 'Boy' },
-  { value: 'FEMALE', label: 'Girl' },
+  { value: 'BOY', label: 'Boy' },
+  { value: 'GIRL', label: 'Girl' },
   { value: 'OTHER', label: 'Other' },
   { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' },
 ];

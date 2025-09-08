@@ -196,25 +196,25 @@ function getDefaultConsentConfig(consentType: ConsentType) {
       return {
         title: 'Help Us Improve',
         description: 'We need permission to collect anonymous usage data to improve your NestSync experience.',
-        icon: '📊',
+        icon: 'chart',
       };
     case ConsentType.MARKETING:
       return {
         title: 'Stay Updated',
         description: 'We need permission to send you helpful parenting tips and product updates.',
-        icon: '📨',
+        icon: 'mail',
       };
     case ConsentType.DATA_SHARING:
       return {
         title: 'Personalized Experience',
         description: 'We need permission to analyze your usage patterns for personalized recommendations.',
-        icon: '🎯',
+        icon: 'target',
       };
     default:
       return {
         title: 'Permission Required',
         description: 'This feature requires additional permissions to function properly.',
-        icon: '🔒',
+        icon: 'lock',
       };
   }
 }

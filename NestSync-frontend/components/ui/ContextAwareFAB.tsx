@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Platform, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Platform, View, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSegments } from 'expo-router';
+import { useQuery } from '@apollo/client';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
@@ -14,6 +15,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { IconSymbol } from './IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { QuickLogModal } from '../modals/QuickLogModal';
+import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
+import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 
 interface FABConfig {
   icon: string;
@@ -31,6 +35,28 @@ export function ContextAwareFAB() {
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   
+  // Modal state
+  const [quickLogModalVisible, setQuickLogModalVisible] = useState(false);
+  
+  // State for selected child with persistence
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
+  
+  // GraphQL queries
+  const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
+    variables: { first: 10 },
+  });
+
+  // Determine if actions should be disabled (same logic as dashboard)
+  const actionsDisabled = !selectedChildId || childrenLoading;
+  
+  // Sync selected child with stored value
+  useEffect(() => {
+    if (storedChildId) {
+      setSelectedChildId(storedChildId);
+    }
+  }, [storedChildId]);
+  
   // Animation values
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
@@ -45,8 +71,15 @@ export function ContextAwareFAB() {
       icon: 'plus.circle.fill',
       accessibilityLabel: 'Log diaper change',
       action: () => {
-        console.log('Opening quick log modal for diaper change');
-        // TODO: Open quick logging modal with time chips
+        if (actionsDisabled) {
+          Alert.alert(
+            'Please Wait',
+            selectedChildId ? 'Loading child data...' : 'Please select a child first',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        setQuickLogModalVisible(true);
       },
     },
     planner: {
@@ -163,22 +196,43 @@ export function ContextAwareFAB() {
     },
   });
   
+  // Handle success callback from modal
+  const handleModalSuccess = (message: string) => {
+    console.log('Diaper change logged successfully:', message);
+    // You could show a toast notification here
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setQuickLogModalVisible(false);
+  };
+
   return (
-    <GestureDetector gesture={tapGesture}>
-      <Animated.View 
-        style={[dynamicStyles.fabContainer, fabAnimatedStyle]}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={currentFABConfig.accessibilityLabel}
-        accessibilityHint="Double tap to activate"
-      >
-        <IconSymbol
-          name={currentFABConfig.icon}
-          size={24}
-          color="#FFFFFF"
-        />
-      </Animated.View>
-    </GestureDetector>
+    <>
+      <GestureDetector gesture={tapGesture}>
+        <Animated.View 
+          style={[dynamicStyles.fabContainer, fabAnimatedStyle]}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={currentFABConfig.accessibilityLabel}
+          accessibilityHint="Double tap to activate"
+        >
+          <IconSymbol
+            name={currentFABConfig.icon}
+            size={24}
+            color="#FFFFFF"
+          />
+        </Animated.View>
+      </GestureDetector>
+      
+      {/* Quick Log Modal */}
+      <QuickLogModal
+        visible={quickLogModalVisible}
+        onClose={handleModalClose}
+        onSuccess={handleModalSuccess}
+        childId={selectedChildId}
+      />
+    </>
   );
 }
 

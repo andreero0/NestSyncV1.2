@@ -40,9 +40,11 @@ class ChildService:
         if children_count >= settings.max_children_per_user:
             raise ValueError(f"Maximum {settings.max_children_per_user} children allowed per user")
         
-        # Validate date of birth
-        if date_of_birth >= date.today():
-            raise ValueError("Date of birth must be in the past")
+        # Validate date of birth - allow future dates for expectant parents (up to 9 months)
+        from datetime import timedelta
+        max_future_date = date.today() + timedelta(days=270)  # ~9 months for pregnancy planning
+        if date_of_birth > max_future_date:
+            raise ValueError("Due date cannot be more than 9 months in the future")
         
         child = Child(
             parent_id=parent.id,

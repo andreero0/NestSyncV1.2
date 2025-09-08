@@ -144,7 +144,7 @@ export default function RegisterScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
         Alert.alert(
-          'Welcome to NestSync! 🎉',
+          'Welcome to NestSync!',
           'Your account has been created successfully. Please check your email for verification.',
           [
             {

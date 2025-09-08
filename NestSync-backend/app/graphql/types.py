@@ -5,7 +5,7 @@ PIPEDA-compliant Canadian diaper planning application
 
 import strawberry
 from typing import Optional, List, Dict, Any
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 
 # =============================================================================
@@ -144,7 +144,8 @@ class ChildProfile:
     
     @strawberry.field
     def age_in_months(self) -> int:
-        return self.age_in_days // 30
+        age_days = (date.today() - self.date_of_birth).days
+        return age_days // 30
     
     @strawberry.field
     def weekly_usage(self) -> int:
@@ -318,31 +319,76 @@ class OnboardingStatusResponse:
 
 
 # =============================================================================
-# Pagination Types
+# GraphQL Connection Types (Relay Pattern)
 # =============================================================================
+
+from typing import Generic, TypeVar
+
+# Generic type for Connection pattern
+GenericType = TypeVar("GenericType")
 
 @strawberry.type
 class PageInfo:
-    """Pagination information"""
-    has_next_page: bool
-    has_previous_page: bool
-    start_cursor: Optional[str] = None
-    end_cursor: Optional[str] = None
-    total_count: int
+    """Information to aid in pagination."""
+    has_next_page: bool = strawberry.field(
+        description="When paginating forwards, are there more items?"
+    )
+    has_previous_page: bool = strawberry.field(
+        description="When paginating backwards, are there more items?"
+    )
+    start_cursor: Optional[str] = strawberry.field(
+        description="When paginating backwards, the cursor to continue."
+    )
+    end_cursor: Optional[str] = strawberry.field(
+        description="When paginating forwards, the cursor to continue."
+    )
+    total_count: int = strawberry.field(
+        description="Total count of items available."
+    )
+
+
+@strawberry.type
+class ChildEdge:
+    """An edge in a connection."""
+    node: ChildProfile = strawberry.field(
+        description="The item at the end of the edge."
+    )
+    cursor: str = strawberry.field(
+        description="A cursor for use in pagination."
+    )
 
 
 @strawberry.type
 class ChildConnection:
-    """Paginated children list"""
-    edges: List[ChildProfile]
-    page_info: PageInfo
+    """A connection to a list of children."""
+    page_info: PageInfo = strawberry.field(
+        description="Information to aid in pagination."
+    )
+    edges: List[ChildEdge] = strawberry.field(
+        description="A list of edges."
+    )
+
+
+@strawberry.type
+class ConsentEdge:
+    """An edge in a consent connection."""
+    node: UserConsent = strawberry.field(
+        description="The item at the end of the edge."
+    )
+    cursor: str = strawberry.field(
+        description="A cursor for use in pagination."
+    )
 
 
 @strawberry.type
 class ConsentConnection:
-    """Paginated consent records"""
-    edges: List[UserConsent]
-    page_info: PageInfo
+    """A connection to a list of consent records."""
+    page_info: PageInfo = strawberry.field(
+        description="Information to aid in pagination."
+    )
+    edges: List[ConsentEdge] = strawberry.field(
+        description="A list of edges."
+    )
 
 
 # =============================================================================
@@ -367,6 +413,237 @@ class ErrorResponse:
 
 
 # =============================================================================
+# Inventory Types
+# =============================================================================
+
+@strawberry.enum
+class ProductTypeEnum(Enum):
+    DIAPER = "diaper"
+    WIPES = "wipes"
+    DIAPER_CREAM = "diaper_cream"
+    POWDER = "powder"
+    DIAPER_BAGS = "diaper_bags"
+    TRAINING_PANTS = "training_pants"
+    SWIMWEAR = "swimwear"
+
+
+@strawberry.enum
+class UsageTypeEnum(Enum):
+    DIAPER_CHANGE = "diaper_change"
+    WIPE_USE = "wipe_use"
+    CREAM_APPLICATION = "cream_application"
+    ACCIDENT_CLEANUP = "accident_cleanup"
+    PREVENTIVE_CHANGE = "preventive_change"
+    OVERNIGHT_CHANGE = "overnight_change"
+
+
+@strawberry.enum
+class UsageContextEnum(Enum):
+    HOME = "home"
+    DAYCARE = "daycare"
+    OUTING = "outing"
+    TRAVEL = "travel"
+    GRANDPARENTS = "grandparents"
+    OTHER = "other"
+
+
+@strawberry.type
+class InventoryItem:
+    """Physical inventory tracking for diaper products"""
+    id: strawberry.ID
+    child_id: strawberry.ID
+    product_type: ProductTypeEnum
+    brand: str
+    product_name: Optional[str] = None
+    size: str
+    quantity_total: int
+    quantity_remaining: int
+    quantity_reserved: int = 0
+    purchase_date: datetime
+    cost_cad: Optional[float] = None
+    expiry_date: Optional[datetime] = None
+    storage_location: Optional[str] = None
+    is_opened: bool = False
+    opened_date: Optional[datetime] = None
+    notes: Optional[str] = None
+    quality_rating: Optional[int] = None
+    would_rebuy: Optional[bool] = None
+    created_at: datetime
+    
+    @strawberry.field
+    def quantity_available(self) -> int:
+        """Available quantity (remaining minus reserved)"""
+        return max(0, self.quantity_remaining - self.quantity_reserved)
+    
+    @strawberry.field
+    def usage_percentage(self) -> float:
+        """Percentage of product used"""
+        if self.quantity_total == 0:
+            return 0.0
+        used = self.quantity_total - self.quantity_remaining
+        return round((used / self.quantity_total) * 100, 2)
+    
+    @strawberry.field
+    def is_expired(self) -> bool:
+        """Check if product is expired"""
+        if not self.expiry_date:
+            return False
+        return datetime.now(timezone.utc) > self.expiry_date
+    
+    @strawberry.field
+    def days_until_expiry(self) -> Optional[int]:
+        """Days until expiry (negative if expired)"""
+        if not self.expiry_date:
+            return None
+        delta = self.expiry_date - datetime.now(timezone.utc)
+        return delta.days
+
+
+@strawberry.type
+class UsageLog:
+    """Usage tracking for diaper changes and product consumption"""
+    id: strawberry.ID
+    child_id: strawberry.ID
+    inventory_item_id: Optional[strawberry.ID] = None
+    usage_type: UsageTypeEnum
+    logged_at: datetime
+    quantity_used: int = 1
+    context: Optional[UsageContextEnum] = None
+    caregiver_name: Optional[str] = None
+    was_wet: Optional[bool] = None
+    was_soiled: Optional[bool] = None
+    diaper_condition: Optional[str] = None
+    had_leakage: Optional[bool] = None
+    product_rating: Optional[int] = None
+    time_since_last_change: Optional[int] = None
+    change_duration: Optional[int] = None
+    notes: Optional[str] = None
+    health_notes: Optional[str] = None
+    created_at: datetime
+
+
+@strawberry.type
+class DashboardStats:
+    """Dashboard statistics for the home screen"""
+    days_remaining: Optional[int]
+    diapers_left: int
+    last_change: Optional[str]
+    today_changes: int
+    current_size: Optional[str]
+
+
+# =============================================================================
+# Inventory Input Types
+# =============================================================================
+
+@strawberry.input
+class CreateInventoryItemInput:
+    """Create inventory item input"""
+    child_id: strawberry.ID
+    product_type: ProductTypeEnum
+    brand: str
+    product_name: Optional[str] = None
+    size: str
+    quantity_total: int
+    cost_cad: Optional[float] = None
+    expiry_date: Optional[datetime] = None
+    storage_location: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@strawberry.input
+class LogDiaperChangeInput:
+    """Log diaper change input"""
+    child_id: strawberry.ID
+    usage_type: UsageTypeEnum = UsageTypeEnum.DIAPER_CHANGE
+    context: Optional[UsageContextEnum] = None
+    caregiver_name: Optional[str] = None
+    was_wet: Optional[bool] = None
+    was_soiled: Optional[bool] = None
+    diaper_condition: Optional[str] = None
+    had_leakage: Optional[bool] = None
+    notes: Optional[str] = None
+    logged_at: Optional[datetime] = None
+
+
+@strawberry.input
+class UpdateInventoryItemInput:
+    """Update inventory item input"""
+    quantity_remaining: Optional[int] = None
+    storage_location: Optional[str] = None
+    notes: Optional[str] = None
+    quality_rating: Optional[int] = None
+    would_rebuy: Optional[bool] = None
+
+
+# =============================================================================
+# Inventory Response Types
+# =============================================================================
+
+@strawberry.type
+class CreateInventoryItemResponse(MutationResponse):
+    """Create inventory item response"""
+    inventory_item: Optional[InventoryItem] = None
+
+
+@strawberry.type
+class LogDiaperChangeResponse(MutationResponse):
+    """Log diaper change response"""
+    usage_log: Optional[UsageLog] = None
+    updated_inventory_items: Optional[List[InventoryItem]] = None
+
+
+@strawberry.type
+class UpdateInventoryItemResponse(MutationResponse):
+    """Update inventory item response"""
+    inventory_item: Optional[InventoryItem] = None
+
+
+@strawberry.type
+class InventoryItemEdge:
+    """An edge in an inventory connection."""
+    node: InventoryItem = strawberry.field(
+        description="The item at the end of the edge."
+    )
+    cursor: str = strawberry.field(
+        description="A cursor for use in pagination."
+    )
+
+
+@strawberry.type
+class InventoryConnection:
+    """A connection to a list of inventory items."""
+    page_info: PageInfo = strawberry.field(
+        description="Information to aid in pagination."
+    )
+    edges: List[InventoryItemEdge] = strawberry.field(
+        description="A list of edges."
+    )
+
+
+@strawberry.type
+class UsageLogEdge:
+    """An edge in a usage log connection."""
+    node: UsageLog = strawberry.field(
+        description="The item at the end of the edge."
+    )
+    cursor: str = strawberry.field(
+        description="A cursor for use in pagination."
+    )
+
+
+@strawberry.type
+class UsageLogConnection:
+    """A connection to a list of usage logs."""
+    page_info: PageInfo = strawberry.field(
+        description="Information to aid in pagination."
+    )
+    edges: List[UsageLogEdge] = strawberry.field(
+        description="A list of edges."
+    )
+
+
+# =============================================================================
 # Export Types
 # =============================================================================
 
@@ -377,6 +654,9 @@ __all__ = [
     "GenderType",
     "ConsentStatusType",
     "ConsentTypeEnum",
+    "ProductTypeEnum",
+    "UsageTypeEnum",
+    "UsageContextEnum",
     
     # User Types
     "UserProfile",
@@ -387,6 +667,11 @@ __all__ = [
     # Child Types
     "ChildProfile",
     "OnboardingWizardStep",
+    
+    # Inventory Types
+    "InventoryItem",
+    "UsageLog",
+    "DashboardStats",
     
     # Input Types
     "SignUpInput",
@@ -399,6 +684,9 @@ __all__ = [
     "UpdateChildInput",
     "OnboardingWizardStepInput",
     "InitialInventoryInput",
+    "CreateInventoryItemInput",
+    "LogDiaperChangeInput",
+    "UpdateInventoryItemInput",
     
     # Response Types
     "MutationResponse",
@@ -406,11 +694,20 @@ __all__ = [
     "UpdateChildResponse", 
     "UserProfileResponse",
     "OnboardingStatusResponse",
+    "CreateInventoryItemResponse",
+    "LogDiaperChangeResponse",
+    "UpdateInventoryItemResponse",
     
-    # Pagination Types
+    # Connection Types
     "PageInfo",
+    "ChildEdge",
     "ChildConnection",
+    "ConsentEdge",
     "ConsentConnection",
+    "InventoryItemEdge",
+    "InventoryConnection",
+    "UsageLogEdge",
+    "UsageLogConnection",
     
     # Error Types
     "ValidationError",

@@ -46,7 +46,7 @@ const CONSENT_CONTENT: Record<ConsentType, ConsentContentConfig> = {
       'App performance metrics',
       'General usage patterns (no personal data)',
     ],
-    icon: '📊',
+    icon: 'chart',
     primaryColor: NestSyncColors.primary.blue,
   },
   [ConsentType.MARKETING]: {
@@ -62,7 +62,7 @@ const CONSENT_CONTENT: Record<ConsentType, ConsentContentConfig> = {
       'General app usage preferences',
       'Feature interest indicators',
     ],
-    icon: '📨',
+    icon: 'mail',
     primaryColor: NestSyncColors.accent.purple,
   },
   [ConsentType.DATA_SHARING]: {
@@ -78,7 +78,7 @@ const CONSENT_CONTENT: Record<ConsentType, ConsentContentConfig> = {
       'Child growth and development data',
       'Brand and size preferences',
     ],
-    icon: '🎯',
+    icon: 'target',
     primaryColor: NestSyncColors.secondary.green,
   },
   [ConsentType.PRIVACY_POLICY]: {
@@ -86,7 +86,7 @@ const CONSENT_CONTENT: Record<ConsentType, ConsentContentConfig> = {
     description: 'This consent should not appear in JIT context - handled at signup',
     benefits: [],
     dataUsed: [],
-    icon: '🔒',
+    icon: 'lock',
     primaryColor: NestSyncColors.neutral[500],
   },
   [ConsentType.TERMS_OF_SERVICE]: {
@@ -94,7 +94,7 @@ const CONSENT_CONTENT: Record<ConsentType, ConsentContentConfig> = {
     description: 'This consent should not appear in JIT context - handled at signup',
     benefits: [],
     dataUsed: [],
-    icon: '📋',
+    icon: 'document',
     primaryColor: NestSyncColors.neutral[500],
   },
 };

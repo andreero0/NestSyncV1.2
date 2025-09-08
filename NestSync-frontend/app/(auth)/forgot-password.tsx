@@ -82,6 +82,7 @@ export default function ForgotPasswordScreen() {
       }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      // Critical auth error - should be logged in production
       console.error('Password reset error:', error);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
@@ -105,7 +106,7 @@ export default function ForgotPasswordScreen() {
         
         {/* Success Header */}
         <View style={styles.header}>
-          <Text style={styles.successEmoji}>📧</Text>
+          <Text style={styles.successEmoji}>✓</Text>
           <Text style={[styles.title, { color: colors.textEmphasis }]}>Check Your Email</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             We've sent password reset instructions to{'\n'}
@@ -220,7 +221,7 @@ export default function ForgotPasswordScreen() {
       {/* Security Notice */}
       <View style={[styles.securityNotice, { borderTopColor: colors.border }]}>
         <Text style={[styles.securityText, { color: colors.textSecondary }]}>
-          🔒 For your security, the reset link will expire in 24 hours
+          For your security, the reset link will expire in 24 hours
         </Text>
       </View>
     </ScrollView>

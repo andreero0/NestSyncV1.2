@@ -108,7 +108,9 @@ export function UnitPreferenceProvider({ children }: { children: ReactNode }) {
         await savePreferences(systemPreferences);
       }
     } catch (error) {
-      console.error('Failed to load unit preferences:', error);
+      if (__DEV__) {
+        console.error('Failed to load unit preferences:', error);
+      }
       // Fall back to system detection
       const systemPreferences = detectSystemPreferences();
       setPreferences(systemPreferences);
@@ -121,7 +123,9 @@ export function UnitPreferenceProvider({ children }: { children: ReactNode }) {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newPreferences));
     } catch (error) {
-      console.error('Failed to save unit preferences:', error);
+      if (__DEV__) {
+        console.error('Failed to save unit preferences:', error);
+      }
     }
   };
 

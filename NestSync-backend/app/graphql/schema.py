@@ -9,11 +9,15 @@ from strawberry.types import Info
 
 from .auth_resolvers import AuthMutations, AuthQueries
 from .child_resolvers import ChildMutations, ChildQueries
+from .inventory_resolvers import InventoryMutations, InventoryQueries
 from .types import (
     UserProfile,
     ChildProfile, 
     OnboardingStatusResponse,
-    MutationResponse
+    MutationResponse,
+    DashboardStats,
+    InventoryConnection,
+    UsageLogConnection
 )
 
 
@@ -29,6 +33,11 @@ class Query:
     my_children = strawberry.field(resolver=ChildQueries.my_children)
     child: Optional[ChildProfile] = strawberry.field(resolver=ChildQueries.child)
     onboarding_status: OnboardingStatusResponse = strawberry.field(resolver=ChildQueries.onboarding_status)
+    
+    # Inventory queries
+    get_dashboard_stats: DashboardStats = strawberry.field(resolver=InventoryQueries.get_dashboard_stats)
+    get_inventory_items: InventoryConnection = strawberry.field(resolver=InventoryQueries.get_inventory_items)
+    get_usage_logs: UsageLogConnection = strawberry.field(resolver=InventoryQueries.get_usage_logs)
     
     @strawberry.field
     async def health_check(self) -> str:
@@ -53,6 +62,8 @@ class Mutation:
     change_password = strawberry.field(resolver=AuthMutations.change_password)
     update_profile = strawberry.field(resolver=AuthMutations.update_profile)
     update_consent = strawberry.field(resolver=AuthMutations.update_consent)
+    refresh_token = strawberry.field(resolver=AuthMutations.refresh_token)
+    complete_onboarding = strawberry.field(resolver=AuthMutations.complete_onboarding)
     
     # Child and onboarding mutations
     create_child = strawberry.field(resolver=ChildMutations.create_child)
@@ -60,6 +71,11 @@ class Mutation:
     delete_child = strawberry.field(resolver=ChildMutations.delete_child)
     complete_onboarding_step = strawberry.field(resolver=ChildMutations.complete_onboarding_step)
     set_initial_inventory = strawberry.field(resolver=ChildMutations.set_initial_inventory)
+    
+    # Inventory mutations
+    log_diaper_change = strawberry.field(resolver=InventoryMutations.log_diaper_change)
+    create_inventory_item = strawberry.field(resolver=InventoryMutations.create_inventory_item)
+    update_inventory_item = strawberry.field(resolver=InventoryMutations.update_inventory_item)
 
 
 @strawberry.type
@@ -91,7 +107,8 @@ schema = strawberry.Schema(
 
 def get_schema_sdl() -> str:
     """Get GraphQL Schema Definition Language (SDL)"""
-    return strawberry.export_schema(schema)
+    from strawberry.printer import print_schema
+    return print_schema(schema)
 
 
 def print_schema():

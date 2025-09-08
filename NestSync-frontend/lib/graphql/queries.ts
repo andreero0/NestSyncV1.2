@@ -90,6 +90,60 @@ export const API_INFO_QUERY = gql`
   }
 `;
 
+export const MY_CHILDREN_QUERY = gql`
+  query MyChildren($first: Int = 10, $after: String) {
+    myChildren(first: $first, after: $after) {
+      edges {
+        node {
+          id
+          name
+          dateOfBirth
+          gender
+          currentDiaperSize
+          currentWeightKg
+          currentHeightCm
+          dailyUsageCount
+          hasSensitiveSkin
+          hasAllergies
+          allergiesNotes
+          onboardingCompleted
+          province
+          createdAt
+          ageInDays
+          ageInMonths
+          weeklyUsage
+          monthlyUsage
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+        totalCount
+      }
+    }
+  }
+`;
+
+export const ONBOARDING_STATUS_QUERY = gql`
+  query OnboardingStatus {
+    onboardingStatus {
+      userOnboardingCompleted
+      currentStep
+      completedSteps {
+        stepName
+        completed
+        completedAt
+        data
+      }
+      childrenCount
+      requiredConsentsGiven
+    }
+  }
+`;
+
 // =============================================================================
 // MUTATIONS
 // =============================================================================
@@ -177,6 +231,60 @@ export const UPDATE_PROFILE_MUTATION = gql`
 export const UPDATE_CONSENT_MUTATION = gql`
   mutation UpdateConsent($input: ConsentUpdateInput!) {
     updateConsent(input: $input) {
+      success
+      message
+      error
+    }
+  }
+`;
+
+export const REFRESH_TOKEN_MUTATION = gql`
+  mutation RefreshToken($refreshToken: String!) {
+    refreshToken(refreshToken: $refreshToken) {
+      success
+      message
+      error
+      session {
+        ...UserSessionFragment
+      }
+    }
+  }
+  ${USER_SESSION_FRAGMENT}
+`;
+
+// =============================================================================
+// CHILD AND ONBOARDING MUTATIONS
+// =============================================================================
+
+export const CREATE_CHILD_MUTATION = gql`
+  mutation CreateChild($input: CreateChildInput!) {
+    createChild(input: $input) {
+      success
+      message
+      error
+      child {
+        id
+        name
+        dateOfBirth
+        gender
+        currentDiaperSize
+        currentWeightKg
+        currentHeightCm
+        dailyUsageCount
+        hasSensitiveSkin
+        hasAllergies
+        allergiesNotes
+        onboardingCompleted
+        province
+        createdAt
+      }
+    }
+  }
+`;
+
+export const SET_INITIAL_INVENTORY_MUTATION = gql`
+  mutation SetInitialInventory($childId: ID!, $inventoryItems: [InitialInventoryInput!]!) {
+    setInitialInventory(childId: $childId, inventoryItems: $inventoryItems) {
       success
       message
       error
@@ -399,4 +507,151 @@ export interface UpdateConsentMutationVariables {
     granted: boolean;
     consentVersion: string;
   };
+}
+
+export interface RefreshTokenMutationData {
+  refreshToken: {
+    success: boolean;
+    message?: string;
+    error?: string;
+    session?: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+    };
+  };
+}
+
+export interface RefreshTokenMutationVariables {
+  refreshToken: string;
+}
+
+// =============================================================================
+// CHILD AND ONBOARDING MUTATION TYPES
+// =============================================================================
+
+export interface CreateChildMutationData {
+  createChild: {
+    success: boolean;
+    message?: string;
+    error?: string;
+    child?: {
+      id: string;
+      name: string;
+      dateOfBirth: string;
+      gender: string;
+      currentDiaperSize?: string;
+      currentWeightKg?: number;
+      currentHeightCm?: number;
+      dailyUsageCount: number;
+      hasSensitiveSkin: boolean;
+      hasAllergies: boolean;
+      allergiesNotes?: string;
+      onboardingCompleted: boolean;
+      province?: string;
+      createdAt: string;
+    };
+  };
+}
+
+export interface CreateChildMutationVariables {
+  input: {
+    name: string;
+    dateOfBirth: string;
+    gender?: 'BOY' | 'GIRL' | null;
+    currentDiaperSize: 'NEWBORN' | 'SIZE_1' | 'SIZE_2' | 'SIZE_3' | 'SIZE_4' | 'SIZE_5' | 'SIZE_6';
+    currentWeightKg?: number;
+    currentHeightCm?: number;
+    dailyUsageCount?: number;
+    hasSensitiveSkin?: boolean;
+    hasAllergies?: boolean;
+    allergiesNotes?: string;
+    specialNeeds?: string;
+    preferredBrands?: string[];
+  };
+}
+
+export interface SetInitialInventoryMutationData {
+  setInitialInventory: {
+    success: boolean;
+    message?: string;
+    error?: string;
+  };
+}
+
+export interface SetInitialInventoryMutationVariables {
+  childId: string;
+  inventoryItems: Array<{
+    diaperSize: 'NEWBORN' | 'SIZE_1' | 'SIZE_2' | 'SIZE_3' | 'SIZE_4' | 'SIZE_5' | 'SIZE_6';
+    brand: string;
+    quantity: number;
+    purchaseDate?: string;
+    expiryDate?: string;
+  }>;
+}
+
+// =============================================================================
+// DASHBOARD AND ACTIVITY QUERIES
+// =============================================================================
+
+export const USAGE_LOG_FRAGMENT = gql`
+  fragment UsageLogFragment on UsageLog {
+    id
+    childId
+    inventoryItemId
+    usageType
+    loggedAt
+    quantityUsed
+    context
+    caregiverName
+    wasWet
+    wasSoiled
+    diaperCondition
+    hadLeakage
+    productRating
+    timeSinceLastChange
+    changeDuration
+    notes
+    healthNotes
+    createdAt
+  }
+`;
+
+export const GET_USAGE_LOGS_QUERY = gql`
+  query GetUsageLogs(
+    $childId: ID!
+    $usageType: UsageTypeEnum
+    $daysBack: Int! = 7
+    $limit: Int! = 50
+    $offset: Int! = 0
+  ) {
+    getUsageLogs(
+      childId: $childId
+      usageType: $usageType
+      daysBack: $daysBack
+      limit: $limit
+      offset: $offset
+    ) {
+      edges {
+        ...UsageLogFragment
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+        totalCount
+      }
+    }
+  }
+  ${USAGE_LOG_FRAGMENT}
+`;
+
+// Query Variables Types for Dashboard
+export interface GetUsageLogsVariables {
+  childId: string;
+  usageType?: 'DIAPER_CHANGE' | 'WIPE_USE' | 'CREAM_APPLICATION' | 'ACCIDENT_CLEANUP' | 'PREVENTIVE_CHANGE' | 'OVERNIGHT_CHANGE';
+  daysBack?: number;
+  limit?: number;
+  offset?: number;
 }

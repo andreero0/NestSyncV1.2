@@ -1,0 +1,458 @@
+/**
+ * GraphQL Mutations for NestSync Application
+ * Includes diaper logging, inventory management, and child management
+ */
+
+import { gql } from '@apollo/client';
+
+// =============================================================================
+// FRAGMENTS
+// =============================================================================
+
+export const CHILD_PROFILE_FRAGMENT = gql`
+  fragment ChildProfileFragment on ChildProfile {
+    id
+    name
+    dateOfBirth
+    gender
+    currentDiaperSize
+    currentWeightKg
+    currentHeightCm
+    dailyUsageCount
+    hasSensitiveSkin
+    hasAllergies
+    allergiesNotes
+    onboardingCompleted
+    province
+    createdAt
+    ageInDays
+    ageInMonths
+    weeklyUsage
+    monthlyUsage
+  }
+`;
+
+export const USAGE_LOG_FRAGMENT = gql`
+  fragment UsageLogFragment on UsageLog {
+    id
+    childId
+    inventoryItemId
+    usageType
+    loggedAt
+    quantityUsed
+    context
+    caregiverName
+    wasWet
+    wasSoiled
+    diaperCondition
+    hadLeakage
+    productRating
+    timeSinceLastChange
+    changeDuration
+    notes
+    healthNotes
+    createdAt
+  }
+`;
+
+export const INVENTORY_ITEM_FRAGMENT = gql`
+  fragment InventoryItemFragment on InventoryItem {
+    id
+    childId
+    productType
+    brand
+    productName
+    size
+    quantityTotal
+    quantityRemaining
+    quantityReserved
+    purchaseDate
+    costCad
+    expiryDate
+    storageLocation
+    isOpened
+    openedDate
+    notes
+    qualityRating
+    wouldRebuy
+    createdAt
+    quantityAvailable
+    usagePercentage
+    isExpired
+    daysUntilExpiry
+  }
+`;
+
+export const DASHBOARD_STATS_FRAGMENT = gql`
+  fragment DashboardStatsFragment on DashboardStats {
+    daysRemaining
+    diapersLeft
+    lastChange
+    todayChanges
+    currentSize
+  }
+`;
+
+// =============================================================================
+// DIAPER LOGGING MUTATIONS
+// =============================================================================
+
+export const LOG_DIAPER_CHANGE_MUTATION = gql`
+  mutation LogDiaperChange($input: LogDiaperChangeInput!) {
+    logDiaperChange(input: $input) {
+      success
+      message
+      error
+      usageLog {
+        ...UsageLogFragment
+      }
+      updatedInventoryItems {
+        ...InventoryItemFragment
+      }
+    }
+  }
+  ${USAGE_LOG_FRAGMENT}
+  ${INVENTORY_ITEM_FRAGMENT}
+`;
+
+// =============================================================================
+// CHILD MANAGEMENT MUTATIONS
+// =============================================================================
+
+export const CREATE_CHILD_MUTATION = gql`
+  mutation CreateChild($input: CreateChildInput!) {
+    createChild(input: $input) {
+      success
+      message
+      error
+      child {
+        ...ChildProfileFragment
+      }
+    }
+  }
+  ${CHILD_PROFILE_FRAGMENT}
+`;
+
+export const UPDATE_CHILD_MUTATION = gql`
+  mutation UpdateChild($childId: ID!, $input: UpdateChildInput!) {
+    updateChild(childId: $childId, input: $input) {
+      success
+      message
+      error
+      child {
+        ...ChildProfileFragment
+      }
+    }
+  }
+  ${CHILD_PROFILE_FRAGMENT}
+`;
+
+export const DELETE_CHILD_MUTATION = gql`
+  mutation DeleteChild($childId: ID!) {
+    deleteChild(childId: $childId) {
+      success
+      message
+      error
+    }
+  }
+`;
+
+// =============================================================================
+// INVENTORY MANAGEMENT MUTATIONS
+// =============================================================================
+
+export const CREATE_INVENTORY_ITEM_MUTATION = gql`
+  mutation CreateInventoryItem($input: CreateInventoryItemInput!) {
+    createInventoryItem(input: $input) {
+      success
+      message
+      error
+      inventoryItem {
+        ...InventoryItemFragment
+      }
+    }
+  }
+  ${INVENTORY_ITEM_FRAGMENT}
+`;
+
+export const UPDATE_INVENTORY_ITEM_MUTATION = gql`
+  mutation UpdateInventoryItem($inventoryItemId: ID!, $input: UpdateInventoryItemInput!) {
+    updateInventoryItem(inventoryItemId: $inventoryItemId, input: $input) {
+      success
+      message
+      error
+      inventoryItem {
+        ...InventoryItemFragment
+      }
+    }
+  }
+  ${INVENTORY_ITEM_FRAGMENT}
+`;
+
+export const SET_INITIAL_INVENTORY_MUTATION = gql`
+  mutation SetInitialInventory($childId: ID!, $inventoryItems: [InitialInventoryInput!]!) {
+    setInitialInventory(childId: $childId, inventoryItems: $inventoryItems) {
+      success
+      message
+      error
+    }
+  }
+`;
+
+// =============================================================================
+// ONBOARDING MUTATIONS
+// =============================================================================
+
+export const COMPLETE_ONBOARDING_STEP_MUTATION = gql`
+  mutation CompleteOnboardingStep($childId: ID!, $input: OnboardingWizardStepInput!) {
+    completeOnboardingStep(childId: $childId, input: $input) {
+      success
+      message
+      error
+    }
+  }
+`;
+
+export const COMPLETE_ONBOARDING_MUTATION = gql`
+  mutation CompleteOnboarding {
+    completeOnboarding {
+      success
+      message
+      error
+    }
+  }
+`;
+
+// =============================================================================
+// DASHBOARD QUERIES (included here for refetch purposes)
+// =============================================================================
+
+export const GET_DASHBOARD_STATS_QUERY = gql`
+  query GetDashboardStats($childId: ID!) {
+    getDashboardStats(childId: $childId) {
+      ...DashboardStatsFragment
+    }
+  }
+  ${DASHBOARD_STATS_FRAGMENT}
+`;
+
+export const GET_USAGE_LOGS_QUERY = gql`
+  query GetUsageLogs(
+    $childId: ID!
+    $usageType: UsageTypeEnum
+    $daysBack: Int! = 7
+    $limit: Int! = 50
+    $offset: Int! = 0
+  ) {
+    getUsageLogs(
+      childId: $childId
+      usageType: $usageType
+      daysBack: $daysBack
+      limit: $limit
+      offset: $offset
+    ) {
+      edges {
+        ...UsageLogFragment
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+        totalCount
+      }
+    }
+  }
+  ${USAGE_LOG_FRAGMENT}
+`;
+
+export const GET_INVENTORY_ITEMS_QUERY = gql`
+  query GetInventoryItems(
+    $childId: ID!
+    $productType: ProductTypeEnum
+    $limit: Int! = 50
+    $offset: Int! = 0
+  ) {
+    getInventoryItems(
+      childId: $childId
+      productType: $productType
+      limit: $limit
+      offset: $offset
+    ) {
+      edges {
+        ...InventoryItemFragment
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+        totalCount
+      }
+    }
+  }
+  ${INVENTORY_ITEM_FRAGMENT}
+`;
+
+// =============================================================================
+// TYPE DEFINITIONS FOR TYPESCRIPT
+// =============================================================================
+
+// Diaper Change Input Types
+export interface LogDiaperChangeInput {
+  childId: string;
+  usageType?: 'DIAPER_CHANGE' | 'WIPE_USE' | 'CREAM_APPLICATION' | 'ACCIDENT_CLEANUP' | 'PREVENTIVE_CHANGE' | 'OVERNIGHT_CHANGE';
+  context?: 'HOME' | 'DAYCARE' | 'OUTING' | 'TRAVEL' | 'GRANDPARENTS' | 'OTHER';
+  caregiverName?: string;
+  wasWet?: boolean;
+  wasSoiled?: boolean;
+  diaperCondition?: string;
+  hadLeakage?: boolean;
+  notes?: string;
+  loggedAt?: string; // ISO string
+}
+
+export interface LogDiaperChangeResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  usageLog?: {
+    id: string;
+    childId: string;
+    inventoryItemId?: string;
+    usageType: string;
+    loggedAt: string;
+    quantityUsed: number;
+    context?: string;
+    caregiverName?: string;
+    wasWet?: boolean;
+    wasSoiled?: boolean;
+    diaperCondition?: string;
+    hadLeakage?: boolean;
+    productRating?: number;
+    timeSinceLastChange?: number;
+    changeDuration?: number;
+    notes?: string;
+    healthNotes?: string;
+    createdAt: string;
+  };
+  updatedInventoryItems?: Array<{
+    id: string;
+    childId: string;
+    productType: string;
+    brand: string;
+    productName?: string;
+    size: string;
+    quantityTotal: number;
+    quantityRemaining: number;
+    quantityReserved: number;
+    purchaseDate: string;
+    costCad?: number;
+    expiryDate?: string;
+    storageLocation?: string;
+    isOpened: boolean;
+    openedDate?: string;
+    notes?: string;
+    qualityRating?: number;
+    wouldRebuy?: boolean;
+    createdAt: string;
+    quantityAvailable: number;
+    usagePercentage: number;
+    isExpired: boolean;
+    daysUntilExpiry?: number;
+  }>;
+}
+
+// Child Management Input Types
+export interface CreateChildInput {
+  name: string;
+  dateOfBirth: string; // Date in ISO format
+  gender?: 'BOY' | 'GIRL' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+  currentDiaperSize: 'NEWBORN' | 'SIZE_1' | 'SIZE_2' | 'SIZE_3' | 'SIZE_4' | 'SIZE_5' | 'SIZE_6' | 'SIZE_7';
+  currentWeightKg?: number;
+  currentHeightCm?: number;
+  dailyUsageCount?: number;
+  hasSensitiveSkin?: boolean;
+  hasAllergies?: boolean;
+  allergiesNotes?: string;
+  preferredBrands?: string[];
+  specialNeeds?: string;
+}
+
+export interface UpdateChildInput {
+  name?: string;
+  currentDiaperSize?: 'NEWBORN' | 'SIZE_1' | 'SIZE_2' | 'SIZE_3' | 'SIZE_4' | 'SIZE_5' | 'SIZE_6' | 'SIZE_7';
+  currentWeightKg?: number;
+  currentHeightCm?: number;
+  dailyUsageCount?: number;
+  hasSensitiveSkin?: boolean;
+  hasAllergies?: boolean;
+  allergiesNotes?: string;
+  preferredBrands?: string[];
+  specialNeeds?: string;
+}
+
+// Inventory Input Types
+export interface CreateInventoryItemInput {
+  childId: string;
+  productType: 'DIAPER' | 'WIPES' | 'DIAPER_CREAM' | 'POWDER' | 'DIAPER_BAGS' | 'TRAINING_PANTS' | 'SWIMWEAR';
+  brand: string;
+  productName?: string;
+  size: string;
+  quantityTotal: number;
+  costCad?: number;
+  expiryDate?: string; // ISO string
+  storageLocation?: string;
+  notes?: string;
+}
+
+export interface UpdateInventoryItemInput {
+  quantityRemaining?: number;
+  storageLocation?: string;
+  notes?: string;
+  qualityRating?: number;
+  wouldRebuy?: boolean;
+}
+
+export interface InitialInventoryInput {
+  diaperSize: 'NEWBORN' | 'SIZE_1' | 'SIZE_2' | 'SIZE_3' | 'SIZE_4' | 'SIZE_5' | 'SIZE_6' | 'SIZE_7';
+  brand: string;
+  quantity: number;
+  purchaseDate?: string; // Date in ISO format
+  expiryDate?: string; // Date in ISO format
+}
+
+// Onboarding Input Types
+export interface OnboardingWizardStepInput {
+  stepName: string;
+  data?: string;
+}
+
+// Dashboard Stats Types
+export interface DashboardStats {
+  daysRemaining?: number;
+  diapersLeft: number;
+  lastChange?: string;
+  todayChanges: number;
+  currentSize?: string;
+}
+
+// Query Variables Types
+export interface GetDashboardStatsVariables {
+  childId: string;
+}
+
+export interface GetUsageLogsVariables {
+  childId: string;
+  usageType?: 'DIAPER_CHANGE' | 'WIPE_USE' | 'CREAM_APPLICATION' | 'ACCIDENT_CLEANUP' | 'PREVENTIVE_CHANGE' | 'OVERNIGHT_CHANGE';
+  daysBack?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface GetInventoryItemsVariables {
+  childId: string;
+  productType?: 'DIAPER' | 'WIPES' | 'DIAPER_CREAM' | 'POWDER' | 'DIAPER_BAGS' | 'TRAINING_PANTS' | 'SWIMWEAR';
+  limit?: number;
+  offset?: number;
+}
