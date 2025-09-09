@@ -57,6 +57,10 @@ export default function HomeScreen() {
   const [addChildModalVisible, setAddChildModalVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   
+  // Recent Activity state for progressive disclosure
+  const [showAllActivity, setShowAllActivity] = useState(false);
+  const ACTIVITY_INITIAL_LIMIT = 5;
+  
   // GraphQL queries
   const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
     variables: { first: 10 },
@@ -80,7 +84,7 @@ export default function HomeScreen() {
       childId: selectedChildId,
       usageType: 'DIAPER_CHANGE',
       daysBack: 7,
-      limit: 10 
+      limit: 50 // Fetch more items for client-side filtering
     },
     skip: !selectedChildId,
     pollInterval: 30000, // Poll every 30 seconds
@@ -128,16 +132,24 @@ export default function HomeScreen() {
   };
 
   // Process recent activity from usage logs
-  const recentActivity: RecentActivity[] = usageLogsData?.getUsageLogs?.edges?.map((edge: any, index: number) => ({
+  const allRecentActivity: RecentActivity[] = usageLogsData?.getUsageLogs?.edges?.map((edge: any, index: number) => ({
     id: edge.node.id || `activity-${index}`,
     time: formatActivityTimestamp(edge.node.loggedAt),
     type: 'diaper-change' as const,
     description: getChangeDescription(edge.node.wasWet, edge.node.wasSoiled, edge.node.notes)
   })) || [];
+  
+  // Apply progressive disclosure limit
+  const recentActivity = showAllActivity 
+    ? allRecentActivity 
+    : allRecentActivity.slice(0, ACTIVITY_INITIAL_LIMIT);
+  
+  const hasMoreActivity = allRecentActivity.length > ACTIVITY_INITIAL_LIMIT;
+  const additionalActivityCount = allRecentActivity.length - ACTIVITY_INITIAL_LIMIT;
 
   // Show loading message when no data is available
   // Enhanced state management
-  const showEmptyState = !usageLogsLoading && recentActivity.length === 0;
+  const showEmptyState = !usageLogsLoading && allRecentActivity.length === 0;
   const showLoadingState = usageLogsLoading && selectedChildId;
   const noChildrenState = !childrenLoading && (!childrenData?.myChildren?.edges || childrenData.myChildren.edges.length === 0);
   const hasMultipleChildren = childrenData?.myChildren?.edges && childrenData.myChildren.edges.length > 1;
@@ -541,16 +553,32 @@ export default function HomeScreen() {
               </View>
             ))}
 
-            {recentActivity.length > 0 && (
+            {/* Progressive Disclosure Controls */}
+            {hasMoreActivity && !showAllActivity && (
               <TouchableOpacity
                 style={[styles.viewAllButton, { borderColor: colors.border }]}
+                onPress={() => setShowAllActivity(true)}
                 accessibilityRole="button"
-                accessibilityLabel="View all activity"
+                accessibilityLabel={`View all activity (${additionalActivityCount} more items)`}
               >
                 <ThemedText style={[styles.viewAllText, { color: colors.tint }]}>
-                  View All Activity
+                  View All Activity ({additionalActivityCount} more)
                 </ThemedText>
-                <IconSymbol name="chevron.right" size={16} color={colors.tint} />
+                <IconSymbol name="chevron.down" size={16} color={colors.tint} />
+              </TouchableOpacity>
+            )}
+            
+            {showAllActivity && hasMoreActivity && (
+              <TouchableOpacity
+                style={[styles.showLessButton, { borderColor: colors.border }]}
+                onPress={() => setShowAllActivity(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Show less activity"
+              >
+                <ThemedText style={[styles.showLessText, { color: colors.textSecondary }]}>
+                  Show Less
+                </ThemedText>
+                <IconSymbol name="chevron.up" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </ThemedView>
@@ -718,8 +746,8 @@ const styles = StyleSheet.create({
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    marginBottom: 8,
+    padding: 18, // Increased padding for better visual separation
+    marginBottom: 12, // Increased margin for better spacing
     borderRadius: 12,
     borderWidth: 1,
   },
@@ -731,22 +759,42 @@ const styles = StyleSheet.create({
   },
   activityDescription: {
     fontSize: 16,
-    marginBottom: 2,
+    fontWeight: '600', // Stronger weight for primary information
+    marginBottom: 4, // Slightly more separation
   },
   activityTime: {
-    fontSize: 12,
+    fontSize: 13, // Slightly larger for better readability
+    lineHeight: 16,
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
+    paddingVertical: 14, // Increased touch target
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 12,
+    gap: 8,
+    minHeight: 48, // Ensure minimum touch target size
+  },
+  viewAllText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  showLessButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
     marginTop: 8,
-    gap: 4,
+    gap: 6,
+    minHeight: 44,
   },
-  viewAllText: {
+  showLessText: {
     fontSize: 14,
     fontWeight: '500',
   },
