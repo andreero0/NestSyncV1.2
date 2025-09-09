@@ -159,6 +159,15 @@ export class AuthService {
         };
       }
 
+      // First check server connectivity
+      const connectivityCheck = await this.checkServerConnectivity();
+      if (!connectivityCheck.connected) {
+        return {
+          success: false,
+          error: connectivityCheck.error || 'Server is not available. Please try again later.',
+        };
+      }
+
       // Set default Canadian timezone if not provided
       if (!input.timezone && input.province) {
         input.timezone = this.getDefaultTimezoneForProvince(input.province as CanadianProvince);
@@ -207,8 +216,24 @@ export class AuthService {
         success: false,
         error: response.error || 'Sign up failed',
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign up error:', error);
+      
+      // Provide more specific error messages
+      if (error.networkError) {
+        return {
+          success: false,
+          error: 'Network connection failed. Please check your internet connection and try again.',
+        };
+      }
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        return {
+          success: false,
+          error: error.graphQLErrors[0].message || 'Registration failed. Please try again.',
+        };
+      }
+      
       return {
         success: false,
         error: 'Sign up failed. Please try again.',
@@ -217,10 +242,46 @@ export class AuthService {
   }
 
   /**
+   * Check server connectivity
+   */
+  async checkServerConnectivity(): Promise<{ connected: boolean; error?: string }> {
+    try {
+      const { data } = await apolloClient.query({
+        query: ME_QUERY,
+        fetchPolicy: 'network-only',
+        errorPolicy: 'all',
+      });
+      return { connected: true };
+    } catch (error: any) {
+      console.log('Server connectivity check failed:', error);
+      
+      // Check if it's a network error
+      if (error.networkError) {
+        return { 
+          connected: false, 
+          error: 'Unable to connect to server. Please check your internet connection.' 
+        };
+      }
+      
+      // If we get GraphQL errors but no network error, server is reachable
+      return { connected: true };
+    }
+  }
+
+  /**
    * Sign in user
    */
   async signIn(input: SignInInput): Promise<AuthResponse> {
     try {
+      // First check server connectivity
+      const connectivityCheck = await this.checkServerConnectivity();
+      if (!connectivityCheck.connected) {
+        return {
+          success: false,
+          error: connectivityCheck.error || 'Server is not available. Please try again later.',
+        };
+      }
+
       const { data } = await apolloClient.mutate<SignInMutationData, SignInMutationVariables>({
         mutation: SIGN_IN_MUTATION,
         variables: { input },
@@ -254,8 +315,24 @@ export class AuthService {
         success: false,
         error: response.error || 'Sign in failed',
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign in error:', error);
+      
+      // Provide more specific error messages
+      if (error.networkError) {
+        return {
+          success: false,
+          error: 'Network connection failed. Please check your internet connection and try again.',
+        };
+      }
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        return {
+          success: false,
+          error: error.graphQLErrors[0].message || 'Authentication failed. Please check your credentials.',
+        };
+      }
+      
       return {
         success: false,
         error: 'Sign in failed. Please try again.',

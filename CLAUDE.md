@@ -178,8 +178,17 @@ export function ComponentName() {
 ## Common Troubleshooting (From bottlenecks.md)
 
 ### Network Connectivity Issues
-**Problem**: "ApolloError: Network request failed"
-**Solution**: Ensure both frontend (port 8082) and backend (port 8001) servers are running
+**Problem**: "ApolloError: Network request failed" during authentication
+**Root Cause**: Backend server not running or not accessible on localhost:8001
+**Solution**: 
+1. **Quick Start**: Use the development startup script: `./start-dev-servers.sh`
+2. **Manual Start**: 
+   - Backend: `cd NestSync-backend && source venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8001 --reload`
+   - Frontend: `cd NestSync-frontend && npx expo start --port 8082`
+3. **Verify Connectivity**: 
+   - Backend health: `curl http://localhost:8001/graphql -H "Content-Type: application/json" -d '{"query":"{ __schema { types { name } } }"}'`
+   - Frontend access: `curl -I http://localhost:8082`
+4. **Enhanced Error Handling**: AuthService now includes automatic server connectivity validation with user-friendly error messages
 
 ### GraphQL Authentication Errors  
 **Problem**: "Error during sign in: __aenter__"
