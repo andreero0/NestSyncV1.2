@@ -16,6 +16,7 @@ import { GET_DASHBOARD_STATS_QUERY, LOG_DIAPER_CHANGE_MUTATION } from '@/lib/gra
 import { QuickLogModal } from '@/components/modals/QuickLogModal';
 import { AddInventoryModal } from '@/components/modals/AddInventoryModal';
 import { AddChildModal } from '@/components/modals/AddChildModal';
+import { formatDiaperSize, formatFieldWithFallback } from '@/lib/utils/enumDisplayFormatters';
 
 const { width } = Dimensions.get('window');
 
@@ -110,20 +111,20 @@ export default function HomeScreen() {
     await setStoredChildId(childId);
   };
 
-  // Process dashboard stats with fallback
+  // Process dashboard stats with fallback and user-friendly formatting
   const dashboardStats: DashboardStats = dashboardData?.getDashboardStats ? {
     daysRemaining: dashboardData.getDashboardStats.daysRemaining || 0,
     diapersLeft: dashboardData.getDashboardStats.diapersLeft || 0,
-    lastChange: dashboardData.getDashboardStats.lastChange || 'No data',
+    lastChange: formatFieldWithFallback(dashboardData.getDashboardStats.lastChange, 'time'),
     todayChanges: dashboardData.getDashboardStats.todayChanges || 0,
-    currentSize: dashboardData.getDashboardStats.currentSize || 'Unknown'
+    currentSize: formatDiaperSize(dashboardData.getDashboardStats.currentSize)
   } : {
     // Fallback data when loading or no child selected
     daysRemaining: dashboardLoading ? 0 : 12,
     diapersLeft: dashboardLoading ? 0 : 24,
     lastChange: dashboardLoading ? 'Loading...' : '2 hours ago',
     todayChanges: dashboardLoading ? 0 : 5,
-    currentSize: dashboardLoading ? 'Loading...' : 'Size 2'
+    currentSize: dashboardLoading ? 'Loading...' : formatDiaperSize('SIZE_2')
   };
 
   // Process recent activity from usage logs

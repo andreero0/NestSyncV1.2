@@ -236,35 +236,6 @@ export const GET_DASHBOARD_STATS_QUERY = gql`
   ${DASHBOARD_STATS_FRAGMENT}
 `;
 
-export const GET_USAGE_LOGS_QUERY = gql`
-  query GetUsageLogs(
-    $childId: ID!
-    $usageType: UsageTypeEnum
-    $daysBack: Int! = 7
-    $limit: Int! = 50
-    $offset: Int! = 0
-  ) {
-    getUsageLogs(
-      childId: $childId
-      usageType: $usageType
-      daysBack: $daysBack
-      limit: $limit
-      offset: $offset
-    ) {
-      edges {
-        ...UsageLogFragment
-      }
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        startCursor
-        endCursor
-        totalCount
-      }
-    }
-  }
-  ${USAGE_LOG_FRAGMENT}
-`;
 
 export const GET_INVENTORY_ITEMS_QUERY = gql`
   query GetInventoryItems(
@@ -280,7 +251,10 @@ export const GET_INVENTORY_ITEMS_QUERY = gql`
       offset: $offset
     ) {
       edges {
-        ...InventoryItemFragment
+        node {
+          ...InventoryItemFragment
+        }
+        cursor
       }
       pageInfo {
         hasNextPage

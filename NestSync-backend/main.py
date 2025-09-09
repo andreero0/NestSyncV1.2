@@ -148,15 +148,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware configuration (PIPEDA compliant)
-cors_origins = get_development_cors_origins()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["*"],
-)
+# Add comprehensive security middleware for PIPEDA compliance FIRST
+setup_security_middleware(app)
 
 # Trusted host middleware - only in production for security
 if ENVIRONMENT == "production":
@@ -172,8 +165,15 @@ else:
     # In development, skip TrustedHostMiddleware to allow flexible IP access
     logger.info("Development mode: TrustedHostMiddleware disabled for flexible IP access")
 
-# Add comprehensive security middleware for PIPEDA compliance
-setup_security_middleware(app)
+# CORS middleware configuration (PIPEDA compliant) - LAST to ensure CORS headers are applied
+cors_origins = get_development_cors_origins()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # Custom OpenAPI schema for Canadian compliance
 def custom_openapi():

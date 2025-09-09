@@ -24,6 +24,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
+import { formatDiaperSize } from '@/lib/utils/enumDisplayFormatters';
 
 const { width } = Dimensions.get('window');
 
@@ -111,7 +112,7 @@ export function ChildSelector({
         ]}
         onPress={() => handleChildSelect(child.id)}
         accessibilityRole="button"
-        accessibilityLabel={`Select ${child.name}, ${formatAge(child)}, currently using ${child.currentDiaperSize}`}
+        accessibilityLabel={`Select ${child.name}, ${formatAge(child)}, currently using ${formatDiaperSize(child.currentDiaperSize)}`}
       >
         <View style={[styles.childIcon, { backgroundColor: colors.background }]}>
           <IconSymbol 
@@ -137,7 +138,7 @@ export function ChildSelector({
               { color: colors.textSecondary }
             ]}
           >
-            {formatAge(child)} • {child.currentDiaperSize}
+            {formatAge(child)} • {formatDiaperSize(child.currentDiaperSize)}
           </ThemedText>
         </View>
         

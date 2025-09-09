@@ -625,6 +625,7 @@ export const GET_USAGE_LOGS_QUERY = gql`
     $limit: Int! = 50
     $offset: Int! = 0
   ) {
+    # Fixed fragment structure - cache buster v2
     getUsageLogs(
       childId: $childId
       usageType: $usageType
@@ -633,7 +634,10 @@ export const GET_USAGE_LOGS_QUERY = gql`
       offset: $offset
     ) {
       edges {
-        ...UsageLogFragment
+        node {
+          ...UsageLogFragment
+        }
+        cursor
       }
       pageInfo {
         hasNextPage
