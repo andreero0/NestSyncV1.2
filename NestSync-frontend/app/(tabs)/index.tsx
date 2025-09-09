@@ -128,11 +128,11 @@ export default function HomeScreen() {
   };
 
   // Process recent activity from usage logs
-  const recentActivity: RecentActivity[] = usageLogsData?.getUsageLogs?.edges?.map((log, index) => ({
-    id: log.id || `activity-${index}`,
-    time: formatTimeAgo(log.loggedAt),
+  const recentActivity: RecentActivity[] = usageLogsData?.getUsageLogs?.edges?.map((edge: any, index: number) => ({
+    id: edge.node.id || `activity-${index}`,
+    time: formatActivityTimestamp(edge.node.loggedAt),
     type: 'diaper-change' as const,
-    description: getChangeDescription(log.wasWet, log.wasSoiled, log.notes)
+    description: getChangeDescription(edge.node.wasWet, edge.node.wasSoiled, edge.node.notes)
   })) || [];
 
   // Show loading message when no data is available
@@ -142,34 +142,76 @@ export default function HomeScreen() {
   const noChildrenState = !childrenLoading && (!childrenData?.myChildren?.edges || childrenData.myChildren.edges.length === 0);
   const hasMultipleChildren = childrenData?.myChildren?.edges && childrenData.myChildren.edges.length > 1;
 
-  // Helper function to format time ago
-  function formatTimeAgo(dateString: string): string {
-    const now = new Date();
+  // Helper function for hybrid timestamp display with Canadian timezone
+  function formatActivityTimestamp(dateString: string): string {
     const logDate = new Date(dateString);
-    const diffMs = now.getTime() - logDate.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMinutes < 60) {
-      return diffMinutes <= 1 ? 'Just now' : `${diffMinutes} minutes ago`;
-    } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    const now = new Date();
+    
+    // Get Canadian timezone (defaults to America/Toronto - Eastern Time)
+    const timeZone = 'America/Toronto';
+    const timeZoneName = now.toLocaleDateString('en-CA', { 
+      timeZone, 
+      timeZoneName: 'short' 
+    }).split(',').pop()?.trim() || 'EDT';
+    
+    // Format time in 12-hour format
+    const timeFormatter = new Intl.DateTimeFormat('en-CA', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone
+    });
+    const timeStr = timeFormatter.format(logDate);
+    
+    // Check if same day
+    const isToday = logDate.toDateString() === now.toDateString();
+    
+    // Check if yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = logDate.toDateString() === yesterday.toDateString();
+    
+    // Check if within this week (last 7 days)
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const isThisWeek = logDate > oneWeekAgo;
+    
+    if (isToday) {
+      // Today: just show time with timezone
+      return `${timeStr} ${timeZoneName}`;
+    } else if (isYesterday) {
+      // Yesterday: "Yesterday, 3:26 PM EDT"
+      return `Yesterday, ${timeStr} ${timeZoneName}`;
+    } else if (isThisWeek) {
+      // This week: "Monday, 3:26 PM EDT"
+      const dayName = logDate.toLocaleDateString('en-CA', { 
+        weekday: 'long',
+        timeZone 
+      });
+      return `${dayName}, ${timeStr} ${timeZoneName}`;
     } else {
-      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      // Older: "Dec 5, 3:26 PM EDT"
+      const dateStr = logDate.toLocaleDateString('en-CA', { 
+        month: 'short',
+        day: 'numeric',
+        timeZone
+      });
+      return `${dateStr}, ${timeStr} ${timeZoneName}`;
     }
   }
 
-  // Helper function to get change description
+  // Helper function to get change description - clearer, parent-friendly format
   function getChangeDescription(wasWet?: boolean, wasSoiled?: boolean, notes?: string): string {
-    let description = 'Diaper changed';
+    let description = '';
     
     if (wasWet && wasSoiled) {
-      description += ' - wet + soiled';
+      description = 'Wet and soiled diaper';
     } else if (wasWet) {
-      description += ' - wet';
+      description = 'Wet diaper';
     } else if (wasSoiled) {
-      description += ' - soiled';
+      description = 'Soiled diaper';
+    } else {
+      description = 'Dry diaper';
     }
     
     if (notes) {
