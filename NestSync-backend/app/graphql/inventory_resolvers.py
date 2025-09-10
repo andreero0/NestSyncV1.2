@@ -40,6 +40,44 @@ from .types import (
 logger = logging.getLogger(__name__)
 
 
+def calculate_changes_ready(diapers_left: int, wipes_left: int, avg_wipes_per_change: float = 4.0) -> int:
+    """
+    Calculate complete diaper changes possible with current supplies
+    Returns minimum of: diapers available OR wipes available / wipes per change
+    
+    Args:
+        diapers_left: Total diapers available
+        wipes_left: Total wipes available
+        avg_wipes_per_change: Average wipes used per diaper change (default 4.0 based on Canadian parent research)
+    
+    Returns:
+        int: Number of complete diaper changes possible
+    """
+    logger.info(f"=== CHANGING READINESS CALCULATION START ===")
+    logger.info(f"Input: diapers_left={diapers_left}, wipes_left={wipes_left}, avg_wipes_per_change={avg_wipes_per_change}")
+    
+    if diapers_left <= 0:
+        logger.info(f"No diapers available - changes_ready=0")
+        return 0
+        
+    if wipes_left <= 0:
+        logger.info(f"No wipes available - changes_ready=0")
+        return 0
+    
+    # Calculate possible changes from each resource
+    possible_from_diapers = diapers_left
+    possible_from_wipes = int(wipes_left / avg_wipes_per_change)
+    
+    # Return the limiting factor
+    changes_ready = min(possible_from_diapers, possible_from_wipes)
+    
+    logger.info(f"Calculation: possible_from_diapers={possible_from_diapers}, possible_from_wipes={possible_from_wipes}")
+    logger.info(f"Result: changes_ready={changes_ready} (limited by {'diapers' if changes_ready == possible_from_diapers else 'wipes'})")
+    logger.info(f"=== CHANGING READINESS CALCULATION END ===")
+    
+    return changes_ready
+
+
 def inventory_item_to_graphql(item: InventoryItem) -> InventoryItemType:
     """Convert InventoryItem model to GraphQL type"""
     return InventoryItemType(
@@ -128,6 +166,7 @@ class InventoryQueries:
         try:
             async for session in get_async_session():
                 child_uuid = uuid.UUID(child_id)
+                logger.info(f"=== DASHBOARD STATS CALCULATION START for child {child_uuid} ===")
                 
                 # Get current diaper inventory
                 diaper_query = select(InventoryItem).where(
@@ -140,8 +179,66 @@ class InventoryQueries:
                 diaper_items = await session.execute(diaper_query)
                 diaper_items = diaper_items.scalars().all()
                 
-                # Calculate total diapers left
-                diapers_left = sum(item.quantity_remaining for item in diaper_items)
+                logger.info(f"Found {len(diaper_items)} diaper inventory items")
+                for item in diaper_items:
+                    logger.info(f"  - Item {item.id}: {item.brand} {item.size}, total={item.quantity_total}, remaining={item.quantity_remaining}, available={item.quantity_available}")
+                
+                # Get child profile first to get current diaper size (needed for consistent calculations)
+                child_query = select(Child).where(
+                    and_(
+                        Child.id == child_uuid,
+                        Child.is_deleted == False
+                    )
+                )
+                child_result = await session.execute(child_query)
+                child = child_result.scalar_one_or_none()
+                
+                current_size = child.current_diaper_size if child else None
+                logger.info(f"Child current diaper size: {current_size}")
+                
+                # Calculate usable diapers left (only diapers matching child's current size)
+                usable_diapers_left = 0
+                if current_size:
+                    # Case-insensitive comparison for diaper size matching
+                    usable_diapers_left = sum(
+                        item.quantity_remaining for item in diaper_items 
+                        if item.size.upper() == current_size.upper()
+                    )
+                    logger.info(f"Usable diapers left for size {current_size}: {usable_diapers_left}")
+                    
+                    # Log breakdown by size for clarity
+                    size_breakdown = {}
+                    for item in diaper_items:
+                        if item.size not in size_breakdown:
+                            size_breakdown[item.size] = 0
+                        size_breakdown[item.size] += item.quantity_remaining
+                    logger.info(f"Diaper inventory by size: {size_breakdown}")
+                else:
+                    logger.warning(f"Child {child_uuid} has no current_diaper_size set")
+                
+                # Get current wipes inventory
+                wipes_query = select(InventoryItem).where(
+                    and_(
+                        InventoryItem.child_id == child_uuid,
+                        InventoryItem.product_type == "wipes",
+                        InventoryItem.is_deleted == False,
+                        InventoryItem.quantity_remaining > 0
+                    )
+                )
+                wipes_items = await session.execute(wipes_query)
+                wipes_items = wipes_items.scalars().all()
+                
+                logger.info(f"Found {len(wipes_items)} wipes inventory items")
+                for item in wipes_items:
+                    logger.info(f"  - Item {item.id}: {item.brand} {item.product_name or 'N/A'}, remaining={item.quantity_remaining}")
+                
+                # Calculate total wipes left
+                wipes_left = sum(item.quantity_remaining for item in wipes_items)
+                logger.info(f"Total wipes left calculated: {wipes_left}")
+                
+                # Calculate changes ready using ONLY usable diapers (correct size) and wipes
+                changes_ready = calculate_changes_ready(usable_diapers_left, wipes_left, avg_wipes_per_change=4.0)
+                logger.info(f"Changes ready calculated: {changes_ready} (usable_diapers={usable_diapers_left}, wipes={wipes_left})")
                 
                 # Get today's usage logs
                 today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -158,6 +255,7 @@ class InventoryQueries:
                 )
                 today_changes_result = await session.execute(today_changes_query)
                 today_changes = today_changes_result.scalar() or 0
+                logger.info(f"Today's changes count: {today_changes} (from {today_start} to {today_end})")
                 
                 # Get last change
                 last_change_query = select(UsageLog).where(
@@ -172,17 +270,7 @@ class InventoryQueries:
                 
                 last_change = format_time_ago(last_change_log.logged_at) if last_change_log else None
                 
-                # Get child's profile daily usage count as primary source
-                child_query = select(Child).where(
-                    and_(
-                        Child.id == child_uuid,
-                        Child.is_deleted == False
-                    )
-                )
-                child_result = await session.execute(child_query)
-                child = child_result.scalar_one_or_none()
-                
-                # Use child's profile daily usage as primary source
+                # Use child's profile daily usage as primary source (child already fetched above)
                 daily_usage = float(child.daily_usage_count) if child and child.daily_usage_count else 8.0
                 
                 # Calculate average daily usage over last 7 days for comparison
@@ -206,22 +294,34 @@ class InventoryQueries:
                     daily_usage = max(daily_usage, logged_daily_usage)
                     
                 logger.info(f"Dashboard calculation for child {child_uuid}: profile_daily={child.daily_usage_count if child else 'N/A'}, weekly_logged={weekly_usage}, calculated_daily={daily_usage}")
+                logger.info(f"Child profile: id={child.id if child else 'N/A'}, name={child.name if child else 'N/A'}, current_size={child.current_diaper_size if child else 'N/A'}")
                 
                 # Calculate days remaining
                 days_remaining = None
-                if diapers_left > 0 and daily_usage > 0:
-                    days_remaining = int(diapers_left / daily_usage)
+                if usable_diapers_left > 0 and daily_usage > 0:
+                    days_remaining = int(usable_diapers_left / daily_usage)
                 
-                # Get current diaper size from child profile (already fetched above)
-                current_size = child.current_diaper_size if child else None
-                
-                return DashboardStats(
+                dashboard_stats = DashboardStats(
                     days_remaining=days_remaining,
-                    diapers_left=diapers_left,
+                    diapers_left=usable_diapers_left,
+                    wipes_left=wipes_left,
+                    changes_ready=changes_ready,
                     last_change=last_change,
                     today_changes=today_changes,
                     current_size=current_size
                 )
+                
+                logger.info(f"=== DASHBOARD STATS RESULT ===")
+                logger.info(f"  days_remaining: {days_remaining}")
+                logger.info(f"  diapers_left (usable): {usable_diapers_left}")
+                logger.info(f"  wipes_left: {wipes_left}")
+                logger.info(f"  changes_ready: {changes_ready}")
+                logger.info(f"  last_change: {last_change}")
+                logger.info(f"  today_changes: {today_changes}")
+                logger.info(f"  current_size: {current_size}")
+                logger.info(f"=== DASHBOARD STATS CALCULATION END ===")
+                
+                return dashboard_stats
                 
         except Exception as e:
             logger.error(f"Error getting dashboard stats: {e}")
@@ -229,6 +329,8 @@ class InventoryQueries:
             return DashboardStats(
                 days_remaining=None,
                 diapers_left=0,
+                wipes_left=0,
+                changes_ready=0,
                 last_change=None,
                 today_changes=0,
                 current_size=None
@@ -489,31 +591,56 @@ class InventoryMutations:
                 # Find and update diaper inventory
                 updated_items = []
                 if input.usage_type == UsageTypeEnum.DIAPER_CHANGE:
-                    # Find available diaper inventory for child's current size
-                    inventory_query = select(InventoryItem).where(
-                        and_(
-                            InventoryItem.child_id == child_uuid,
-                            InventoryItem.product_type == "diaper",
-                            InventoryItem.size == child.current_diaper_size,
-                            InventoryItem.quantity_remaining > 0,
-                            InventoryItem.is_deleted == False
-                        )
-                    ).order_by(asc(InventoryItem.expiry_date), asc(InventoryItem.created_at)).limit(1)
+                    logger.info(f"=== DIAPER CHANGE INVENTORY UPDATE START ===")
+                    logger.info(f"Looking for diapers for child {child_uuid}, size: {child.current_diaper_size}")
                     
-                    inventory_result = await session.execute(inventory_query)
-                    inventory_item = inventory_result.scalar_one_or_none()
+                    # Use no_autoflush to prevent premature flushing during inventory lookup
+                    with session.no_autoflush:
+                        # Find available diaper inventory for child's current size (case-insensitive)
+                        inventory_query = select(InventoryItem).where(
+                            and_(
+                                InventoryItem.child_id == child_uuid,
+                                InventoryItem.product_type == "diaper",
+                                InventoryItem.quantity_remaining > 0,
+                                InventoryItem.is_deleted == False
+                            )
+                        ).order_by(asc(InventoryItem.expiry_date), asc(InventoryItem.created_at))
+                        
+                        inventory_result = await session.execute(inventory_query)
+                        all_inventory_items = inventory_result.scalars().all()
+                        
+                        # Filter by size (case-insensitive)
+                        child_size_upper = child.current_diaper_size.upper()
+                        logger.info(f"Searching for size: '{child_size_upper}' among {len(all_inventory_items)} inventory items")
+                        for i, item in enumerate(all_inventory_items):
+                            logger.info(f"  Item {i}: size='{item.size}', size.upper()='{item.size.upper()}', match={item.size.upper() == child_size_upper}")
+                        
+                        inventory_item = None
+                        for item in all_inventory_items:
+                            if item.size.upper() == child_size_upper:
+                                inventory_item = item
+                                break
                     
                     if inventory_item:
+                        logger.info(f"Found inventory item {inventory_item.id}: {inventory_item.brand} {inventory_item.size}")
+                        logger.info(f"  Before use: total={inventory_item.quantity_total}, remaining={inventory_item.quantity_remaining}, available={inventory_item.quantity_available}")
+                        
                         # Use one diaper from inventory
                         if inventory_item.use_quantity(1, usage_log.logged_at):
+                            logger.info(f"  After use: remaining={inventory_item.quantity_remaining}, available={inventory_item.quantity_available}")
                             usage_log.inventory_item_id = inventory_item.id
                             updated_items.append(inventory_item_to_graphql(inventory_item))
+                            logger.info(f"Successfully used 1 diaper from inventory item {inventory_item.id}")
                         else:
-                            logger.warning(f"Could not use diaper from inventory item {inventory_item.id}")
+                            logger.error(f"FAILED to use diaper from inventory item {inventory_item.id} - insufficient stock")
                     else:
-                        logger.warning(f"No diaper inventory available for child {child_uuid} size {child.current_diaper_size}")
+                        logger.error(f"No diaper inventory available for child {child_uuid} size {child.current_diaper_size}")
+                    
+                    logger.info(f"=== DIAPER CHANGE INVENTORY UPDATE END ===")
                 
+                logger.info(f"Committing diaper change transaction for usage log {usage_log.id}")
                 await session.commit()
+                logger.info(f"Transaction committed successfully")
                 
                 return LogDiaperChangeResponse(
                     success=True,
@@ -667,4 +794,4 @@ class InventoryMutations:
             return UpdateInventoryItemResponse(
                 success=False,
                 error=f"Failed to update inventory item: {str(e)}"
-            )
+            )# Changing Readiness Implementation Complete

@@ -527,6 +527,8 @@ class DashboardStats:
     """Dashboard statistics for the home screen"""
     days_remaining: Optional[int]
     diapers_left: int
+    wipes_left: int
+    changes_ready: int
     last_change: Optional[str]
     today_changes: int
     current_size: Optional[str]
