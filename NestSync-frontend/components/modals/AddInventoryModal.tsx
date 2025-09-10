@@ -24,10 +24,13 @@ import Animated, {
 
 import { ThemedText } from '../ThemedText';
 import { IconSymbol } from '../ui/IconSymbol';
+import { PremiumProductGate } from '../ui/PremiumGate';
+import { PremiumModal } from './PremiumModal';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { CREATE_INVENTORY_ITEM_MUTATION, GET_DASHBOARD_STATS_QUERY, GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/mutations';
 import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
+import { usePremiumStore, isPremiumProduct, ProductType } from '@/stores/premiumStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -227,9 +230,9 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
         size: selectedSize,
         quantityTotal: quantityNumber,
         costCad: cost.trim() ? parseFloat(cost) : undefined,
-        expiryDate: expiryDate.trim() || undefined,
-        storageLocation: storageLocation.trim() || undefined,
-        notes: notes.trim() || undefined,
+        expiryDate: expiryDate.trim() || undefined, // Repurposed as purchase date
+        storageLocation: undefined, // Simplified - not needed for diaper planning
+        notes: undefined, // Simplified - not needed for diaper planning
       };
 
       const result = await createInventoryItem({
@@ -237,10 +240,13 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
       });
 
       if (result.data?.createInventoryItem?.success) {
-        onSuccess?.('Inventory item added successfully!');
+        // Get product label for dynamic success message
+        const productTypeObj = PRODUCT_TYPES.find(type => type.id === selectedProductType);
+        const productLabel = productTypeObj?.label || 'Items';
+        onSuccess?.(`${productLabel} added successfully! You're all set.`);
         handleClose();
       } else {
-        console.error('Failed to add inventory item:', result.data?.createInventoryItem?.error);
+        console.error(`Failed to add ${selectedProductType.toLowerCase()}:`, result.data?.createInventoryItem?.error);
       }
     } catch (error) {
       console.error('Error adding inventory item:', error);
@@ -354,7 +360,7 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
                 <View style={[styles.childIndicator, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <IconSymbol name="person.circle.fill" size={20} color={colors.tint} />
                   <ThemedText type="defaultSemiBold" style={[styles.childIndicatorText, { color: colors.text }]}>
-                    Adding stock for: {childrenData.myChildren.edges.find(edge => edge.node.id === selectedChildId)?.node.firstName || 'Selected Child'}
+                    Adding stock for: {childrenData.myChildren.edges.find(edge => edge.node.id === selectedChildId)?.node.name || 'Unknown Child'}
                   </ThemedText>
                 </View>
               )}
@@ -365,59 +371,90 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
                   What are you adding?
                 </ThemedText>
                 <View style={styles.productTypes}>
-                  {PRODUCT_TYPES.map((type) => (
-                    <TouchableOpacity
-                      key={type.id}
-                      style={[
-                        styles.productTypeButton,
-                        {
-                          backgroundColor: selectedProductType === type.id ? colors.success : colors.surface,
-                          borderColor: selectedProductType === type.id ? colors.success : colors.border,
-                        },
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setSelectedProductType(type.id);
-                        // Reset size when changing product type
-                        if (type.id === 'DIAPER' || type.id === 'TRAINING_PANTS') {
-                          setSelectedSize('SIZE_2');
-                        } else {
-                          setSelectedSize('MEDIUM');
-                        }
-                      }}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: selectedProductType === type.id }}
-                    >
-                      <IconSymbol
-                        name={type.icon}
-                        size={20}
-                        color={selectedProductType === type.id ? '#FFFFFF' : colors.textSecondary}
-                      />
-                      <View style={styles.productTypeContent}>
-                        <ThemedText
-                          type="defaultSemiBold"
-                          style={[
-                            styles.productTypeLabel,
-                            {
-                              color: selectedProductType === type.id ? '#FFFFFF' : colors.text,
-                            },
-                          ]}
+                  {PRODUCT_TYPES.map((type) => {
+                    const productType = type.id as ProductType;
+                    const isPremium = isPremiumProduct(productType);
+                    
+                    const productButton = (
+                      <TouchableOpacity
+                        key={type.id}
+                        style={[
+                          styles.productTypeButton,
+                          {
+                            backgroundColor: selectedProductType === type.id ? colors.success : colors.surface,
+                            borderColor: selectedProductType === type.id ? colors.success : colors.border,
+                          },
+                        ]}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setSelectedProductType(type.id);
+                          // Reset size when changing product type
+                          if (type.id === 'DIAPER' || type.id === 'TRAINING_PANTS') {
+                            setSelectedSize('SIZE_2');
+                          } else {
+                            setSelectedSize('MEDIUM');
+                          }
+                        }}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: selectedProductType === type.id }}
+                      >
+                        <IconSymbol
+                          name={type.icon}
+                          size={20}
+                          color={selectedProductType === type.id ? '#FFFFFF' : colors.textSecondary}
+                        />
+                        <View style={styles.productTypeContent}>
+                          <View style={styles.productTypeLabelRow}>
+                            <ThemedText
+                              type="defaultSemiBold"
+                              style={[
+                                styles.productTypeLabel,
+                                {
+                                  color: selectedProductType === type.id ? '#FFFFFF' : colors.text,
+                                },
+                              ]}
+                            >
+                              {type.label}
+                            </ThemedText>
+                            {isPremium && (
+                              <IconSymbol
+                                name="crown.fill"
+                                size={12}
+                                color={selectedProductType === type.id ? '#FFFFFF' : colors.tint}
+                                style={{ marginLeft: 6 }}
+                              />
+                            )}
+                          </View>
+                          <ThemedText
+                            style={[
+                              styles.productTypeDescription,
+                              {
+                                color: selectedProductType === type.id ? '#FFFFFF' : colors.textSecondary,
+                              },
+                            ]}
+                          >
+                            {type.description}
+                          </ThemedText>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                    
+                    // Wrap premium products with PremiumProductGate
+                    if (isPremium) {
+                      return (
+                        <PremiumProductGate
+                          key={type.id}
+                          productType={productType}
+                          showPreview={false}
+                          style={styles.premiumGateWrapper}
                         >
-                          {type.label}
-                        </ThemedText>
-                        <ThemedText
-                          style={[
-                            styles.productTypeDescription,
-                            {
-                              color: selectedProductType === type.id ? '#FFFFFF' : colors.textSecondary,
-                            },
-                          ]}
-                        >
-                          {type.description}
-                        </ThemedText>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                          {productButton}
+                        </PremiumProductGate>
+                      );
+                    }
+                    
+                    return productButton;
+                  })}
                 </View>
               </View>
 
@@ -664,6 +701,9 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
           </KeyboardAvoidingView>
         </Animated.View>
       </Animated.View>
+      
+      {/* Premium Modal */}
+      <PremiumModal />
     </Modal>
   );
 }
@@ -685,13 +725,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.25)',
     elevation: 10,
   },
   header: {
@@ -856,5 +890,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  // Diaper-focused UI styles
+  diaperFocusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    marginBottom: 24,
+    gap: 12,
+  },
+  focusContent: {
+    flex: 1,
+  },
+  focusTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  focusDescription: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  
+  // Premium gating styles
+  premiumGateWrapper: {
+    marginBottom: 8,
+  },
+  
+  productTypeLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
