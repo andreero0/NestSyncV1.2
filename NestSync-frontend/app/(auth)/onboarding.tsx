@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Dropdown } from 'react-native-element-dropdown';
+import DropDownPicker from 'react-native-dropdown-picker';
 import { useMutation, ApolloError } from '@apollo/client';
 import { ensureValidToken } from '../../lib/graphql/client';
 import { useAuth, useUserPersona, useOnboarding } from '../../stores/authStore';
@@ -105,6 +105,10 @@ export default function OnboardingScreen() {
   const [selectedPersona, setSelectedPersona] = useState<UserPersona | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [genderDropdownOpen, setGenderDropdownOpen] = useState(false);
+  const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const [absorbencyDropdownOpen, setAbsorbencyDropdownOpen] = useState(false);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     childInfo: null,
     inventory: [],
@@ -562,18 +566,41 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Gender</Text>
-          <Dropdown
-            style={styles.dropdown}
-            placeholderStyle={styles.placeholderStyle}
-            selectedTextStyle={styles.selectedTextStyle}
-            data={GENDER_OPTIONS}
-            maxHeight={300}
-            labelField="label"
-            valueField="value"
-            placeholder="Select gender"
+          <Text style={[styles.label, { color: colors.textEmphasis }]}>Gender</Text>
+          <DropDownPicker
+            open={genderDropdownOpen}
             value={childInfo.gender}
-            onChange={(item) => setChildInfo(prev => ({ ...prev, gender: item.value as any }))}
+            items={GENDER_OPTIONS}
+            setOpen={setGenderDropdownOpen}
+            setValue={(callback) => {
+              const newValue = typeof callback === 'function' ? callback(childInfo.gender) : callback;
+              setChildInfo(prev => ({ ...prev, gender: newValue as any }));
+            }}
+            placeholder="Select gender"
+            style={[
+              styles.dropdown,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              }
+            ]}
+            dropDownContainerStyle={[
+              styles.dropdownContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              }
+            ]}
+            textStyle={{ color: colors.text }}
+            placeholderStyle={{ color: colors.placeholder }}
+            labelStyle={{ color: colors.text }}
+            arrowIconStyle={{ tintColor: colors.textSecondary }}
+            tickIconStyle={{ tintColor: colors.tint }}
+            listItemLabelStyle={{ color: colors.text }}
+            selectedItemLabelStyle={{ color: colors.tint }}
+            theme={colorScheme === 'dark' ? 'DARK' : 'LIGHT'}
+            zIndex={4000}
+            zIndexInverse={1000}
           />
         </View>
 
@@ -649,17 +676,40 @@ export default function OnboardingScreen() {
 
         <View style={styles.rowContainer}>
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>Size</Text>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={DIAPER_SIZE_OPTIONS}
-              maxHeight={300}
-              labelField="label"
-              valueField="value"
+            <Text style={[styles.label, { color: colors.textEmphasis }]}>Size</Text>
+            <DropDownPicker
+              open={sizeDropdownOpen}
               value={inventoryItem.size}
-              onChange={(item) => setInventoryItem(prev => ({ ...prev, size: item.value as any }))}
+              items={DIAPER_SIZE_OPTIONS}
+              setOpen={setSizeDropdownOpen}
+              setValue={(callback) => {
+                const newValue = typeof callback === 'function' ? callback(inventoryItem.size) : callback;
+                setInventoryItem(prev => ({ ...prev, size: newValue as any }));
+              }}
+              style={[
+                styles.dropdown,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                }
+              ]}
+              dropDownContainerStyle={[
+                styles.dropdownContainer,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                }
+              ]}
+              textStyle={{ color: colors.text }}
+              placeholderStyle={{ color: colors.placeholder }}
+              labelStyle={{ color: colors.text }}
+              arrowIconStyle={{ tintColor: colors.textSecondary }}
+              tickIconStyle={{ tintColor: colors.tint }}
+              listItemLabelStyle={{ color: colors.text }}
+              selectedItemLabelStyle={{ color: colors.tint }}
+              theme={colorScheme === 'dark' ? 'DARK' : 'LIGHT'}
+              zIndex={3000}
+              zIndexInverse={2000}
             />
           </View>
 
@@ -682,32 +732,78 @@ export default function OnboardingScreen() {
 
         <View style={styles.rowContainer}>
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>Type</Text>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={DIAPER_TYPE_OPTIONS}
-              maxHeight={300}
-              labelField="label"
-              valueField="value"
+            <Text style={[styles.label, { color: colors.textEmphasis }]}>Type</Text>
+            <DropDownPicker
+              open={typeDropdownOpen}
               value={inventoryItem.type}
-              onChange={(item) => setInventoryItem(prev => ({ ...prev, type: item.value as any }))}
+              items={DIAPER_TYPE_OPTIONS}
+              setOpen={setTypeDropdownOpen}
+              setValue={(callback) => {
+                const newValue = typeof callback === 'function' ? callback(inventoryItem.type) : callback;
+                setInventoryItem(prev => ({ ...prev, type: newValue as any }));
+              }}
+              style={[
+                styles.dropdown,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                }
+              ]}
+              dropDownContainerStyle={[
+                styles.dropdownContainer,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                }
+              ]}
+              textStyle={{ color: colors.text }}
+              placeholderStyle={{ color: colors.placeholder }}
+              labelStyle={{ color: colors.text }}
+              arrowIconStyle={{ tintColor: colors.textSecondary }}
+              tickIconStyle={{ tintColor: colors.tint }}
+              listItemLabelStyle={{ color: colors.text }}
+              selectedItemLabelStyle={{ color: colors.tint }}
+              theme={colorScheme === 'dark' ? 'DARK' : 'LIGHT'}
+              zIndex={2000}
+              zIndexInverse={3000}
             />
           </View>
 
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>Absorbency</Text>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={ABSORBENCY_OPTIONS}
-              maxHeight={300}
-              labelField="label"
-              valueField="value"
+            <Text style={[styles.label, { color: colors.textEmphasis }]}>Absorbency</Text>
+            <DropDownPicker
+              open={absorbencyDropdownOpen}
               value={inventoryItem.absorbency}
-              onChange={(item) => setInventoryItem(prev => ({ ...prev, absorbency: item.value as any }))}
+              items={ABSORBENCY_OPTIONS}
+              setOpen={setAbsorbencyDropdownOpen}
+              setValue={(callback) => {
+                const newValue = typeof callback === 'function' ? callback(inventoryItem.absorbency) : callback;
+                setInventoryItem(prev => ({ ...prev, absorbency: newValue as any }));
+              }}
+              style={[
+                styles.dropdown,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                }
+              ]}
+              dropDownContainerStyle={[
+                styles.dropdownContainer,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                }
+              ]}
+              textStyle={{ color: colors.text }}
+              placeholderStyle={{ color: colors.placeholder }}
+              labelStyle={{ color: colors.text }}
+              arrowIconStyle={{ tintColor: colors.textSecondary }}
+              tickIconStyle={{ tintColor: colors.tint }}
+              listItemLabelStyle={{ color: colors.text }}
+              selectedItemLabelStyle={{ color: colors.tint }}
+              theme={colorScheme === 'dark' ? 'DARK' : 'LIGHT'}
+              zIndex={1000}
+              zIndexInverse={4000}
             />
           </View>
         </View>
@@ -907,13 +1003,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    boxShadow: '0 2px 3.84px rgba(0, 0, 0, 0.1)',
     elevation: 5,
   },
   personaIcon: {
@@ -1020,6 +1110,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 16,
+  },
+  dropdownContainer: {
+    borderWidth: 1,
+    borderRadius: 8,
   },
   placeholderStyle: {
     fontSize: 16,

@@ -20,7 +20,7 @@ import * as Haptics from 'expo-haptics';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Dropdown } from 'react-native-element-dropdown';
+import DropDownPicker from 'react-native-dropdown-picker';
 import { useAuthStore } from '../../stores/authStore';
 import { SignUpInput, CanadianProvince } from '../../lib/types/auth';
 import { NestSyncButton, NestSyncInput } from '@/components/ui';
@@ -91,6 +91,7 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [provinceDropdownOpen, setProvinceDropdownOpen] = useState(false);
 
   const {
     control,
@@ -363,31 +364,39 @@ export default function RegisterScreen() {
             control={control}
             name="province"
             render={({ field: { onChange, value } }) => (
-              <Dropdown
-                style={[styles.dropdown, 
-                  { 
+              <DropDownPicker
+                open={provinceDropdownOpen}
+                value={value}
+                items={CANADIAN_PROVINCES}
+                setOpen={setProvinceDropdownOpen}
+                setValue={(callback) => {
+                  const newValue = typeof callback === 'function' ? callback(value) : callback;
+                  onChange(newValue);
+                }}
+                placeholder="Select your province..."
+                disabled={isLoading}
+                style={[
+                  styles.dropdown,
+                  {
                     borderColor: errors.province ? colors.error : colors.border,
-                    backgroundColor: colors.background 
+                    backgroundColor: colors.background,
                   }
                 ]}
-                containerStyle={[styles.dropdownContainer, { 
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border 
-                }]}
-                itemContainerStyle={{ 
-                  backgroundColor: colors.surface 
-                }}
-                itemTextStyle={{ color: colors.text }}
-                placeholderStyle={[styles.placeholderStyle, { color: colors.placeholder }]}
-                selectedTextStyle={[styles.selectedTextStyle, { color: colors.text }]}
-                data={CANADIAN_PROVINCES}
-                maxHeight={300}
-                labelField="label"
-                valueField="value"
-                placeholder="Select your province..."
-                value={value}
-                onChange={(item) => onChange(item.value)}
-                disable={isLoading}
+                dropDownContainerStyle={[
+                  styles.dropdownContainer,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  }
+                ]}
+                textStyle={{ color: colors.text }}
+                placeholderStyle={{ color: colors.placeholder }}
+                labelStyle={{ color: colors.text }}
+                arrowIconStyle={{ tintColor: colors.textSecondary }}
+                tickIconStyle={{ tintColor: colors.tint }}
+                listItemLabelStyle={{ color: colors.text }}
+                selectedItemLabelStyle={{ color: colors.tint }}
+                theme={colorScheme === 'dark' ? 'DARK' : 'LIGHT'}
                 accessibilityLabel="Province/Territory selection"
               />
             )}

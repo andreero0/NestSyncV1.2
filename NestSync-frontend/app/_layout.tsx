@@ -16,6 +16,8 @@ import { Colors } from '../constants/Colors';
 import apolloClient from '../lib/graphql/client';
 import { useAuthStore } from '../stores/authStore';
 import { JITConsentModal } from '../components/consent/JITConsentModal';
+import { PremiumModal } from '../components/modals/PremiumModal';
+import { UnifiedErrorHandler } from '../components/common/UnifiedErrorHandler';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -130,7 +132,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return children as React.ReactElement;
 }
 
 // Theme-aware navigation wrapper
@@ -172,7 +174,9 @@ function ThemedNavigationWrapper() {
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style={actualTheme === 'dark' ? 'light' : 'dark'} />
+        <UnifiedErrorHandler />
         <JITConsentModal />
+        <PremiumModal />
       </AuthGuard>
     </ThemeProvider>
   );

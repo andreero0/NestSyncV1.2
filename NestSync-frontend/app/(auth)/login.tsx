@@ -21,6 +21,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore, useBiometrics } from '../../stores/authStore';
+import { useErrorStore, createNetworkError, createAuthError, ErrorSeverity, ErrorSource } from '../../stores/errorStore';
 import { SignInInput } from '../../lib/types/auth';
 import { NestSyncButton, NestSyncInput } from '@/components/ui';
 import { Colors } from '../../constants/Colors';
@@ -43,6 +44,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn, isLoading, error, clearError } = useAuthStore();
+  const { addError } = useErrorStore();
   const { available: biometricsAvailable, enabled: biometricsEnabled, signIn: signInWithBiometrics } = useBiometrics();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -115,16 +117,30 @@ export default function LoginScreen() {
         }
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert(
-          'Sign In Failed',
-          response.error || 'Please check your email and password and try again.',
-          [{ text: 'OK', style: 'default' }]
-        );
+        // Add error to unified error system instead of showing alert
+        addError({
+          ...createAuthError(
+            response.error || 'Please check your email and password and try again.',
+            ErrorSeverity.MEDIUM,
+            ErrorSource.LOGIN
+          ),
+          supportiveMessage: "We're here to help you sign in. Double-check your credentials or try resetting your password.",
+          canadianCompliance: true
+        });
       }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       console.error('Login error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      // Add network error to unified error system instead of showing alert
+      addError({
+        ...createNetworkError(
+          'Something went wrong. Please try again.',
+          ErrorSeverity.HIGH,
+          ErrorSource.LOGIN
+        ),
+        supportiveMessage: "Don't worry, this happens sometimes. Please check your internet connection and try again.",
+        canadianCompliance: true
+      });
     }
   };
 
@@ -208,12 +224,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Error Display */}
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-          </View>
-        )}
+        {/* Error Display - Now handled by UnifiedErrorHandler */}
 
         {/* Sign In Button */}
         <NestSyncButton
@@ -291,13 +302,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  errorContainer: {
-    marginBottom: 16,
-  },
-  errorText: {
-    fontSize: 14,
-    marginTop: 4,
-  },
+  // Error styles removed - now handled by UnifiedErrorHandler
   signInButton: {
     marginBottom: 24,
   },
