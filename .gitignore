@@ -56,3 +56,30 @@ supabase/.branches
 supabase/.temp
 NestSync-backend/supabase/.branches
 NestSync-backend/supabase/.temp
+
+# Development Analysis & Temporary Files
+# Temporary JSON data exports and corrections
+*_correction_*.json
+*_dry_run_*.json
+*_backup_*.json
+inventory_correction_applied_*.json
+inventory_correction_dry_run_*.json
+
+# Ad-hoc analysis scripts (commit reusable ones manually)
+analyze_*.py
+debug_*.py
+fix_*.py
+backup_restore_*.py
+
+# Playwright MCP Screenshots (commit key ones manually for documentation)
+.playwright-mcp/*.png
+!.playwright-mcp/final-*.png
+!.playwright-mcp/authentication-success-*.png
+!.playwright-mcp/inventory-management-*.png
+!.playwright-mcp/premium-gated-*.png
+
+# Git worktrees
+worktrees/
+
+# Temporary page screenshots with timestamps
+.playwright-mcp/page-*.png
