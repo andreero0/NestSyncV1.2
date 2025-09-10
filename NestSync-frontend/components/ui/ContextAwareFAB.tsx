@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Platform, View, Alert } from 'react-native';
+import { StyleSheet, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSegments } from 'expo-router';
 import { useQuery } from '@apollo/client';
@@ -18,6 +18,12 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { QuickLogModal } from '../modals/QuickLogModal';
 import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
+
+interface ValidationResult {
+  isValid: boolean;
+  errorMessage?: string;
+  errorTitle?: string;
+}
 
 interface FABConfig {
   icon: string;
@@ -40,15 +46,12 @@ export function ContextAwareFAB() {
   
   // State for selected child with persistence
   const [selectedChildId, setSelectedChildId] = useState<string>('');
-  const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
+  const [storedChildId] = useAsyncStorage('nestsync_selected_child_id');
   
   // GraphQL queries
-  const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
+  const { data: childrenData, loading: childrenLoading, error: childrenError } = useQuery(MY_CHILDREN_QUERY, {
     variables: { first: 10 },
   });
-
-  // Determine if actions should be disabled (same logic as dashboard)
-  const actionsDisabled = !selectedChildId || childrenLoading;
   
   // Sync selected child with stored value
   useEffect(() => {
@@ -65,18 +68,136 @@ export function ContextAwareFAB() {
   // Get current route context
   const currentRoute = segments[1] || 'index'; // Get the tab route (index, planner, settings)
   
-  // Context-aware FAB configurations
+  // Context-specific error messages for supportive UX
+  const getContextErrorMessages = (context: string): { title: string; actions: string[] } => {
+    switch (context) {
+      case 'index':
+        return {
+          title: 'Ready to log?',
+          actions: [
+            'Add a child profile to start tracking',
+            'Select your child from the profile menu',
+            'Check your internet connection'
+          ]
+        };
+      case 'planner':
+        return {
+          title: 'Let\'s plan ahead',
+          actions: [
+            'Add a child profile to create schedules',
+            'Select your child to plan activities',
+            'Check your internet connection'
+          ]
+        };
+      case 'settings':
+        return {
+          title: 'Child settings',
+          actions: [
+            'Add a child profile to customize settings',
+            'Select your child to manage preferences',
+            'Check your internet connection'
+          ]
+        };
+      default:
+        return {
+          title: 'Getting ready',
+          actions: [
+            'Add a child profile to continue',
+            'Select your child from the menu',
+            'Check your internet connection'
+          ]
+        };
+    }
+  };
+
+  // Comprehensive validation function
+  const validateChildContext = (): ValidationResult => {
+    // Check if async storage is still loading (race condition prevention)
+    if (storedChildId === undefined) {
+      return {
+        isValid: false,
+        errorTitle: 'Loading...',
+        errorMessage: 'Setting up your profile data. This usually takes just a moment.'
+      };
+    }
+
+    // Check if GraphQL query is loading
+    if (childrenLoading) {
+      return {
+        isValid: false,
+        errorTitle: 'Loading...',
+        errorMessage: 'Getting your children\'s information. This usually takes just a moment.'
+      };
+    }
+
+    // Check for GraphQL errors
+    if (childrenError) {
+      const contextMessages = getContextErrorMessages(currentRoute);
+      return {
+        isValid: false,
+        errorTitle: 'Connection Issue',
+        errorMessage: `We couldn't load your data right now. ${contextMessages.actions[2]}.`
+      };
+    }
+
+    // Check if children data exists
+    const children = childrenData?.myChildren?.edges || [];
+    if (children.length === 0) {
+      const contextMessages = getContextErrorMessages(currentRoute);
+      return {
+        isValid: false,
+        errorTitle: contextMessages.title,
+        errorMessage: contextMessages.actions[0]
+      };
+    }
+
+    // Check if a child is selected
+    if (!selectedChildId) {
+      const contextMessages = getContextErrorMessages(currentRoute);
+      return {
+        isValid: false,
+        errorTitle: contextMessages.title,
+        errorMessage: contextMessages.actions[1]
+      };
+    }
+
+    // Check if selected child actually exists in the data
+    const selectedChildExists = children.some((edge: any) => edge.node.id === selectedChildId);
+    if (!selectedChildExists) {
+      const contextMessages = getContextErrorMessages(currentRoute);
+      return {
+        isValid: false,
+        errorTitle: 'Child Not Found',
+        errorMessage: contextMessages.actions[1]
+      };
+    }
+
+    // All validation passed
+    return { isValid: true };
+  };
+  
+  // Helper function to handle validation errors with supportive messaging
+  const handleValidationError = (validation: ValidationResult) => {
+    Alert.alert(
+      validation.errorTitle || 'Just a moment...',
+      validation.errorMessage || 'Setting things up for you.',
+      [{ text: 'OK', style: 'default' }],
+      { 
+        cancelable: true,
+        userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light'
+      }
+    );
+  };
+
+  // Context-aware FAB configurations with consistent validation
   const fabContexts: FABContextMap = {
     index: {
       icon: 'plus.circle.fill',
       accessibilityLabel: 'Log diaper change',
       action: () => {
-        if (actionsDisabled) {
-          Alert.alert(
-            'Please Wait',
-            selectedChildId ? 'Loading child data...' : 'Please select a child first',
-            [{ text: 'OK' }]
-          );
+        const validation = validateChildContext();
+        if (!validation.isValid) {
+          handleValidationError(validation);
           return;
         }
         setQuickLogModalVisible(true);
@@ -86,6 +207,11 @@ export function ContextAwareFAB() {
       icon: 'calendar.badge.plus',
       accessibilityLabel: 'Add to planner',
       action: () => {
+        const validation = validateChildContext();
+        if (!validation.isValid) {
+          handleValidationError(validation);
+          return;
+        }
         console.log('Opening planner modal for scheduling or inventory');
         // TODO: Open planning modal (schedule diaper changes or add inventory)
       },
@@ -94,6 +220,11 @@ export function ContextAwareFAB() {
       icon: 'questionmark.circle.fill',
       accessibilityLabel: 'Get help and support',
       action: () => {
+        const validation = validateChildContext();
+        if (!validation.isValid) {
+          handleValidationError(validation);
+          return;
+        }
         console.log('Opening help and support resources');
         // TODO: Open help modal or hide FAB for clean interface
       },
@@ -153,7 +284,7 @@ export function ContextAwareFAB() {
         stiffness: 200,
       });
     });
-  }, [currentRoute]);
+  }, [currentRoute, opacity]);
   
   // Animated styles
   const fabAnimatedStyle = useAnimatedStyle(() => {
@@ -184,13 +315,7 @@ export function ContextAwareFAB() {
       justifyContent: 'center',
       alignItems: 'center',
       // iOS shadow
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 4,
-      },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
       // Android shadow
       elevation: 8,
     },

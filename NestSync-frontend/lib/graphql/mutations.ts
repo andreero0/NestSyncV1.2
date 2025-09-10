@@ -87,9 +87,11 @@ export const DASHBOARD_STATS_FRAGMENT = gql`
   fragment DashboardStatsFragment on DashboardStats {
     daysRemaining
     diapersLeft
+    wipesLeft
     lastChange
     todayChanges
     currentSize
+    changesReady
   }
 `;
 
@@ -187,6 +189,16 @@ export const UPDATE_INVENTORY_ITEM_MUTATION = gql`
     }
   }
   ${INVENTORY_ITEM_FRAGMENT}
+`;
+
+export const DELETE_INVENTORY_ITEM_MUTATION = gql`
+  mutation DeleteInventoryItem($inventoryItemId: ID!) {
+    deleteInventoryItem(inventoryItemId: $inventoryItemId) {
+      success
+      message
+      error
+    }
+  }
 `;
 
 export const SET_INITIAL_INVENTORY_MUTATION = gql`
@@ -409,6 +421,7 @@ export interface DashboardStats {
   lastChange?: string;
   todayChanges: number;
   currentSize?: string;
+  changesReady: number;
 }
 
 // Query Variables Types

@@ -136,7 +136,6 @@ export function UnitSegmentedControl({
               backgroundColor: colors.tint,
               transform: [{ translateX: thumbTranslateX }],
               elevation: thumbElevation,
-              shadowOpacity: disabled ? 0.2 : 0.3,
             }
           ]}
         >
@@ -161,13 +160,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     // Professional transistor switch aesthetic
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
     elevation: 2,
   },
 
@@ -191,9 +184,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     // Ensure text is always readable
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0, height: 0.5 },
-    textShadowRadius: 1,
+    // Note: textShadow is deprecated in React Native Web, but kept for visual consistency
+    // Consider removing if causing deprecation warnings
   },
 
   thumb: {
@@ -206,13 +198,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     // Radio transistor aesthetic with subtle shadow
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    boxShadow: '0 2px 3px rgba(0, 0, 0, 0.25)',
     elevation: 4,
     zIndex: 2,
   },
@@ -222,13 +208,7 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     // Small indicator dot like radio transistors
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 1,
+    boxShadow: '0 1px 1px rgba(0, 0, 0, 0.2)',
     elevation: 1,
   },
 });

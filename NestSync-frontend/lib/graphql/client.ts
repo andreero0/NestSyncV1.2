@@ -260,56 +260,163 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
   return;
 });
 
-// Error logging link - handles non-auth errors and logging using Apollo Client 3.x patterns
+// Enhanced error logging link with unified error store integration
 const errorLoggingLink = new ErrorLink(({ error }) => {
   if (!error) {
     return;
   }
-  
-  // Handle GraphQL errors using Apollo Client 3.x patterns
-  if (error.graphQLErrors && __DEV__) {
-    error.graphQLErrors.forEach((graphQLError: any) => {
-      const { message, locations, path, extensions } = graphQLError;
-      console.error(
-        `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`
-      );
-      
-      // Handle specific error types (non-auth)
-      if (extensions?.code === 'PIPEDA_COMPLIANCE_ERROR') {
-        console.error('PIPEDA compliance error:', message);
-      }
-    });
-  }
 
-  // Handle network errors using Apollo Client 3.x patterns
-  if (error.networkError && __DEV__) {
-    console.error(`Network error: ${error.networkError.message}`);
-    
-    // Check if it's a server error with status code
-    if ('statusCode' in error.networkError) {
-      const statusCode = (error.networkError as any).statusCode;
-      console.error(`Status: ${statusCode}`);
+  // Import error store dynamically to avoid circular imports
+  import('../../stores/errorStore').then(({ useErrorStore, createNetworkError, createDataError, ErrorSeverity, ErrorSource }) => {
+    const { addError } = useErrorStore.getState();
+
+    // Handle GraphQL errors using Apollo Client 3.x patterns
+    if (error.graphQLErrors) {
+      error.graphQLErrors.forEach((graphQLError: any) => {
+        const { message, locations, path, extensions } = graphQLError;
+        
+        if (__DEV__) {
+          console.error(
+            `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`
+          );
+        }
+        
+        // Handle specific error types (non-auth)
+        if (extensions?.code === 'PIPEDA_COMPLIANCE_ERROR') {
+          if (__DEV__) {
+            console.error('PIPEDA compliance error:', message);
+          }
+          
+          // Add PIPEDA compliance error to unified store
+          addError({
+            ...createDataError(
+              message,
+              ErrorSeverity.HIGH,
+              ErrorSource.APOLLO_CLIENT
+            ),
+            supportiveMessage: "We're ensuring your data stays in Canada as required. This helps protect your family's privacy.",
+            context: { code: extensions.code, path },
+          });
+        } else {
+          // Generic GraphQL error
+          addError({
+            ...createDataError(
+              message,
+              ErrorSeverity.MEDIUM,
+              ErrorSource.APOLLO_CLIENT
+            ),
+            supportiveMessage: "We're having trouble getting your latest information. Your data is safe and we're working on it.",
+            context: { path, extensions },
+          });
+        }
+      });
+    }
+
+    // Handle network errors using Apollo Client 3.x patterns
+    if (error.networkError) {
+      const networkError = error.networkError;
       
-      switch (statusCode) {
-        case 403:
-          console.error('Access forbidden - insufficient permissions');
-          break;
-        case 429:
-          console.error('Rate limit exceeded (429) - requests are being throttled. Please wait before retrying.');
-          break;
-        case 500:
-        case 502:
-        case 503:
-          console.error('Server error - will retry');
-          break;
+      if (__DEV__) {
+        console.error(`Network error: ${networkError.message}`);
+      }
+      
+      // Check if it's a server error with status code
+      if ('statusCode' in networkError) {
+        const statusCode = (networkError as any).statusCode;
+        if (__DEV__) {
+          console.error(`Status: ${statusCode}`);
+        }
+        
+        switch (statusCode) {
+          case 403:
+            if (__DEV__) {
+              console.error('Access forbidden - insufficient permissions');
+            }
+            addError({
+              ...createNetworkError(
+                'Access forbidden - insufficient permissions',
+                ErrorSeverity.HIGH,
+                ErrorSource.APOLLO_CLIENT
+              ),
+              supportiveMessage: "We don't have permission to access this information. This helps keep your data secure.",
+              canRetry: false,
+            });
+            break;
+          case 429:
+            if (__DEV__) {
+              console.error('Rate limit exceeded (429) - requests are being throttled. Please wait before retrying.');
+            }
+            addError({
+              ...createNetworkError(
+                'Too many requests - please wait a moment',
+                ErrorSeverity.MEDIUM,
+                ErrorSource.APOLLO_CLIENT
+              ),
+              supportiveMessage: "We're being extra careful with your requests. Just a moment while things settle down.",
+              canRetry: true,
+              maxRetries: 2,
+            });
+            break;
+          case 500:
+          case 502:
+          case 503:
+            if (__DEV__) {
+              console.error('Server error - will retry');
+            }
+            addError({
+              ...createNetworkError(
+                `Server error (${statusCode})`,
+                ErrorSeverity.HIGH,
+                ErrorSource.APOLLO_CLIENT
+              ),
+              supportiveMessage: "Our servers are taking a quick break. We're working on it and your data is safe.",
+            });
+            break;
+          default:
+            // Generic network error with status code
+            addError({
+              ...createNetworkError(
+                `Network error (${statusCode}): ${networkError.message}`,
+                ErrorSeverity.MEDIUM,
+                ErrorSource.APOLLO_CLIENT
+              ),
+            });
+        }
+      } else {
+        // Network error without status code (connection issues, timeout, etc.)
+        addError({
+          ...createNetworkError(
+            networkError.message,
+            ErrorSeverity.HIGH,
+            ErrorSource.APOLLO_CLIENT
+          ),
+          supportiveMessage: "We're having trouble connecting right now. Your data is safe, and we'll keep trying.",
+        });
       }
     }
-  }
 
-  // Log other error types
-  if (error && !error.graphQLErrors && !error.networkError && __DEV__) {
-    console.error('Other Apollo Client error:', error.message);
-  }
+    // Log other error types
+    if (error && !error.graphQLErrors && !error.networkError) {
+      if (__DEV__) {
+        console.error('Other Apollo Client error:', error.message);
+      }
+      
+      addError({
+        ...createDataError(
+          error.message || 'Unknown GraphQL error',
+          ErrorSeverity.MEDIUM,
+          ErrorSource.APOLLO_CLIENT
+        ),
+        supportiveMessage: "Something unexpected happened. We're looking into it and your data is safe.",
+      });
+    }
+  }).catch((importError) => {
+    // Fallback if error store import fails
+    if (__DEV__) {
+      console.error('Failed to import error store:', importError);
+      console.error('Original GraphQL error:', error);
+    }
+  });
 });
 
 // Simple retry logic without external dependency
@@ -383,17 +490,26 @@ export const apolloClient = new ApolloClient({
     httpLink,
   ]),
   cache: new InMemoryCache({
-    addTypename: true,
     typePolicies: {
       Query: {
         fields: {
           myChildren: {
-            // Proper cache merge for pagination
+            // Proper cache merge for pagination with deduplication
             keyArgs: false,
-            merge(existing = { edges: [] }, incoming, { args }) {
+            merge(existing = { edges: [] }, incoming, { args, readField }) {
+              // Create a set of existing child IDs to avoid duplicates
+              const existingIds = new Set(
+                existing.edges.map((edge: any) => readField('id', edge.node))
+              );
+              
+              // Filter out incoming children that already exist
+              const newEdges = incoming.edges.filter((edge: any) => 
+                !existingIds.has(readField('id', edge.node))
+              );
+              
               return {
                 ...incoming,
-                edges: [...existing.edges, ...incoming.edges],
+                edges: [...existing.edges, ...newEdges],
               };
             },
           },
