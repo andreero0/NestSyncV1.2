@@ -22,7 +22,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Dropdown } from 'react-native-element-dropdown';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 import { ThemedText } from '../ThemedText';
 import { IconSymbol } from '../ui/IconSymbol';
@@ -61,6 +61,7 @@ export function AddChildModal({ visible, onClose, onSuccess }: AddChildModalProp
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [genderDropdownOpen, setGenderDropdownOpen] = useState(false);
 
   // GraphQL mutation
   const [createChild, { loading: createChildLoading, error: createChildError }] = useMutation(
@@ -277,21 +278,38 @@ export function AddChildModal({ visible, onClose, onSuccess }: AddChildModalProp
               <ThemedText style={[styles.label, { color: colors.text }]}>
                 Gender (optional)
               </ThemedText>
-              <Dropdown
-                style={[styles.dropdown, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                containerStyle={[styles.dropdownContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                data={GENDER_OPTIONS}
-                labelField="label"
-                valueField="value"
-                placeholder="Select gender"
+              <DropDownPicker
+                open={genderDropdownOpen}
                 value={childInfo.gender}
-                onChange={(item) => setChildInfo(prev => ({ ...prev, gender: item.value as any }))}
-                renderLeftIcon={() => (
-                  <IconSymbol name="person" size={20} color={colors.tint} style={{ marginRight: 8 }} />
-                )}
-                selectedTextStyle={{ color: colors.text }}
+                items={GENDER_OPTIONS}
+                setOpen={setGenderDropdownOpen}
+                setValue={(callback) => {
+                  const newValue = typeof callback === 'function' ? callback(childInfo.gender) : callback;
+                  setChildInfo(prev => ({ ...prev, gender: newValue as any }));
+                }}
+                placeholder="Select gender"
+                style={[
+                  styles.dropdown,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surface,
+                  }
+                ]}
+                dropDownContainerStyle={[
+                  styles.dropdownContainer,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  }
+                ]}
+                textStyle={{ color: colors.text }}
                 placeholderStyle={{ color: colors.textSecondary }}
-                iconStyle={{ tintColor: colors.textSecondary }}
+                labelStyle={{ color: colors.text }}
+                arrowIconStyle={{ tintColor: colors.textSecondary }}
+                tickIconStyle={{ tintColor: colors.tint }}
+                listItemLabelStyle={{ color: colors.text }}
+                selectedItemLabelStyle={{ color: colors.tint }}
+                theme={colorScheme === 'dark' ? 'DARK' : 'LIGHT'}
               />
             </View>
 

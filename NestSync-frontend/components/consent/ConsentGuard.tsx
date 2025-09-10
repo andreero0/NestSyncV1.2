@@ -107,7 +107,7 @@ export function ConsentGuard({
   // Show loading state
   if (state.isLoading) {
     if (fallback) {
-      return <>{fallback}</>;
+      return fallback as React.ReactElement;
     }
     return (
       <View style={[styles.container, { backgroundColor: colors.surface }]}>
@@ -121,7 +121,7 @@ export function ConsentGuard({
 
   // Show children if consent is granted
   if (state.hasConsent) {
-    return <>{children}</>;
+    return children as React.ReactElement;
   }
 
   // Show consent request UI
@@ -234,13 +234,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
   icon: {

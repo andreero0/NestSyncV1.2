@@ -27,7 +27,7 @@ import { ThemedText } from '../ThemedText';
 import { IconSymbol } from '../ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { LOG_DIAPER_CHANGE_MUTATION, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/mutations';
+import { LOG_DIAPER_CHANGE_MUTATION, GET_DASHBOARD_STATS_QUERY, GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/mutations';
 import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -36,6 +36,7 @@ interface QuickLogModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess?: (message: string) => void;
+  childId?: string;
 }
 
 interface TimeOption {
@@ -73,7 +74,7 @@ const CHANGE_TYPES: ChangeType[] = [
   },
 ];
 
-export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProps) {
+export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLogModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
@@ -89,21 +90,87 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
   const [selectedChangeType, setSelectedChangeType] = useState<string>('wet');
   const [notes, setNotes] = useState<string>('');
   const [showCustomTime, setShowCustomTime] = useState(false);
-  const [selectedChildId, setSelectedChildId] = useState<string>('');
-
-  // GraphQL queries and mutations
+  
+  // GraphQL queries - declare childrenData first before using it
   const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
     variables: { first: 10 },
     skip: !visible,
   });
 
+  // Use passed childId or derive from children query (fallback) - with validation
+  const selectedChildId = childId || (childrenData?.myChildren?.edges?.[0]?.node?.id || '');
+  
+  // Validate childId to prevent empty string cache invalidation failures
+  const validChildId = selectedChildId && selectedChildId.trim() !== '' ? selectedChildId : null;
+  
+  // Debug logging to track childId values
+  React.useEffect(() => {
+    console.log('QuickLogModal childId Debug:', {
+      propChildId: childId,
+      derivedChildId: childrenData?.myChildren?.edges?.[0]?.node?.id,
+      selectedChildId,
+      validChildId,
+      childrenLoading,
+      hasChildrenData: !!childrenData?.myChildren?.edges?.length
+    });
+  }, [childId, childrenData, selectedChildId, validChildId, childrenLoading]);
+
   const [logDiaperChange, { loading: submitLoading }] = useMutation(LOG_DIAPER_CHANGE_MUTATION, {
-    refetchQueries: [
+    // Comprehensive cache invalidation - only if we have valid childId
+    refetchQueries: validChildId ? [
       {
         query: GET_DASHBOARD_STATS_QUERY,
-        variables: { childId: selectedChildId },
+        variables: { childId: validChildId },
       },
-    ],
+      {
+        query: GET_INVENTORY_ITEMS_QUERY,
+        variables: { 
+          childId: validChildId, 
+          productType: 'DIAPER',
+          limit: 50,
+          offset: 0
+        },
+      },
+    ] : [],
+    // Wait for refetch to complete for real-time updates
+    awaitRefetchQueries: true,
+    // Enhanced cache updates with fallback clearing
+    update: (cache, { data }) => {
+      if (data?.logDiaperChange?.success) {
+        if (validChildId) {
+          // Targeted cache invalidation when we have valid childId
+          console.log('Targeted cache invalidation for childId:', validChildId);
+          cache.evict({ fieldName: 'getDashboardStats' });
+          cache.evict({ fieldName: 'getInventoryItems' });
+        } else {
+          // Fallback: Clear all dashboard and inventory cache entries when childId is invalid
+          console.log('Fallback cache invalidation: clearing all dashboard/inventory cache');
+          cache.evict({ fieldName: 'getDashboardStats' });
+          cache.evict({ fieldName: 'getInventoryItems' });
+          
+          // More aggressive cache clearing for inventory-related data
+          const cacheKeys = Object.keys(cache.extract());
+          cacheKeys.forEach(key => {
+            if (key.includes('getDashboardStats') || key.includes('getInventoryItems')) {
+              cache.evict({ id: key });
+            }
+          });
+        }
+        
+        // Trigger garbage collection to clean up evicted cache entries
+        cache.gc();
+        
+        console.log('Cache invalidation completed after diaper change logging', {
+          validChildId,
+          cacheStrategy: validChildId ? 'targeted' : 'fallback'
+        });
+      }
+    },
+    onCompleted: (data) => {
+      if (data?.logDiaperChange?.success) {
+        console.log('Diaper change logged successfully with cache invalidation');
+      }
+    },
   });
 
   // Generate time options (Now, 1h ago, 2h ago, Custom)
@@ -134,12 +201,7 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
     ];
   }, [customTime]);
 
-  // Get the first child as default (in a real app, this would be user-selected or stored)
-  React.useEffect(() => {
-    if (childrenData?.myChildren?.edges?.length > 0 && !selectedChildId) {
-      setSelectedChildId(childrenData.myChildren.edges[0].node.id);
-    }
-  }, [childrenData, selectedChildId]);
+  // Removed child selection effect since we now use the passed childId prop
 
   // Animation effects
   React.useEffect(() => {
@@ -164,8 +226,13 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
 
   // Handle form submission
   const handleSubmit = async () => {
-    if (!selectedChildId) {
-      console.error('No child selected');
+    if (!validChildId) {
+      console.error('No valid child selected for diaper change logging', {
+        selectedChildId,
+        validChildId,
+        childrenLoading,
+        hasChildrenData: !!childrenData?.myChildren?.edges?.length
+      });
       return;
     }
 
@@ -180,7 +247,7 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
       const changeType = CHANGE_TYPES.find(type => type.id === selectedChangeType);
       
       const input = {
-        childId: selectedChildId,
+        childId: validChildId,
         wasWet: changeType?.id === 'wet' || changeType?.id === 'both',
         wasSoiled: changeType?.id === 'soiled' || changeType?.id === 'both',
         loggedAt: loggedAt.toISOString(),
@@ -514,11 +581,11 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
                     styles.primaryButton,
                     { 
                       backgroundColor: colors.tint,
-                      opacity: (!selectedChildId || !selectedChangeType || submitLoading) ? 0.6 : 1,
+                      opacity: (!validChildId || !selectedChangeType || submitLoading) ? 0.6 : 1,
                     },
                   ]}
                   onPress={handleSubmit}
-                  disabled={!selectedChildId || !selectedChangeType || submitLoading}
+                  disabled={!validChildId || !selectedChangeType || submitLoading}
                   accessibilityRole="button"
                   accessibilityLabel="Log diaper change"
                 >
@@ -561,13 +628,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.25)',
     // Elevation for Android
     elevation: 10,
   },
