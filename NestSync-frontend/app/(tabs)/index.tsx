@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ScrollView, StyleSheet, View, TouchableOpacity, Dimensions, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@apollo/client';
+import { useQuery, NetworkStatus } from '@apollo/client';
+import { router } from 'expo-router';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -15,17 +16,30 @@ import { MY_CHILDREN_QUERY, GET_USAGE_LOGS_QUERY } from '@/lib/graphql/queries';
 import { GET_DASHBOARD_STATS_QUERY, LOG_DIAPER_CHANGE_MUTATION } from '@/lib/graphql/mutations';
 import { QuickLogModal } from '@/components/modals/QuickLogModal';
 import { AddInventoryModal } from '@/components/modals/AddInventoryModal';
+import { InventoryDetailModal } from '@/components/modals/InventoryDetailModal';
 import { AddChildModal } from '@/components/modals/AddChildModal';
+import { ChangingReadinessCard } from '@/components/ui/ChangingReadinessCard';
+import { DiapersCard, WipesCard } from '@/components/ui/SupplyBreakdownCard';
 import { formatDiaperSize, formatFieldWithFallback } from '@/lib/utils/enumDisplayFormatters';
+import { UnifiedErrorHandler } from '@/components/common/UnifiedErrorHandler';
+import { 
+  useErrorStore, 
+  createNetworkError, 
+  createDataError, 
+  ErrorSeverity, 
+  ErrorSource 
+} from '@/stores/errorStore';
 
 const { width } = Dimensions.get('window');
 
 interface DashboardStats {
   daysRemaining: number;
   diapersLeft: number;
+  wipesLeft: number;
   lastChange: string;
   todayChanges: number;
   currentSize: string;
+  changesReady: number;
 }
 
 interface RecentActivity {
@@ -33,6 +47,7 @@ interface RecentActivity {
   time: string;
   type: 'diaper-change' | 'inventory-update' | 'size-change';
   description: string;
+  rawTimestamp?: string; // For smart timing analysis
 }
 
 interface QuickAction {
@@ -54,12 +69,22 @@ export default function HomeScreen() {
   // Modal state
   const [quickLogModalVisible, setQuickLogModalVisible] = useState(false);
   const [addInventoryModalVisible, setAddInventoryModalVisible] = useState(false);
+  const [inventoryDetailModalVisible, setInventoryDetailModalVisible] = useState(false);
   const [addChildModalVisible, setAddChildModalVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   
   // Recent Activity state for progressive disclosure
   const [showAllActivity, setShowAllActivity] = useState(false);
   const ACTIVITY_INITIAL_LIMIT = 5;
+  
+  // Supply breakdown progressive disclosure
+  const [showSupplyBreakdown, setShowSupplyBreakdown] = useState(false);
+  
+  // RefreshControl state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Unified error store
+  const { addError, clearAllErrors } = useErrorStore();
   
   // GraphQL queries
   const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
@@ -69,16 +94,24 @@ export default function HomeScreen() {
   const { 
     data: dashboardData, 
     loading: dashboardLoading, 
-    error: dashboardError 
+    error: dashboardError,
+    refetch: refetchDashboard,
+    networkStatus: dashboardNetworkStatus
   } = useQuery(GET_DASHBOARD_STATS_QUERY, {
     variables: { childId: selectedChildId },
     skip: !selectedChildId,
+    fetchPolicy: 'cache-and-network', // Ensure fresh data while serving cache
     pollInterval: 30000, // Poll every 30 seconds for real-time updates
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all', // Show partial data when available
   });
 
   const { 
     data: usageLogsData, 
-    loading: usageLogsLoading 
+    loading: usageLogsLoading,
+    error: usageLogsError,
+    refetch: refetchUsageLogs,
+    networkStatus: usageLogsNetworkStatus
   } = useQuery(GET_USAGE_LOGS_QUERY, {
     variables: { 
       childId: selectedChildId,
@@ -87,8 +120,40 @@ export default function HomeScreen() {
       limit: 50 // Fetch more items for client-side filtering
     },
     skip: !selectedChildId,
+    fetchPolicy: 'cache-and-network', // Ensure fresh data while serving cache
     pollInterval: 30000, // Poll every 30 seconds
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all', // Show partial data when available
   });
+
+  // Handle GraphQL errors that might not be caught by Apollo's ErrorLink
+  useEffect(() => {
+    if (dashboardError) {
+      addError({
+        ...createDataError(
+          dashboardError.message,
+          ErrorSeverity.MEDIUM,
+          ErrorSource.DASHBOARD
+        ),
+        supportiveMessage: "We're having trouble loading your dashboard. Your data is safe and we're working on it.",
+        context: { query: 'GET_DASHBOARD_STATS_QUERY' },
+      });
+    }
+  }, [dashboardError, addError]);
+
+  useEffect(() => {
+    if (usageLogsError) {
+      addError({
+        ...createDataError(
+          usageLogsError.message,
+          ErrorSeverity.MEDIUM,
+          ErrorSource.DASHBOARD
+        ),
+        supportiveMessage: "We're having trouble loading your recent activity. Your logs are safe and we're working on it.",
+        context: { query: 'GET_USAGE_LOGS_QUERY' },
+      });
+    }
+  }, [usageLogsError, addError]);
 
   // Initialize selected child from storage or default to first child
   useEffect(() => {
@@ -119,24 +184,29 @@ export default function HomeScreen() {
   const dashboardStats: DashboardStats = dashboardData?.getDashboardStats ? {
     daysRemaining: dashboardData.getDashboardStats.daysRemaining || 0,
     diapersLeft: dashboardData.getDashboardStats.diapersLeft || 0,
+    wipesLeft: dashboardData.getDashboardStats.wipesLeft || 0,
     lastChange: formatFieldWithFallback(dashboardData.getDashboardStats.lastChange, 'time'),
     todayChanges: dashboardData.getDashboardStats.todayChanges || 0,
-    currentSize: formatDiaperSize(dashboardData.getDashboardStats.currentSize)
+    currentSize: formatDiaperSize(dashboardData.getDashboardStats.currentSize),
+    changesReady: dashboardData.getDashboardStats.changesReady || 0,
   } : {
     // Fallback data when loading or no child selected
     daysRemaining: dashboardLoading ? 0 : 12,
     diapersLeft: dashboardLoading ? 0 : 24,
+    wipesLeft: dashboardLoading ? 0 : 50,
     lastChange: dashboardLoading ? 'Loading...' : '2 hours ago',
     todayChanges: dashboardLoading ? 0 : 5,
-    currentSize: dashboardLoading ? 'Loading...' : formatDiaperSize('SIZE_2')
+    currentSize: dashboardLoading ? 'Loading...' : formatDiaperSize('SIZE_2'),
+    changesReady: dashboardLoading ? 0 : 65,
   };
 
-  // Process recent activity from usage logs
+  // Process recent activity from usage logs with enhanced timestamp tracking
   const allRecentActivity: RecentActivity[] = usageLogsData?.getUsageLogs?.edges?.map((edge: any, index: number) => ({
     id: edge.node.id || `activity-${index}`,
     time: formatActivityTimestamp(edge.node.loggedAt),
     type: 'diaper-change' as const,
-    description: getChangeDescription(edge.node.wasWet, edge.node.wasSoiled, edge.node.notes)
+    description: getChangeDescription(edge.node.wasWet, edge.node.wasSoiled, edge.node.notes),
+    rawTimestamp: edge.node.loggedAt // Keep raw timestamp for smart analysis
   })) || [];
   
   // Apply progressive disclosure limit
@@ -147,12 +217,87 @@ export default function HomeScreen() {
   const hasMoreActivity = allRecentActivity.length > ACTIVITY_INITIAL_LIMIT;
   const additionalActivityCount = allRecentActivity.length - ACTIVITY_INITIAL_LIMIT;
 
-  // Show loading message when no data is available
-  // Enhanced state management
-  const showEmptyState = !usageLogsLoading && allRecentActivity.length === 0;
-  const showLoadingState = usageLogsLoading && selectedChildId;
+  // Enhanced state management 
+  const showEmptyState = !usageLogsLoading && allRecentActivity.length === 0 && !usageLogsError;
+
+  const showLoadingState = (usageLogsLoading || usageLogsNetworkStatus === NetworkStatus.refetch) && selectedChildId;
   const noChildrenState = !childrenLoading && (!childrenData?.myChildren?.edges || childrenData.myChildren.edges.length === 0);
   const hasMultipleChildren = childrenData?.myChildren?.edges && childrenData.myChildren.edges.length > 1;
+  
+  // Loading states with network awareness
+  const isDashboardLoading = dashboardLoading || dashboardNetworkStatus === NetworkStatus.refetch;
+  const isActivityLoading = usageLogsLoading || usageLogsNetworkStatus === NetworkStatus.refetch;
+
+  // Helper function for smart activity counter with psychology-driven messaging
+  function getSmartActivityMessage(additionalCount: number, allActivities: RecentActivity[]): { message: string; accessibilityLabel: string } {
+    if (additionalCount <= 0) {
+      return { message: '', accessibilityLabel: '' };
+    }
+
+    // Get the additional activities to analyze timing context
+    const additionalActivities = allActivities.slice(ACTIVITY_INITIAL_LIMIT);
+
+    // Analyze time context of additional activities
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    weekAgo.setHours(0, 0, 0, 0);
+
+    let todayCount = 0;
+    let thisWeekCount = 0;
+
+    additionalActivities.forEach(activity => {
+      // Use raw timestamp for proper date analysis
+      if (activity.rawTimestamp) {
+        const activityDate = new Date(activity.rawTimestamp);
+        
+        if (activityDate >= today) {
+          todayCount++;
+        } else if (activityDate >= weekAgo) {
+          thisWeekCount++;
+        }
+      }
+    });
+
+    // Psychology-driven smart messaging based on count and context
+    let message: string;
+    let accessibilityLabel: string;
+
+    if (additionalCount <= 3) {
+      // Small counts: Be specific and encouraging
+      if (additionalCount === 1) {
+        message = "View 1 more change";
+        accessibilityLabel = "View 1 more activity";
+      } else {
+        message = `View ${additionalCount} more changes`;
+        accessibilityLabel = `View ${additionalCount} more activities`;
+      }
+    } else if (additionalCount <= 10) {
+      // Medium counts: Context-aware with time reference
+      if (todayCount >= additionalCount * 0.7) {
+        message = `+${additionalCount} more today`;
+        accessibilityLabel = `View ${additionalCount} more activities from today`;
+      } else if (thisWeekCount >= additionalCount * 0.8) {
+        message = `+${additionalCount} more this week`;
+        accessibilityLabel = `View ${additionalCount} more activities from this week`;
+      } else {
+        message = `+${additionalCount} more recent`;
+        accessibilityLabel = `View ${additionalCount} more recent activities`;
+      }
+    } else if (additionalCount <= 20) {
+      // Large counts: Simplified with encouraging tone
+      message = `+${additionalCount} more this week`;
+      accessibilityLabel = `View ${additionalCount} more activities from recent days`;
+    } else {
+      // Very large counts: Fallback to supportive messaging
+      message = "View complete history";
+      accessibilityLabel = `View complete activity history with ${additionalCount} more items`;
+    }
+
+    return { message, accessibilityLabel };
+  }
 
   // Helper function for hybrid timestamp display with Canadian timezone
   function formatActivityTimestamp(dateString: string): string {
@@ -233,6 +378,65 @@ export default function HomeScreen() {
     return description;
   }
 
+  
+  // Handle manual retry operations with unified error system
+  const handleManualRetry = useCallback(async (retryFn: () => Promise<any>, context: string) => {
+    try {
+      // Clear any existing manual retry errors
+      clearAllErrors();
+      await retryFn();
+    } catch (error) {
+      // Add error to unified system instead of local state
+      addError({
+        ...createNetworkError(
+          `${context} failed`,
+          ErrorSeverity.MEDIUM,
+          ErrorSource.MANUAL_RETRY
+        ),
+        supportiveMessage: "We've tried a few times but couldn't connect. When you're ready, tap Try Again to continue.",
+        context: { operation: context, error: error?.toString() },
+      });
+    }
+  }, [addError, clearAllErrors]);
+  
+  // Handle pull-to-refresh with psychology-driven UX
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    
+    try {
+      // Clear any existing errors before refreshing
+      clearAllErrors();
+      
+      // Refresh all data sources
+      const promises = [];
+      
+      if (selectedChildId && refetchDashboard) {
+        promises.push(refetchDashboard());
+      }
+      
+      if (selectedChildId && refetchUsageLogs) {
+        promises.push(refetchUsageLogs());
+      }
+      
+      await Promise.all(promises);
+      
+      // Show brief success feedback
+      setSuccessMessage("Updated! Everything's looking good.");
+      setTimeout(() => setSuccessMessage(''), 2000);
+      
+    } catch (error) {
+      // Use unified error system instead of manual retry logic
+      await handleManualRetry(async () => {
+        const promises = [];
+        if (selectedChildId && refetchDashboard) promises.push(refetchDashboard());
+        if (selectedChildId && refetchUsageLogs) promises.push(refetchUsageLogs());
+        await Promise.all(promises);
+      }, 'Data refresh');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [selectedChildId, refetchDashboard, refetchUsageLogs, handleManualRetry, clearAllErrors]);
+  
   // Handle success messages from modals
   const handleModalSuccess = (message: string) => {
     setSuccessMessage(message);
@@ -242,6 +446,22 @@ export default function HomeScreen() {
 
   // Determine if actions should be disabled
   const actionsDisabled = !selectedChildId || childrenLoading || dashboardLoading;
+
+  // Time-aware greeting function
+  const getTimeBasedGreeting = (): string => {
+    const now = new Date();
+    const hour = now.getHours();
+    
+    if (hour >= 5 && hour < 12) {
+      return "Good morning!";
+    } else if (hour >= 12 && hour < 17) {
+      return "Good afternoon!";
+    } else if (hour >= 17 && hour < 22) {
+      return "Good evening!";
+    } else {
+      return "Hello there!";
+    }
+  };
 
   // Quick Actions with better state handling
   const quickActions: QuickAction[] = [
@@ -334,12 +554,27 @@ export default function HomeScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.tint}
+              colors={[colors.tint, colors.success]}
+              progressBackgroundColor={colors.surface}
+              title="Refreshing your data..."
+              titleColor={colors.textSecondary}
+            />
+          }
         >
           {/* Success Message */}
           {successMessage && (
-            <View style={[styles.successMessage, { backgroundColor: colors.success }]}>
-              <IconSymbol name="checkmark.circle.fill" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.successMessageText}>
+            <View 
+              style={[styles.successMessage, { backgroundColor: '#E3F2FD', borderColor: '#1565C0' }]}
+              accessibilityRole="alert"
+              accessibilityLabel={`Success: ${successMessage}`}
+            >
+              <IconSymbol name="checkmark.circle.fill" size={20} color="#1565C0" />
+              <ThemedText style={[styles.successMessageText, { color: '#1565C0' }]}>
                 {successMessage}
               </ThemedText>
             </View>
@@ -350,7 +585,7 @@ export default function HomeScreen() {
             <View style={styles.headerTop}>
               <View style={styles.headerTextContainer}>
                 <ThemedText type="title" style={styles.headerTitle}>
-                  Good morning!
+                  {getTimeBasedGreeting()}
                 </ThemedText>
                 <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
                   {childrenLoading ? 'Loading child information...' : 
@@ -367,7 +602,16 @@ export default function HomeScreen() {
               {hasMultipleChildren && (
                 <View style={styles.childSelectorContainer}>
                   <ChildSelector
-                    children={childrenData.myChildren.edges.map(edge => edge.node)}
+                    children={(() => {
+                      // Client-side deduplication safeguard for child entries
+                      const childrenMap = new Map();
+                      childrenData.myChildren.edges.forEach((edge: any) => {
+                        if (!childrenMap.has(edge.node.id)) {
+                          childrenMap.set(edge.node.id, edge.node);
+                        }
+                      });
+                      return Array.from(childrenMap.values());
+                    })()}
                     selectedChildId={selectedChildId}
                     onChildSelect={handleChildSelect}
                     loading={childrenLoading}
@@ -386,7 +630,7 @@ export default function HomeScreen() {
                 No Children Added
               </ThemedText>
               <ThemedText style={[styles.noChildrenText, { color: colors.textSecondary }]}>
-                You haven't added any children to your account yet. Complete the onboarding process to add your first child and start tracking diaper usage.
+                You haven't added any children to your account yet. Complete the onboarding process to add your first child and start your diaper planning journey.
               </ThemedText>
               <TouchableOpacity
                 style={[styles.noChildrenButton, { backgroundColor: colors.tint }]}
@@ -403,77 +647,81 @@ export default function HomeScreen() {
           {/* Stats Overview - only show when children exist */}
           {!noChildrenState && (
           <ThemedView style={styles.statsContainer}>
-            {/* Loading state for dashboard */}
-            {(childrenLoading || dashboardLoading) && (
-              <View style={[styles.loadingContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <ActivityIndicator size="small" color={colors.tint} />
-                <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-                  Loading dashboard data...
-                </ThemedText>
-              </View>
-            )}
-            
-            {/* Error state */}
-            {dashboardError && (
-              <View style={[styles.errorContainer, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-                <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.error} />
-                <ThemedText style={[styles.errorText, { color: colors.error }]}>
-                  Unable to load dashboard data. Please try again.
-                </ThemedText>
-              </View>
-            )}
-            
-            <View style={styles.statsGrid}>
-              {/* Days Remaining Card */}
-              <View style={[
-                styles.statCard, 
-                styles.statCardLarge,
-                { backgroundColor: colors.surface, borderColor: colors.border }
-              ]}>
-                <View style={styles.statHeader}>
-                  <IconSymbol name="calendar.circle.fill" size={28} color={colors.success} />
-                  <ThemedText type="defaultSemiBold" style={styles.statLabel}>
-                    Days of Cover
+            {/* Loading state with skeleton */}
+            {(childrenLoading || isDashboardLoading) && (
+              <View style={styles.skeletonContainer}>
+                <View style={[styles.skeletonCard, styles.skeletonCardLarge, { backgroundColor: '#E3F2FD' }]}>
+                  <View style={styles.skeletonHeader}>
+                    <View style={[styles.skeletonIcon, { backgroundColor: '#B3E5FC' }]} />
+                    <View style={[styles.skeletonText, styles.skeletonTextMedium, { backgroundColor: '#B3E5FC' }]} />
+                  </View>
+                  <View style={[styles.skeletonText, styles.skeletonTextLarge, { backgroundColor: '#B3E5FC' }]} />
+                  <View style={[styles.skeletonText, styles.skeletonTextSmall, { backgroundColor: '#B3E5FC' }]} />
+                </View>
+                <View style={styles.skeletonGrid}>
+                  <View style={[styles.skeletonCard, styles.skeletonCardSmall, { backgroundColor: '#E3F2FD' }]}>
+                    <View style={[styles.skeletonIcon, styles.skeletonIconSmall, { backgroundColor: '#B3E5FC' }]} />
+                    <View style={[styles.skeletonText, styles.skeletonTextLarge, { backgroundColor: '#B3E5FC' }]} />
+                    <View style={[styles.skeletonText, styles.skeletonTextSmall, { backgroundColor: '#B3E5FC' }]} />
+                  </View>
+                  <View style={[styles.skeletonCard, styles.skeletonCardSmall, { backgroundColor: '#E3F2FD' }]}>
+                    <View style={[styles.skeletonIcon, styles.skeletonIconSmall, { backgroundColor: '#B3E5FC' }]} />
+                    <View style={[styles.skeletonText, styles.skeletonTextLarge, { backgroundColor: '#B3E5FC' }]} />
+                    <View style={[styles.skeletonText, styles.skeletonTextSmall, { backgroundColor: '#B3E5FC' }]} />
+                  </View>
+                </View>
+                <View style={[styles.loadingIndicator, { backgroundColor: '#E3F2FD', borderColor: '#4FC3F7' }]}>
+                  <ActivityIndicator size="small" color="#1565C0" />
+                  <ThemedText style={[styles.loadingText, { color: '#1565C0' }]}>
+                    Getting your latest data ready...
                   </ThemedText>
                 </View>
-                <ThemedText type="title" style={[styles.statNumber, { color: colors.success }]}>
-                  {dashboardStats.daysRemaining}
-                </ThemedText>
-                <ThemedText style={[styles.statSubtext, { color: colors.textSecondary }]}>
-                  At current usage rate
-                </ThemedText>
               </View>
-
-              {/* Diapers Left Card */}
-              <View style={[
-                styles.statCard,
-                styles.statCardSmall,
-                { backgroundColor: colors.surface, borderColor: colors.border }
-              ]}>
-                <IconSymbol name="cube.box" size={20} color={colors.tint} />
-                <ThemedText type="title" style={[styles.statNumber, { color: colors.tint }]}>
-                  {dashboardStats.diapersLeft}
+            )}
+            
+            {/* Primary Readiness Card - New UX Focus */}
+            <ChangingReadinessCard
+              changesReady={dashboardStats.changesReady}
+              onPress={() => setShowSupplyBreakdown(!showSupplyBreakdown)}
+              loading={isDashboardLoading}
+            />
+            
+            {/* Progressive Disclosure: Supply Breakdown */}
+            {showSupplyBreakdown && (
+              <View style={styles.supplyBreakdownContainer}>
+                <ThemedText type="defaultSemiBold" style={[styles.breakdownTitle, { color: colors.text }]}>
+                  Supply Overview
                 </ThemedText>
-                <ThemedText style={[styles.statText, { color: colors.textSecondary }]}>
-                  Diapers Left
-                </ThemedText>
+                <View style={styles.supplyGrid}>
+                  <DiapersCard
+                    quantity={dashboardStats.diapersLeft}
+                    loading={isDashboardLoading}
+                    onPress={() => setInventoryDetailModalVisible(true)}
+                  />
+                  <WipesCard
+                    quantity={dashboardStats.wipesLeft}
+                    loading={isDashboardLoading}
+                    onPress={() => setInventoryDetailModalVisible(true)}
+                  />
+                </View>
+                
+                {/* Compact stats for secondary information */}
+                <View style={styles.secondaryStatsContainer}>
+                  <View style={styles.secondaryStatItem}>
+                    <IconSymbol name="calendar.circle.fill" size={16} color={colors.success} />
+                    <ThemedText style={[styles.secondaryStatText, { color: colors.textSecondary }]}>
+                      {dashboardStats.daysRemaining} days coverage
+                    </ThemedText>
+                  </View>
+                  <View style={styles.secondaryStatItem}>
+                    <IconSymbol name="checkmark.circle" size={16} color={colors.accent} />
+                    <ThemedText style={[styles.secondaryStatText, { color: colors.textSecondary }]}>
+                      {dashboardStats.todayChanges} changes today
+                    </ThemedText>
+                  </View>
+                </View>
               </View>
-
-              {/* Today's Changes Card */}
-              <View style={[
-                styles.statCard,
-                styles.statCardSmall,
-                { backgroundColor: colors.surface, borderColor: colors.border }
-              ]}>
-                <IconSymbol name="checkmark.circle" size={20} color={colors.accent} />
-                <ThemedText type="title" style={[styles.statNumber, { color: colors.accent }]}>
-                  {dashboardStats.todayChanges}
-                </ThemedText>
-                <ThemedText style={[styles.statText, { color: colors.textSecondary }]}>
-                  Today
-                </ThemedText>
-              </View>
-            </View>
+            )}
           </ThemedView>
           )}
 
@@ -506,34 +754,62 @@ export default function HomeScreen() {
               Recent Activity
             </ThemedText>
             
-            {/* Loading state for recent activity */}
-            {showLoadingState && (
-              <View style={[styles.activityLoadingContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <ActivityIndicator size="small" color={colors.tint} />
-                <ThemedText style={[styles.activityLoadingText, { color: colors.textSecondary }]}>
-                  Loading recent activity...
-                </ThemedText>
+            {/* Loading state for recent activity with skeleton */}
+            {(showLoadingState || isActivityLoading) && (
+              <View style={styles.activitySkeletonContainer}>
+                {[...Array(3)].map((_, index) => (
+                  <View 
+                    key={index} 
+                    style={[styles.activitySkeletonItem, { backgroundColor: '#E3F2FD', borderColor: '#B3E5FC' }]}
+                  >
+                    <View style={[styles.skeletonIcon, styles.skeletonIconSmall, { backgroundColor: '#B3E5FC' }]} />
+                    <View style={styles.activitySkeletonContent}>
+                      <View style={[styles.skeletonText, styles.skeletonTextMedium, { backgroundColor: '#B3E5FC', width: '70%' }]} />
+                      <View style={[styles.skeletonText, styles.skeletonTextSmall, { backgroundColor: '#B3E5FC', width: '50%', marginTop: 4 }]} />
+                    </View>
+                  </View>
+                ))}
+                <View style={[styles.loadingIndicator, { backgroundColor: '#E3F2FD', borderColor: '#4FC3F7' }]}>
+                  <ActivityIndicator size="small" color="#1565C0" />
+                  <ThemedText style={[styles.loadingText, { color: '#1565C0' }]}>
+                    Loading your recent activity...
+                  </ThemedText>
+                </View>
               </View>
             )}
             
-            {/* Empty state */}
+            {/* Empty state with supportive messaging */}
             {showEmptyState && (
-              <View style={[styles.emptyActivityContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <IconSymbol name="clock.fill" size={24} color={colors.textSecondary} />
-                <ThemedText type="defaultSemiBold" style={[styles.emptyActivityTitle, { color: colors.text }]}>
-                  No recent activity
+              <View style={[styles.supportiveEmptyContainer, { backgroundColor: '#E3F2FD', borderColor: '#4FC3F7' }]}>
+                <IconSymbol name="heart.fill" size={32} color="#1565C0" />
+                <ThemedText type="defaultSemiBold" style={[styles.supportiveEmptyTitle, { color: '#1565C0' }]}>
+                  Ready for your first log
                 </ThemedText>
-                <ThemedText style={[styles.emptyActivityText, { color: colors.textSecondary }]}>
-                  Start logging diaper changes to see activity here
+                <ThemedText style={[styles.supportiveEmptyText, { color: '#1565C0' }]}>
+                  When you log your first diaper change, we'll show your activity timeline here. You've got this - every parent starts somewhere!
                 </ThemedText>
+                <TouchableOpacity 
+                  style={[styles.supportiveEmptyButton, { backgroundColor: '#1565C0' }]}
+                  onPress={() => setQuickLogModalVisible(true)}
+                  disabled={!selectedChildId}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log your first diaper change"
+                >
+                  <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
+                  <ThemedText style={styles.supportiveEmptyButtonText}>Log First Change</ThemedText>
+                </TouchableOpacity>
               </View>
             )}
             
-            {/* Activity items */}
+            {/* Activity items - Now Interactive */}
             {recentActivity.map((activity) => (
-              <View
+              <TouchableOpacity
                 key={activity.id}
                 style={[styles.activityItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => router.push('/activity-history')}
+                accessibilityRole="button"
+                accessibilityLabel={`View activity details: ${activity.description} at ${activity.time}`}
+                accessibilityHint="Navigate to full activity history"
               >
                 <View style={styles.activityIcon}>
                   <IconSymbol 
@@ -550,23 +826,29 @@ export default function HomeScreen() {
                     {activity.time}
                   </ThemedText>
                 </View>
-              </View>
+                <View style={styles.activityChevron}>
+                  <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
             ))}
 
-            {/* Progressive Disclosure Controls */}
-            {hasMoreActivity && !showAllActivity && (
-              <TouchableOpacity
-                style={[styles.viewAllButton, { borderColor: colors.border }]}
-                onPress={() => setShowAllActivity(true)}
-                accessibilityRole="button"
-                accessibilityLabel={`View all activity (${additionalActivityCount} more items)`}
-              >
-                <ThemedText style={[styles.viewAllText, { color: colors.tint }]}>
-                  View All Activity ({additionalActivityCount} more)
-                </ThemedText>
-                <IconSymbol name="chevron.down" size={16} color={colors.tint} />
-              </TouchableOpacity>
-            )}
+            {/* Progressive Disclosure Controls - Smart Activity Counter */}
+            {hasMoreActivity && !showAllActivity && (() => {
+              const smartMessage = getSmartActivityMessage(additionalActivityCount, allRecentActivity);
+              return (
+                <TouchableOpacity
+                  style={[styles.viewAllButton, { borderColor: colors.border }]}
+                  onPress={() => router.push('/activity-history')}
+                  accessibilityRole="button"
+                  accessibilityLabel={smartMessage.accessibilityLabel}
+                >
+                  <ThemedText style={[styles.viewAllText, { color: colors.tint }]}>
+                    {smartMessage.message}
+                  </ThemedText>
+                  <IconSymbol name="chevron.right" size={16} color={colors.tint} />
+                </TouchableOpacity>
+              );
+            })()}
             
             {showAllActivity && hasMoreActivity && (
               <TouchableOpacity
@@ -592,7 +874,7 @@ export default function HomeScreen() {
               </ThemedText>
             </View>
             <ThemedText style={[styles.statusText, { color: colors.textSecondary }]}>
-              Using {dashboardStats.currentSize} • Last change {dashboardStats.lastChange} • On track with schedule
+              Using {dashboardStats.currentSize} diapers • Last change {dashboardStats.lastChange} • You're on track
             </ThemedText>
           </ThemedView>
 
@@ -600,7 +882,7 @@ export default function HomeScreen() {
           <ThemedView style={[styles.trustIndicator, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <IconSymbol name="checkmark.shield.fill" size={20} color={colors.info} />
             <ThemedText style={[styles.trustText, { color: colors.textSecondary }]}>
-              Your data is securely stored in Canada
+              Your diaper planning data is securely stored in Canada
             </ThemedText>
           </ThemedView>
 
@@ -626,10 +908,28 @@ export default function HomeScreen() {
           childId={selectedChildId}
         />
         
+        <InventoryDetailModal
+          visible={inventoryDetailModalVisible}
+          onClose={() => setInventoryDetailModalVisible(false)}
+          onSuccess={handleModalSuccess}
+          onAddMore={() => {
+            setInventoryDetailModalVisible(false);
+            setAddInventoryModalVisible(true);
+          }}
+          childId={selectedChildId}
+        />
+        
         <AddChildModal
           visible={addChildModalVisible}
           onClose={() => setAddChildModalVisible(false)}
           onSuccess={handleModalSuccess}
+        />
+        
+        {/* Unified Error Handler - Single source of truth for all error displays */}
+        <UnifiedErrorHandler
+          position="top"
+          showComplianceIndicator={true}
+          onRetry={onRefresh}
         />
       </SafeAreaView>
     </SafeAreaProvider>
@@ -757,6 +1057,11 @@ const styles = StyleSheet.create({
   activityContent: {
     flex: 1,
   },
+  activityChevron: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
   activityDescription: {
     fontSize: 16,
     fontWeight: '600', // Stronger weight for primary information
@@ -829,6 +1134,190 @@ const styles = StyleSheet.create({
   trustText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  // RefreshControl and Enhanced Error Handling Styles
+  supportiveErrorMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  errorMessageContent: {
+    flex: 1,
+  },
+  supportiveErrorText: {
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  retryText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  retryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Skeleton Loading Styles
+  skeletonContainer: {
+    marginBottom: 16,
+  },
+  skeletonCard: {
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 8,
+  },
+  skeletonCardLarge: {
+    width: '100%',
+  },
+  skeletonCardSmall: {
+    width: (width - 52) / 2,
+  },
+  skeletonGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  skeletonIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  skeletonIconSmall: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  skeletonText: {
+    height: 16,
+    borderRadius: 8,
+  },
+  skeletonTextLarge: {
+    height: 32,
+    width: '60%',
+    marginBottom: 8,
+  },
+  skeletonTextMedium: {
+    height: 20,
+    width: '80%',
+  },
+  skeletonTextSmall: {
+    height: 14,
+    width: '50%',
+  },
+  loadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 12,
+    gap: 12,
+  },
+  // Supportive Error Container Styles
+  supportiveErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 16,
+  },
+  errorContentContainer: {
+    flex: 1,
+  },
+  supportiveErrorTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  supportiveErrorMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  supportiveRetryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+    alignSelf: 'flex-start',
+  },
+  supportiveRetryText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Activity Skeleton Styles
+  activitySkeletonContainer: {
+    marginBottom: 16,
+  },
+  activitySkeletonItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 16,
+  },
+  activitySkeletonContent: {
+    flex: 1,
+  },
+  // Supportive Empty State Styles
+  supportiveEmptyContainer: {
+    alignItems: 'center',
+    padding: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 16,
+  },
+  supportiveEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  supportiveEmptyText: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+  },
+  supportiveEmptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
+    marginTop: 8,
+  },
+  supportiveEmptyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -934,5 +1423,64 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  
+  // Supply breakdown progressive disclosure styles
+  supplyBreakdownContainer: {
+    marginTop: 16,
+    marginBottom: 16,
+    gap: 16,
+  },
+  breakdownTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  supplyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  secondaryStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(8, 145, 178, 0.05)', // Primary blue with 5% opacity
+    borderRadius: 12,
+    gap: 16,
+  },
+  secondaryStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  secondaryStatText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  
+  // Diaper-focused card styling for anxiety reduction
+  diaperFocusCard: {
+    width: (width - 52) / 2,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
+  },
+  diaperFocusContent: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  diaperFocusText: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 16,
+    fontWeight: '500',
   },
 });
