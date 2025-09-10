@@ -157,17 +157,30 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         
         client_id = self.get_client_identifier(request)
         
+        # Environment-aware rate limiting
+        is_development = settings.environment == "development"
+        
         # Different limits for different endpoints
         if request.url.path.startswith("/graphql"):
-            # More restrictive for GraphQL
-            max_requests = 50
-            window = 900  # 15 minutes
+            # Development: Much higher limits for GraphQL
+            # Production: More restrictive for security
+            if is_development:
+                max_requests = 500  # Allow 500 requests for development
+                window = 900  # 15 minutes
+            else:
+                max_requests = 50   # Production limit
+                window = 900  # 15 minutes
         elif request.url.path.startswith("/auth"):
-            # Very restrictive for auth endpoints
-            max_requests = 10
-            window = 300  # 5 minutes
+            # Development: Slightly higher auth limits
+            # Production: Very restrictive for auth endpoints
+            if is_development:
+                max_requests = 25   # Allow more auth attempts in development
+                window = 300  # 5 minutes
+            else:
+                max_requests = 10   # Production limit
+                window = 300  # 5 minutes
         else:
-            # Default limits
+            # Default limits from settings (already environment-aware)
             max_requests = settings.rate_limit_requests
             window = settings.rate_limit_window
         
