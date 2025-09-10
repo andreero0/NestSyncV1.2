@@ -136,13 +136,7 @@ const styles = StyleSheet.create({
 
   // iOS specific shadow
   iosShadow: {
-    shadowColor: NestSyncColors.neutral[900],
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    boxShadow: `0 2px 8px ${NestSyncColors.neutral[900]}1A`,
   },
 });
 
