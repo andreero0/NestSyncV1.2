@@ -302,6 +302,70 @@ class UpdateChildResponse(MutationResponse):
     child: Optional[ChildProfile] = None
 
 
+# =============================================================================
+# Child Profile Cleanup Types
+# =============================================================================
+
+@strawberry.enum
+class DeletionType(Enum):
+    """Types of child profile deletion"""
+    SOFT_DELETE = "soft_delete"
+    HARD_DELETE = "hard_delete"
+
+
+@strawberry.input
+class DeleteChildInput:
+    """Input for child profile deletion with options"""
+    deletion_type: DeletionType = DeletionType.SOFT_DELETE
+    confirmation_text: str
+    reason: Optional[str] = None
+    retain_audit_logs: bool = True
+
+
+@strawberry.input
+class RecreateChildProfileInput:
+    """Input for recreating a child profile after deletion"""
+    name: str
+    date_of_birth: date
+    gender: Optional[GenderType] = None
+    current_diaper_size: DiaperSizeType
+    current_weight_kg: Optional[float] = None
+    current_height_cm: Optional[float] = None
+    daily_usage_count: Optional[int] = None
+    has_sensitive_skin: bool = False
+    has_allergies: bool = False
+    allergies_notes: Optional[str] = None
+    special_needs: Optional[str] = None
+    preferred_brands: Optional[List[str]] = None
+    province: Optional[str] = None
+
+
+@strawberry.type
+class DeletionAuditInfo:
+    """Audit information for data deletion (PIPEDA compliance)"""
+    deleted_at: datetime
+    deleted_by: str
+    deletion_type: DeletionType
+    reason: Optional[str] = None
+    items_deleted_summary: str  # Changed from Dict[str, int] to string for GraphQL compatibility
+    retention_period_days: Optional[int] = None
+
+
+@strawberry.type
+class DeleteChildResponse(MutationResponse):
+    """Enhanced delete child response with audit information"""
+    deleted_child_id: Optional[str] = None
+    audit_info: Optional[DeletionAuditInfo] = None
+
+
+@strawberry.type
+class RecreateChildProfileResponse(MutationResponse):
+    """Response for child profile recreation"""
+    child: Optional[ChildProfile] = None
+    previous_deletion_info: Optional[DeletionAuditInfo] = None
+    data_integrity_verified: bool = False
+
+
 @strawberry.type
 class UserProfileResponse(MutationResponse):
     """User profile response"""
@@ -576,6 +640,13 @@ class UpdateInventoryItemInput:
     would_rebuy: Optional[bool] = None
 
 
+@strawberry.input
+class DeleteInventoryItemInput:
+    """Delete inventory item input with safety confirmation"""
+    confirmation_text: str  # Required confirmation text for safety
+    reason: Optional[str] = None  # Optional reason for deletion
+
+
 # =============================================================================
 # Inventory Response Types
 # =============================================================================
@@ -597,6 +668,12 @@ class LogDiaperChangeResponse(MutationResponse):
 class UpdateInventoryItemResponse(MutationResponse):
     """Update inventory item response"""
     inventory_item: Optional[InventoryItem] = None
+
+
+@strawberry.type
+class DeleteInventoryItemResponse(MutationResponse):
+    """Delete inventory item response"""
+    deleted_item_id: Optional[str] = None
 
 
 @strawberry.type
@@ -657,6 +734,7 @@ __all__ = [
     "ProductTypeEnum",
     "UsageTypeEnum",
     "UsageContextEnum",
+    "DeletionType",
     
     # User Types
     "UserProfile",
@@ -682,21 +760,28 @@ __all__ = [
     "ConsentUpdateInput",
     "CreateChildInput",
     "UpdateChildInput",
+    "DeleteChildInput",
+    "RecreateChildProfileInput",
     "OnboardingWizardStepInput",
     "InitialInventoryInput",
     "CreateInventoryItemInput",
     "LogDiaperChangeInput",
     "UpdateInventoryItemInput",
+    "DeleteInventoryItemInput",
     
     # Response Types
     "MutationResponse",
     "CreateChildResponse",
-    "UpdateChildResponse", 
+    "UpdateChildResponse",
+    "DeleteChildResponse",
+    "RecreateChildProfileResponse",
+    "DeletionAuditInfo",
     "UserProfileResponse",
     "OnboardingStatusResponse",
     "CreateInventoryItemResponse",
     "LogDiaperChangeResponse",
     "UpdateInventoryItemResponse",
+    "DeleteInventoryItemResponse",
     
     # Connection Types
     "PageInfo",

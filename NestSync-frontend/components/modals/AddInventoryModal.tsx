@@ -26,8 +26,8 @@ import { ThemedText } from '../ThemedText';
 import { IconSymbol } from '../ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { CREATE_INVENTORY_ITEM_MUTATION, GET_DASHBOARD_STATS_QUERY, GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/mutations';
-import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
+import { CREATE_INVENTORY_ITEM_MUTATION, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/mutations';
+import { MY_CHILDREN_QUERY, GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/queries';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -129,6 +129,7 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
   const [storageLocation, setStorageLocation] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [expiryValidation, setExpiryValidation] = useState<{type: 'warning' | 'error' | 'success' | null, message: string}>({type: null, message: ''});
 
   // GraphQL queries and mutations
   const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
@@ -155,6 +156,108 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
       ? DIAPER_SIZES
       : GENERIC_SIZES;
   }, [selectedProductType]);
+
+  // Smart default expiry date suggestions based on product type
+  const getDefaultExpiryDate = useCallback((productType: string): Date => {
+    const today = new Date();
+    const currentDate = new Date(today.toLocaleString("en-US", {timeZone: 'America/Toronto'}));
+    
+    const monthsToAdd = {
+      'DIAPER': 24,        // 2 years
+      'WIPES': 24,         // 2 years  
+      'DIAPER_CREAM': 36,  // 3 years
+      'POWDER': 36,        // 3 years
+      'DIAPER_BAGS': 120,  // 10 years (durable goods)
+      'TRAINING_PANTS': 24, // 2 years
+      'SWIMWEAR': 24       // 2 years
+    } as const;
+    
+    const months = monthsToAdd[productType as keyof typeof monthsToAdd] || 24;
+    currentDate.setMonth(currentDate.getMonth() + months);
+    return currentDate;
+  }, []);
+
+  // Format date to YYYY-MM-DD for input field
+  const formatDateForInput = useCallback((date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  // Validate expiry date
+  const validateExpiryDate = useCallback((expiryDateStr: string, productType: string) => {
+    if (!expiryDateStr.trim()) {
+      setExpiryValidation({type: null, message: ''});
+      return {valid: true};
+    }
+
+    try {
+      const expiryDate = new Date(expiryDateStr);
+      if (isNaN(expiryDate.getTime())) {
+        setExpiryValidation({type: 'error', message: 'Please enter a valid date (YYYY-MM-DD)'});
+        return {valid: false, error: 'Invalid date format'};
+      }
+
+      const today = new Date();
+      const monthsFromNow = (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+      
+      if (monthsFromNow < 0) {
+        setExpiryValidation({type: 'error', message: 'Expiry date cannot be in the past'});
+        return {valid: false, error: 'Date in past'};
+      }
+      
+      if (monthsFromNow < 1) {
+        setExpiryValidation({type: 'warning', message: 'This expiry date is very soon. Is this correct?'});
+        return {valid: true, warning: 'Very soon expiry'};
+      }
+      
+      if (monthsFromNow > 120) { // 10 years
+        setExpiryValidation({type: 'warning', message: 'This expiry date is quite far in the future. Please verify.'});
+        return {valid: true, warning: 'Far future date'};
+      }
+
+      // Show success feedback with calculated status
+      const years = Math.floor(monthsFromNow / 12);
+      const remainingMonths = Math.floor(monthsFromNow % 12);
+      let timeMessage = '';
+      
+      if (years > 0) {
+        timeMessage = years === 1 ? '1 year' : `${years} years`;
+        if (remainingMonths > 0) {
+          timeMessage += remainingMonths === 1 ? ' 1 month' : ` ${remainingMonths} months`;
+        }
+      } else {
+        timeMessage = remainingMonths === 1 ? '1 month' : `${Math.floor(monthsFromNow)} months`;
+      }
+
+      setExpiryValidation({
+        type: 'success', 
+        message: `Great! You'll get alerts before this expires (expires in ${timeMessage})`
+      });
+      return {valid: true, success: `Expires in ${timeMessage}`};
+      
+    } catch {
+      setExpiryValidation({type: 'error', message: 'Please enter a valid date'});
+      return {valid: false, error: 'Invalid date'};
+    }
+  }, []);
+
+  // Handle expiry date change with validation
+  const handleExpiryDateChange = useCallback((value: string) => {
+    setExpiryDate(value);
+    validateExpiryDate(value, selectedProductType);
+  }, [selectedProductType, validateExpiryDate]);
+
+  // Auto-suggest expiry date when product type changes
+  React.useEffect(() => {
+    if (!expiryDate) {
+      const suggested = getDefaultExpiryDate(selectedProductType);
+      const formattedSuggestion = formatDateForInput(suggested);
+      setExpiryDate(formattedSuggestion);
+      validateExpiryDate(formattedSuggestion, selectedProductType);
+    }
+  }, [selectedProductType, expiryDate, getDefaultExpiryDate, formatDateForInput, validateExpiryDate]);
 
   // Use provided childId or get the first child as fallback
   React.useEffect(() => {
@@ -186,7 +289,26 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
       modalScale.value = withTiming(0.9, { duration: 200 });
       slideY.value = withTiming(screenHeight, { duration: 200 });
     }
-  }, [visible]);
+  }, [visible, modalOpacity, modalScale, slideY]);
+
+  // Date format conversion helper
+  const formatDateToISO = (dateStr: string): string => {
+    // Handle both YYYY/MM/DD and YYYY-MM-DD formats
+    const normalized = dateStr.replace(/\//g, '-');
+    
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+      throw new Error('Invalid date format. Please use YYYY-MM-DD');
+    }
+    
+    // Create date and return ISO string
+    const date = new Date(normalized + 'T00:00:00');
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date');
+    }
+    
+    return date.toISOString();
+  };
 
   // Form validation helper
   const isFormValid = () => {
@@ -194,7 +316,16 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
       return false;
     }
     const quantityNumber = parseInt(quantity, 10);
-    return !isNaN(quantityNumber) && quantityNumber > 0;
+    if (isNaN(quantityNumber) || quantityNumber <= 0) {
+      return false;
+    }
+    
+    // Check if expiry validation is in error state
+    if (expiryValidation.type === 'error') {
+      return false;
+    }
+    
+    return true;
   };
 
   // Handle form submission
@@ -215,6 +346,16 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
       return;
     }
 
+    // Validate expiry date format if provided
+    if (expiryDate.trim()) {
+      try {
+        formatDateToISO(expiryDate.trim());
+      } catch (error) {
+        console.error('Invalid expiry date format:', error.message);
+        return;
+      }
+    }
+
     // Haptic feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -227,7 +368,7 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
         size: selectedSize,
         quantityTotal: quantityNumber,
         costCad: cost.trim() ? parseFloat(cost) : undefined,
-        expiryDate: expiryDate.trim() || undefined,
+        expiryDate: expiryDate.trim() ? formatDateToISO(expiryDate.trim()) : undefined,
         storageLocation: storageLocation.trim() || undefined,
         notes: notes.trim() || undefined,
       };
@@ -263,6 +404,7 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
       setExpiryDate('');
       setStorageLocation('');
       setNotes('');
+      setExpiryValidation({type: null, message: ''});
       // Reset selectedChildId to empty so it gets repopulated on next open
       setSelectedChildId('');
     }, 300);
@@ -549,48 +691,93 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
                 </View>
               </View>
 
-              {/* Expiry Date and Storage Location */}
-              <View style={styles.row}>
-                <View style={styles.halfWidth}>
-                  <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-                    Expiry Date
+              {/* Enhanced Expiry Date Section */}
+              <View style={styles.section}>
+                <View style={styles.expiryHeader}>
+                  <View style={styles.expiryHeaderLeft}>
+                    <IconSymbol name="clock.circle.fill" size={20} color={colors.success} />
+                    <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                      Expiry Date
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={[styles.expiryBenefit, { color: colors.textSecondary }]}>
+                    Track freshness & get alerts
                   </ThemedText>
+                </View>
+                
+                <View style={styles.expiryInputContainer}>
                   <TextInput
                     style={[
                       styles.textInput,
+                      styles.expiryInput,
                       {
                         backgroundColor: colors.surface,
-                        borderColor: colors.border,
+                        borderColor: expiryValidation.type === 'error' ? colors.error : 
+                                   expiryValidation.type === 'success' ? colors.success : colors.border,
                         color: colors.text,
                       },
                     ]}
-                    placeholder="YYYY-MM-DD"
+                    placeholder="YYYY-MM-DD (auto-suggested based on product)"
                     placeholderTextColor={colors.placeholder}
                     value={expiryDate}
-                    onChangeText={setExpiryDate}
+                    onChangeText={handleExpiryDateChange}
                     maxLength={10}
+                    keyboardType="numeric"
                   />
-                </View>
-                <View style={styles.halfWidth}>
-                  <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-                    Storage
-                  </ThemedText>
-                  <TextInput
-                    style={[
-                      styles.textInput,
+                  
+                  {expiryValidation.type && (
+                    <View style={[
+                      styles.validationContainer,
                       {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    placeholder="e.g., Closet, Pantry"
-                    placeholderTextColor={colors.placeholder}
-                    value={storageLocation}
-                    onChangeText={setStorageLocation}
-                    maxLength={30}
-                  />
+                        backgroundColor: expiryValidation.type === 'error' ? colors.errorBackground :
+                                       expiryValidation.type === 'warning' ? colors.warningBackground :
+                                       colors.successBackground,
+                      }
+                    ]}>
+                      <IconSymbol 
+                        name={expiryValidation.type === 'error' ? 'exclamationmark.triangle.fill' :
+                              expiryValidation.type === 'warning' ? 'exclamationmark.circle.fill' :
+                              'checkmark.circle.fill'} 
+                        size={16} 
+                        color={expiryValidation.type === 'error' ? colors.error :
+                               expiryValidation.type === 'warning' ? colors.warning :
+                               colors.success} 
+                      />
+                      <ThemedText style={[
+                        styles.validationText,
+                        {
+                          color: expiryValidation.type === 'error' ? colors.error :
+                                 expiryValidation.type === 'warning' ? colors.warning :
+                                 colors.success,
+                        }
+                      ]}>
+                        {expiryValidation.message}
+                      </ThemedText>
+                    </View>
+                  )}
                 </View>
+              </View>
+
+              {/* Storage Location */}
+              <View style={styles.section}>
+                <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                  Storage Location (optional)
+                </ThemedText>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
+                  placeholder="e.g., Nursery closet, Pantry, Diaper bag"
+                  placeholderTextColor={colors.placeholder}
+                  value={storageLocation}
+                  onChangeText={setStorageLocation}
+                  maxLength={50}
+                />
               </View>
 
               {/* Notes Section */}
@@ -856,5 +1043,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  // Enhanced expiry date styles
+  expiryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  expiryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  expiryBenefit: {
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  expiryInputContainer: {
+    gap: 8,
+  },
+  expiryInput: {
+    borderWidth: 2, // Slightly thicker border to make it more prominent
+  },
+  validationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  validationText: {
+    fontSize: 13,
+    flex: 1,
+    fontWeight: '500',
   },
 });

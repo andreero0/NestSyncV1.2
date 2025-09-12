@@ -16,6 +16,8 @@ import { IconSymbol } from './IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { QuickLogModal } from '../modals/QuickLogModal';
+import { AddInventoryModal } from '../modals/AddInventoryModal';
+import { LegalModal } from '../consent/LegalModals';
 import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 
@@ -35,8 +37,11 @@ export function ContextAwareFAB() {
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   
-  // Modal state
+  // Modal states
   const [quickLogModalVisible, setQuickLogModalVisible] = useState(false);
+  const [addInventoryModalVisible, setAddInventoryModalVisible] = useState(false);
+  const [legalModalVisible, setLegalModalVisible] = useState(false);
+  const [legalModalType, setLegalModalType] = useState<'privacy' | 'terms' | 'affiliate'>('privacy');
   
   // State for selected child with persistence
   const [selectedChildId, setSelectedChildId] = useState<string>('');
@@ -47,8 +52,13 @@ export function ContextAwareFAB() {
     variables: { first: 10 },
   });
 
-  // Determine if actions should be disabled (same logic as dashboard)
-  const actionsDisabled = !selectedChildId || childrenLoading;
+  // Enhanced state management for better UX
+  const hasChildren = childrenData?.myChildren?.edges?.length > 0;
+  const isLoading = childrenLoading;
+  const showAddFirstChild = !hasChildren && !isLoading;
+  
+  // Only disable actions during loading, not when no children exist
+  const actionsDisabled = isLoading;
   
   // Sync selected child with stored value
   useEffect(() => {
@@ -65,37 +75,100 @@ export function ContextAwareFAB() {
   // Get current route context
   const currentRoute = segments[1] || 'index'; // Get the tab route (index, planner, settings)
   
-  // Context-aware FAB configurations
+  // Context-aware FAB configurations with enhanced logic for new users
   const fabContexts: FABContextMap = {
     index: {
-      icon: 'plus.circle.fill',
-      accessibilityLabel: 'Log diaper change',
+      icon: showAddFirstChild ? 'person.badge.plus' : 'plus.circle.fill',
+      accessibilityLabel: showAddFirstChild ? 'Add your first child' : 'Log diaper change',
       action: () => {
         if (actionsDisabled) {
           Alert.alert(
-            'Please Wait',
-            selectedChildId ? 'Loading child data...' : 'Please select a child first',
+            'Loading...',
+            'Please wait while we load your data',
             [{ text: 'OK' }]
           );
           return;
         }
+        
+        if (showAddFirstChild) {
+          // Navigate to child creation - using console for now, TODO: implement navigation
+          console.log('Navigate to add first child onboarding');
+          Alert.alert(
+            'Welcome to NestSync!',
+            'Let\'s add your first child to get started with diaper tracking.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Add Child', onPress: () => console.log('Navigate to child creation') }
+            ]
+          );
+          return;
+        }
+        
+        if (!selectedChildId) {
+          Alert.alert(
+            'Please Select a Child',
+            'Choose which child you\'d like to log a diaper change for.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
         setQuickLogModalVisible(true);
       },
     },
     planner: {
-      icon: 'calendar.badge.plus',
-      accessibilityLabel: 'Add to planner',
+      icon: showAddFirstChild ? 'person.badge.plus' : 'calendar.badge.plus',
+      accessibilityLabel: showAddFirstChild ? 'Add your first child' : 'Add to planner',
       action: () => {
-        console.log('Opening planner modal for scheduling or inventory');
-        // TODO: Open planning modal (schedule diaper changes or add inventory)
+        if (actionsDisabled) {
+          Alert.alert(
+            'Loading...',
+            'Please wait while we load your data',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        if (showAddFirstChild) {
+          Alert.alert(
+            'Welcome to NestSync!',
+            'Add your first child to start planning and tracking.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Add Child', onPress: () => console.log('Navigate to child creation') }
+            ]
+          );
+          return;
+        }
+        
+        if (!selectedChildId) {
+          Alert.alert(
+            'Please Select a Child',
+            'Choose which child you\'d like to add inventory for.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        setAddInventoryModalVisible(true);
       },
     },
     settings: {
       icon: 'questionmark.circle.fill',
       accessibilityLabel: 'Get help and support',
       action: () => {
-        console.log('Opening help and support resources');
-        // TODO: Open help modal or hide FAB for clean interface
+        if (actionsDisabled) {
+          Alert.alert(
+            'Loading...',
+            'Please wait while we load your data',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        // Show privacy policy as primary help/legal resource
+        setLegalModalType('privacy');
+        setLegalModalVisible(true);
       },
     },
   };
@@ -196,41 +269,83 @@ export function ContextAwareFAB() {
     },
   });
   
-  // Handle success callback from modal
-  const handleModalSuccess = (message: string) => {
+  // Handle success callbacks from modals
+  const handleQuickLogSuccess = (message: string) => {
     console.log('Diaper change logged successfully:', message);
     // You could show a toast notification here
   };
+  
+  const handleAddInventorySuccess = (message: string) => {
+    console.log('Inventory added successfully:', message);
+    // You could show a toast notification here
+  };
 
-  // Handle modal close
-  const handleModalClose = () => {
+  // Handle modal close functions
+  const handleQuickLogModalClose = () => {
     setQuickLogModalVisible(false);
+  };
+  
+  const handleAddInventoryModalClose = () => {
+    setAddInventoryModalVisible(false);
+  };
+  
+  const handleLegalModalClose = () => {
+    setLegalModalVisible(false);
   };
 
   return (
     <>
       <GestureDetector gesture={tapGesture}>
         <Animated.View 
-          style={[dynamicStyles.fabContainer, fabAnimatedStyle]}
+          style={[
+            dynamicStyles.fabContainer, 
+            fabAnimatedStyle,
+            isLoading && { backgroundColor: colors.tabIconDefault }
+          ]}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel={currentFABConfig.accessibilityLabel}
-          accessibilityHint="Double tap to activate"
+          accessibilityLabel={isLoading ? 'Loading...' : currentFABConfig.accessibilityLabel}
+          accessibilityHint={isLoading ? 'Please wait' : 'Double tap to activate'}
         >
-          <IconSymbol
-            name={currentFABConfig.icon}
-            size={24}
-            color="#FFFFFF"
-          />
+          {isLoading ? (
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              <IconSymbol
+                name="arrow.2.circlepath"
+                size={20}
+                color="#FFFFFF"
+              />
+            </View>
+          ) : (
+            <IconSymbol
+              name={currentFABConfig.icon}
+              size={24}
+              color="#FFFFFF"
+            />
+          )}
         </Animated.View>
       </GestureDetector>
       
       {/* Quick Log Modal */}
       <QuickLogModal
         visible={quickLogModalVisible}
-        onClose={handleModalClose}
-        onSuccess={handleModalSuccess}
+        onClose={handleQuickLogModalClose}
+        onSuccess={handleQuickLogSuccess}
         childId={selectedChildId}
+      />
+      
+      {/* Add Inventory Modal */}
+      <AddInventoryModal
+        visible={addInventoryModalVisible}
+        onClose={handleAddInventoryModalClose}
+        onSuccess={handleAddInventorySuccess}
+        childId={selectedChildId}
+      />
+      
+      {/* Legal Modal */}
+      <LegalModal
+        isVisible={legalModalVisible}
+        onClose={handleLegalModalClose}
+        type={legalModalType}
       />
     </>
   );

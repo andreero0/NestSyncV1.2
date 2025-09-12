@@ -277,22 +277,25 @@ export function AddChildModal({ visible, onClose, onSuccess }: AddChildModalProp
               <ThemedText style={[styles.label, { color: colors.text }]}>
                 Gender (optional)
               </ThemedText>
-              <Dropdown
-                style={[styles.dropdown, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                containerStyle={[styles.dropdownContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                data={GENDER_OPTIONS}
-                labelField="label"
-                valueField="value"
-                placeholder="Select gender"
-                value={childInfo.gender}
-                onChange={(item) => setChildInfo(prev => ({ ...prev, gender: item.value as any }))}
-                renderLeftIcon={() => (
-                  <IconSymbol name="person" size={20} color={colors.tint} style={{ marginRight: 8 }} />
-                )}
-                selectedTextStyle={{ color: colors.text }}
-                placeholderStyle={{ color: colors.textSecondary }}
-                iconStyle={{ tintColor: colors.textSecondary }}
-              />
+              <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <IconSymbol name="person" size={20} color={colors.tint} style={styles.pickerIcon} />
+                <Dropdown
+                  style={[styles.picker, { color: colors.text }]}
+                  placeholderStyle={{ color: colors.placeholder }}
+                  selectedTextStyle={{ color: colors.text }}
+                  itemTextStyle={{ color: colors.text }}
+                  data={GENDER_OPTIONS}
+                  maxHeight={300}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select gender"
+                  value={childInfo.gender}
+                  onChange={(item) => setChildInfo(prev => ({ ...prev, gender: item.value as any }))}
+                  dropdownPosition="auto"
+                  containerStyle={{ backgroundColor: colors.background, borderColor: colors.border }}
+                  itemContainerStyle={{ backgroundColor: colors.background }}
+                />
+              </View>
             </View>
 
             {/* Current Weight */}
@@ -424,17 +427,20 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
   },
-  dropdown: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  pickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 12,
     borderWidth: 1,
     minHeight: 48,
+    paddingLeft: 16,
   },
-  dropdownContainer: {
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 4,
+  picker: {
+    flex: 1,
+    height: 48,
+  },
+  pickerIcon: {
+    marginRight: 8,
   },
   footer: {
     flexDirection: 'row',

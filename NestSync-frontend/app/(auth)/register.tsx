@@ -358,38 +358,30 @@ export default function RegisterScreen() {
 
         {/* Province Picker */}
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.textEmphasis }]}>Province/Territory</Text>
+          <Text style={[styles.label, { color: colors.textEmphasis }]}>Province/Territory *</Text>
           <Controller
             control={control}
             name="province"
             render={({ field: { onChange, value } }) => (
-              <Dropdown
-                style={[styles.dropdown, 
-                  { 
-                    borderColor: errors.province ? colors.error : colors.border,
-                    backgroundColor: colors.background 
-                  }
-                ]}
-                containerStyle={[styles.dropdownContainer, { 
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border 
-                }]}
-                itemContainerStyle={{ 
-                  backgroundColor: colors.surface 
-                }}
-                itemTextStyle={{ color: colors.text }}
-                placeholderStyle={[styles.placeholderStyle, { color: colors.placeholder }]}
-                selectedTextStyle={[styles.selectedTextStyle, { color: colors.text }]}
-                data={CANADIAN_PROVINCES}
-                maxHeight={300}
-                labelField="label"
-                valueField="value"
-                placeholder="Select your province..."
-                value={value}
-                onChange={(item) => onChange(item.value)}
-                disable={isLoading}
-                accessibilityLabel="Province/Territory selection"
-              />
+              <View style={[styles.pickerContainer, { borderColor: errors.province ? colors.error : colors.border, backgroundColor: colors.surface }]}>
+                <Dropdown
+                  style={[styles.picker, { backgroundColor: colors.surface }]}
+                  placeholderStyle={[styles.pickerText, { color: colors.placeholder }]}
+                  selectedTextStyle={[styles.pickerText, { color: colors.text }]}
+                  itemTextStyle={[styles.pickerText, { color: colors.text }]}
+                  data={CANADIAN_PROVINCES}
+                  maxHeight={300}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select your province..."
+                  value={value || ''}
+                  onChange={(item) => onChange(item.value)}
+                  disable={isLoading}
+                  dropdownPosition="auto"
+                  containerStyle={[styles.dropdownContainer, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  itemContainerStyle={{ backgroundColor: colors.background }}
+                />
+              </View>
             )}
           />
           {errors.province && (
@@ -651,22 +643,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
   },
-  dropdown: {
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-  },
-  dropdownContainer: {
+  pickerContainer: {
     borderWidth: 1,
     borderRadius: 12,
     overflow: 'hidden',
   },
-  placeholderStyle: {
-    fontSize: 16,
+  picker: {
+    height: 50,
+    paddingHorizontal: 16,
   },
-  selectedTextStyle: {
+  pickerText: {
     fontSize: 16,
+    lineHeight: 22,
+  },
+  dropdownContainer: {
+    borderWidth: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   consentContainer: {
     marginBottom: 16,

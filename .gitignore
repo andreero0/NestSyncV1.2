@@ -56,3 +56,10 @@ supabase/.branches
 supabase/.temp
 NestSync-backend/supabase/.branches
 NestSync-backend/supabase/.temp
+
+# Testing and development artifacts
+baseline-screenshots/
+.playwright-mcp/
+
+# Git worktrees (separate working directories for branches)
+worktrees/

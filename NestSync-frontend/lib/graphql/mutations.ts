@@ -189,6 +189,16 @@ export const UPDATE_INVENTORY_ITEM_MUTATION = gql`
   ${INVENTORY_ITEM_FRAGMENT}
 `;
 
+export const DELETE_INVENTORY_ITEM_MUTATION = gql`
+  mutation DeleteInventoryItem($inventoryItemId: ID!, $input: DeleteInventoryItemInput!) {
+    deleteInventoryItem(inventoryItemId: $inventoryItemId, input: $input) {
+      success
+      message
+      error
+    }
+  }
+`;
+
 export const SET_INITIAL_INVENTORY_MUTATION = gql`
   mutation SetInitialInventory($childId: ID!, $inventoryItems: [InitialInventoryInput!]!) {
     setInitialInventory(childId: $childId, inventoryItems: $inventoryItems) {
@@ -252,7 +262,10 @@ export const GET_USAGE_LOGS_QUERY = gql`
       offset: $offset
     ) {
       edges {
-        ...UsageLogFragment
+        node {
+          ...UsageLogFragment
+        }
+        cursor
       }
       pageInfo {
         hasNextPage
@@ -270,7 +283,7 @@ export const GET_INVENTORY_ITEMS_QUERY = gql`
   query GetInventoryItems(
     $childId: ID!
     $productType: ProductTypeEnum
-    $limit: Int! = 50
+    $limit: Int! = 500
     $offset: Int! = 0
   ) {
     getInventoryItems(
@@ -280,7 +293,10 @@ export const GET_INVENTORY_ITEMS_QUERY = gql`
       offset: $offset
     ) {
       edges {
-        ...InventoryItemFragment
+        node {
+          ...InventoryItemFragment
+        }
+        cursor
       }
       pageInfo {
         hasNextPage
@@ -412,6 +428,48 @@ export interface UpdateInventoryItemInput {
   notes?: string;
   qualityRating?: number;
   wouldRebuy?: boolean;
+}
+
+export interface DeleteInventoryItemInput {
+  confirmationText: string;
+  reason?: string;
+}
+
+export interface UpdateInventoryItemResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  inventoryItem?: {
+    id: string;
+    childId: string;
+    productType: string;
+    brand: string;
+    productName?: string;
+    size: string;
+    quantityTotal: number;
+    quantityRemaining: number;
+    quantityReserved: number;
+    purchaseDate: string;
+    costCad?: number;
+    expiryDate?: string;
+    storageLocation?: string;
+    isOpened: boolean;
+    openedDate?: string;
+    notes?: string;
+    qualityRating?: number;
+    wouldRebuy?: boolean;
+    createdAt: string;
+    quantityAvailable: number;
+    usagePercentage: number;
+    isExpired: boolean;
+    daysUntilExpiry?: number;
+  };
+}
+
+export interface DeleteInventoryItemResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
 }
 
 export interface InitialInventoryInput {

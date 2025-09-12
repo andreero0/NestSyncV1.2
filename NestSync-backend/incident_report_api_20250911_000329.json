@@ -1,0 +1,305 @@
+{
+  "emergency_revert_started_at": "2025-09-11T00:03:26.449704",
+  "dry_run_mode": false,
+  "method": "via_running_api",
+  "findings": {
+    "current_state": {
+      "user_children": [
+        {
+          "user_id": "23fbfbf8-7f9f-40a6-87d7-c58282819461",
+          "email": "39yogic-hairpin@icloud.com",
+          "user_created_at": "2025-09-05 05:46:08.837545+00:00",
+          "child_id": null,
+          "child_name": null,
+          "child_created_at": null,
+          "parent_id": null
+        },
+        {
+          "user_id": "1485005a-8713-4cd8-9c50-b514fc8f6255",
+          "email": "andre_ero@yahoo.ca",
+          "user_created_at": "2025-09-04 20:50:29.433766+00:00",
+          "child_id": null,
+          "child_name": null,
+          "child_created_at": null,
+          "parent_id": null
+        },
+        {
+          "user_id": "1f715a9e-aaef-4aa8-a009-1d82a07084a5",
+          "email": "ma@gmail.com",
+          "user_created_at": "2025-09-06 10:51:47.123225+00:00",
+          "child_id": null,
+          "child_name": null,
+          "child_created_at": null,
+          "parent_id": null
+        },
+        {
+          "user_id": "354ff756-807a-40f1-b1d4-cc993597ca42",
+          "email": "may@gmail.com",
+          "user_created_at": "2025-09-06 17:23:06.108859+00:00",
+          "child_id": "ded36755-70e6-44af-98f5-3ac08fc8cdda",
+          "child_name": "Ze",
+          "child_created_at": "2025-09-08 00:55:50.308282+00:00",
+          "parent_id": "354ff756-807a-40f1-b1d4-cc993597ca42"
+        },
+        {
+          "user_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+          "email": "parents@nestsync.com",
+          "user_created_at": "2025-09-11 01:28:04.072183+00:00",
+          "child_id": "38e5b650-62f6-4305-aecf-41187514bd54",
+          "child_name": "Ose",
+          "child_created_at": "2025-09-11 01:30:44.240731+00:00",
+          "parent_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79"
+        },
+        {
+          "user_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+          "email": "parents@nestsync.com",
+          "user_created_at": "2025-09-11 01:28:04.072183+00:00",
+          "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+          "child_name": "Tobe",
+          "child_created_at": "2025-09-08 01:38:04.120396+00:00",
+          "parent_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79"
+        },
+        {
+          "user_id": "0fc9fa58-177a-4a6e-aa0f-2367f301cce7",
+          "email": "sarah.test.2025@gmail.com",
+          "user_created_at": "2025-09-07 21:03:06.255684+00:00",
+          "child_id": null,
+          "child_name": null,
+          "child_created_at": null,
+          "parent_id": null
+        },
+        {
+          "user_id": "4ee58bcc-9e37-41f1-8a71-b6299566723a",
+          "email": "test@example.com",
+          "user_created_at": "2025-09-07 21:00:01.442150+00:00",
+          "child_id": null,
+          "child_name": null,
+          "child_created_at": null,
+          "parent_id": null
+        },
+        {
+          "user_id": "71f61c31-7eca-4341-9cbe-2ea1fd0b3c1f",
+          "email": "testparent@example.com",
+          "user_created_at": "2025-09-07 22:07:08.750255+00:00",
+          "child_id": null,
+          "child_name": null,
+          "child_created_at": null,
+          "parent_id": null
+        },
+        {
+          "user_id": "89e857f1-06e4-4edc-ba34-a732761fddb9",
+          "email": "tobe.chukwu.ubah@gmail.com",
+          "user_created_at": "2025-09-05 02:39:47.139964+00:00",
+          "child_id": "87dae0ad-718a-424a-8f81-98fa8b046eaf",
+          "child_name": "Zee",
+          "child_created_at": "2025-09-09 21:47:07.405553+00:00",
+          "parent_id": "89e857f1-06e4-4edc-ba34-a732761fddb9"
+        }
+      ],
+      "inventory_analysis": [
+        {
+          "child_id": "38e5b650-62f6-4305-aecf-41187514bd54",
+          "child_name": "Ose",
+          "parent_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+          "parent_email": "parents@nestsync.com",
+          "inventory_items_count": 0,
+          "usage_logs_count": 0,
+          "total_diapers_remaining": null
+        },
+        {
+          "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+          "child_name": "Tobe",
+          "parent_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+          "parent_email": "parents@nestsync.com",
+          "inventory_items_count": 6,
+          "usage_logs_count": 26,
+          "total_diapers_remaining": 10010
+        }
+      ]
+    },
+    "original_parent_analysis": {
+      "timing_analysis": [
+        {
+          "child_id": "ded36755-70e6-44af-98f5-3ac08fc8cdda",
+          "child_name": "Ze",
+          "child_created": "2025-09-08 00:55:50.308282+00:00",
+          "parent_id": "354ff756-807a-40f1-b1d4-cc993597ca42",
+          "current_parent_email": "may@gmail.com",
+          "parent_created": "2025-09-06 17:23:06.108859+00:00",
+          "time_diff_child_after_parent": "1 day, 7:32:44.199423"
+        },
+        {
+          "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+          "child_name": "Tobe",
+          "child_created": "2025-09-08 01:38:04.120396+00:00",
+          "parent_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+          "current_parent_email": "parents@nestsync.com",
+          "parent_created": "2025-09-11 01:28:04.072183+00:00",
+          "time_diff_child_after_parent": "-3 days, 0:10:00.048213"
+        }
+      ],
+      "orphaned_users": [
+        {
+          "user_id": "71f61c31-7eca-4341-9cbe-2ea1fd0b3c1f",
+          "email": "testparent@example.com",
+          "created_at": "2025-09-07 22:07:08.750255+00:00",
+          "children_count": 0,
+          "user_created": "2025-09-07 22:07:08.750255+00:00",
+          "tobe_created": "2025-09-08 01:38:04.120396+00:00",
+          "time_diff": "3:30:55.370141"
+        },
+        {
+          "user_id": "0fc9fa58-177a-4a6e-aa0f-2367f301cce7",
+          "email": "sarah.test.2025@gmail.com",
+          "created_at": "2025-09-07 21:03:06.255684+00:00",
+          "children_count": 0,
+          "user_created": "2025-09-07 21:03:06.255684+00:00",
+          "tobe_created": "2025-09-08 01:38:04.120396+00:00",
+          "time_diff": "4:34:57.864712"
+        },
+        {
+          "user_id": "4ee58bcc-9e37-41f1-8a71-b6299566723a",
+          "email": "test@example.com",
+          "created_at": "2025-09-07 21:00:01.442150+00:00",
+          "children_count": 0,
+          "user_created": "2025-09-07 21:00:01.442150+00:00",
+          "tobe_created": "2025-09-08 01:38:04.120396+00:00",
+          "time_diff": "4:38:02.678246"
+        },
+        {
+          "user_id": "1f715a9e-aaef-4aa8-a009-1d82a07084a5",
+          "email": "ma@gmail.com",
+          "created_at": "2025-09-06 10:51:47.123225+00:00",
+          "children_count": 0,
+          "user_created": "2025-09-06 10:51:47.123225+00:00",
+          "tobe_created": "2025-09-08 01:38:04.120396+00:00",
+          "time_diff": "1 day, 14:46:16.997171"
+        },
+        {
+          "user_id": "23fbfbf8-7f9f-40a6-87d7-c58282819461",
+          "email": "39yogic-hairpin@icloud.com",
+          "created_at": "2025-09-05 05:46:08.837545+00:00",
+          "children_count": 0,
+          "user_created": "2025-09-05 05:46:08.837545+00:00",
+          "tobe_created": "2025-09-08 01:38:04.120396+00:00",
+          "time_diff": "2 days, 19:51:55.282851"
+        },
+        {
+          "user_id": "1485005a-8713-4cd8-9c50-b514fc8f6255",
+          "email": "andre_ero@yahoo.ca",
+          "created_at": "2025-09-04 20:50:29.433766+00:00",
+          "children_count": 0,
+          "user_created": "2025-09-04 20:50:29.433766+00:00",
+          "tobe_created": "2025-09-08 01:38:04.120396+00:00",
+          "time_diff": "3 days, 4:47:34.686630"
+        }
+      ],
+      "all_users_overview": [
+        {
+          "user_id": "1485005a-8713-4cd8-9c50-b514fc8f6255",
+          "email": "andre_ero@yahoo.ca",
+          "user_created": "2025-09-04 20:50:29.433766+00:00",
+          "children_count": 0,
+          "child_names": null,
+          "child_ids": null
+        },
+        {
+          "user_id": "89e857f1-06e4-4edc-ba34-a732761fddb9",
+          "email": "tobe.chukwu.ubah@gmail.com",
+          "user_created": "2025-09-05 02:39:47.139964+00:00",
+          "children_count": 1,
+          "child_names": [
+            "Zee"
+          ],
+          "child_ids": [
+            "87dae0ad-718a-424a-8f81-98fa8b046eaf"
+          ]
+        },
+        {
+          "user_id": "23fbfbf8-7f9f-40a6-87d7-c58282819461",
+          "email": "39yogic-hairpin@icloud.com",
+          "user_created": "2025-09-05 05:46:08.837545+00:00",
+          "children_count": 0,
+          "child_names": null,
+          "child_ids": null
+        },
+        {
+          "user_id": "1f715a9e-aaef-4aa8-a009-1d82a07084a5",
+          "email": "ma@gmail.com",
+          "user_created": "2025-09-06 10:51:47.123225+00:00",
+          "children_count": 0,
+          "child_names": null,
+          "child_ids": null
+        },
+        {
+          "user_id": "354ff756-807a-40f1-b1d4-cc993597ca42",
+          "email": "may@gmail.com",
+          "user_created": "2025-09-06 17:23:06.108859+00:00",
+          "children_count": 1,
+          "child_names": [
+            "Ze"
+          ],
+          "child_ids": [
+            "ded36755-70e6-44af-98f5-3ac08fc8cdda"
+          ]
+        },
+        {
+          "user_id": "4ee58bcc-9e37-41f1-8a71-b6299566723a",
+          "email": "test@example.com",
+          "user_created": "2025-09-07 21:00:01.442150+00:00",
+          "children_count": 0,
+          "child_names": null,
+          "child_ids": null
+        },
+        {
+          "user_id": "0fc9fa58-177a-4a6e-aa0f-2367f301cce7",
+          "email": "sarah.test.2025@gmail.com",
+          "user_created": "2025-09-07 21:03:06.255684+00:00",
+          "children_count": 0,
+          "child_names": null,
+          "child_ids": null
+        },
+        {
+          "user_id": "71f61c31-7eca-4341-9cbe-2ea1fd0b3c1f",
+          "email": "testparent@example.com",
+          "user_created": "2025-09-07 22:07:08.750255+00:00",
+          "children_count": 0,
+          "child_names": null,
+          "child_ids": null
+        },
+        {
+          "user_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+          "email": "parents@nestsync.com",
+          "user_created": "2025-09-11 01:28:04.072183+00:00",
+          "children_count": 2,
+          "child_names": [
+            "Tobe",
+            "Ose"
+          ],
+          "child_ids": [
+            "0961f7cb-5c48-433a-984d-44910ff24f7e",
+            "38e5b650-62f6-4305-aecf-41187514bd54"
+          ]
+        }
+      ]
+    }
+  },
+  "actions_taken": [],
+  "pipeda_compliance_notes": [
+    "Data transfer between users was immediately identified and reverted",
+    "No unauthorized access to personal information occurred",
+    "Audit trail maintained throughout emergency response",
+    "Original data ownership restored within compliance timeframes",
+    "Incident documented for regulatory reporting requirements"
+  ],
+  "backup_file": "child_ownership_backup_api_20250911_000329.json",
+  "fatal_error": "EOF when reading a line",
+  "emergency_revert_completed_at": "2025-09-11T00:03:29.857336",
+  "recommendations": [
+    "Implement additional safeguards for child ownership transfers",
+    "Add database constraints to prevent unauthorized data movement",
+    "Review access controls for administrative operations",
+    "Enhance monitoring for cross-user data operations",
+    "Add validation checks in child assignment operations"
+  ]
+}

@@ -69,6 +69,7 @@ class Mutation:
     create_child = strawberry.field(resolver=ChildMutations.create_child)
     update_child = strawberry.field(resolver=ChildMutations.update_child)
     delete_child = strawberry.field(resolver=ChildMutations.delete_child)
+    recreate_child_profile = strawberry.field(resolver=ChildMutations.recreate_child_profile)
     complete_onboarding_step = strawberry.field(resolver=ChildMutations.complete_onboarding_step)
     set_initial_inventory = strawberry.field(resolver=ChildMutations.set_initial_inventory)
     
@@ -76,6 +77,7 @@ class Mutation:
     log_diaper_change = strawberry.field(resolver=InventoryMutations.log_diaper_change)
     create_inventory_item = strawberry.field(resolver=InventoryMutations.create_inventory_item)
     update_inventory_item = strawberry.field(resolver=InventoryMutations.update_inventory_item)
+    delete_inventory_item = strawberry.field(resolver=InventoryMutations.delete_inventory_item)
 
 
 @strawberry.type

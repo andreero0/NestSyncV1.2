@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, View, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
@@ -7,12 +7,15 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { ChildSelector } from '@/components/ui/ChildSelector';
+import { StatusOverviewGrid } from '@/components/cards/StatusOverviewGrid';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
+import { useInventoryTrafficLight } from '@/hooks/useInventoryTrafficLight';
 import DevOnboardingReset from '@/components/dev/DevOnboardingReset';
 import { MY_CHILDREN_QUERY, GET_USAGE_LOGS_QUERY } from '@/lib/graphql/queries';
-import { GET_DASHBOARD_STATS_QUERY, LOG_DIAPER_CHANGE_MUTATION } from '@/lib/graphql/mutations';
+import { GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/mutations';
+import { formatTimeAgo, safeFormatTimeAgo, formatDiaperSize, formatFieldName, getTimeBasedGreeting } from '@/utils/formatters';
 import { QuickLogModal } from '@/components/modals/QuickLogModal';
 import { AddInventoryModal } from '@/components/modals/AddInventoryModal';
 import { AddChildModal } from '@/components/modals/AddChildModal';
@@ -85,6 +88,14 @@ export default function HomeScreen() {
     pollInterval: 30000, // Poll every 30 seconds
   });
 
+  // Traffic Light Dashboard Data
+  const { 
+    cardData: trafficLightCards, 
+    trafficLightData,
+    loading: trafficLightLoading,
+    error: trafficLightError 
+  } = useInventoryTrafficLight(selectedChildId);
+
   // Initialize selected child from storage or default to first child
   useEffect(() => {
     if (childrenData?.myChildren?.edges?.length > 0) {
@@ -121,18 +132,29 @@ export default function HomeScreen() {
     // Fallback data when loading or no child selected
     daysRemaining: dashboardLoading ? 0 : 12,
     diapersLeft: dashboardLoading ? 0 : 24,
-    lastChange: dashboardLoading ? 'Loading...' : '2 hours ago',
+    lastChange: dashboardLoading ? 'Loading...' : new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     todayChanges: dashboardLoading ? 0 : 5,
     currentSize: dashboardLoading ? 'Loading...' : 'Size 2'
   };
 
-  // Process recent activity from usage logs
-  const recentActivity: RecentActivity[] = usageLogsData?.getUsageLogs?.edges?.map((log, index) => ({
-    id: log.id || `activity-${index}`,
-    time: formatTimeAgo(log.loggedAt),
-    type: 'diaper-change' as const,
-    description: getChangeDescription(log.wasWet, log.wasSoiled, log.notes)
-  })) || [];
+  // Process recent activity from usage logs with limit
+  const recentActivity: RecentActivity[] = useMemo(() => {
+    const activities = usageLogsData?.getUsageLogs?.edges?.map((edge, index) => {
+      const log = edge.node;
+      // Generate safe ID with better fallback
+      const safeId = log.id || `activity-${Date.now()}-${index}`;
+      
+      return {
+        id: safeId,
+        time: safeFormatTimeAgo(log.loggedAt, 'recent-activity'),
+        type: 'diaper-change' as const,
+        description: getChangeDescription(log.wasWet, log.wasSoiled, log.notes)
+      };
+    }) || [];
+    
+    // Limit to first 5 activities for performance
+    return activities.slice(0, 5);
+  }, [usageLogsData]);
 
   // Show loading message when no data is available
   // Enhanced state management
@@ -141,23 +163,8 @@ export default function HomeScreen() {
   const noChildrenState = !childrenLoading && (!childrenData?.myChildren?.edges || childrenData.myChildren.edges.length === 0);
   const hasMultipleChildren = childrenData?.myChildren?.edges && childrenData.myChildren.edges.length > 1;
 
-  // Helper function to format time ago
-  function formatTimeAgo(dateString: string): string {
-    const now = new Date();
-    const logDate = new Date(dateString);
-    const diffMs = now.getTime() - logDate.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMinutes < 60) {
-      return diffMinutes <= 1 ? 'Just now' : `${diffMinutes} minutes ago`;
-    } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    } else {
-      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    }
-  }
+  // Check if there are more activities to show
+  const hasMoreActivities = usageLogsData?.getUsageLogs?.edges?.length > 5;
 
   // Helper function to get change description
   function getChangeDescription(wasWet?: boolean, wasSoiled?: boolean, notes?: string): string {
@@ -272,6 +279,39 @@ export default function HomeScreen() {
     }
   };
 
+  // Optimized Activity Item Component with React.memo
+  const ActivityItem = React.memo<{ item: RecentActivity; colors: any }>(
+    function ActivityItemComponent({ item, colors }) {
+      return (
+      <View
+        style={[styles.activityItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      >
+        <View style={styles.activityIcon}>
+          <IconSymbol 
+            name={getActivityIcon(item.type)} 
+            size={20} 
+            color={getActivityColor(item.type)} 
+          />
+        </View>
+        <View style={styles.activityContent}>
+          <ThemedText type="defaultSemiBold" style={styles.activityDescription}>
+            {item.description}
+          </ThemedText>
+          <ThemedText style={[styles.activityTime, { color: colors.textSecondary }]}>
+            {item.time}
+          </ThemedText>
+        </View>
+      </View>
+      );
+    },
+    (prevProps, nextProps) => {
+      return prevProps.item.id === nextProps.item.id && 
+             prevProps.item.time === nextProps.item.time &&
+             prevProps.item.description === nextProps.item.description;
+    }
+  );
+
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -295,7 +335,7 @@ export default function HomeScreen() {
             <View style={styles.headerTop}>
               <View style={styles.headerTextContainer}>
                 <ThemedText type="title" style={styles.headerTitle}>
-                  Good morning!
+                  {getTimeBasedGreeting()}
                 </ThemedText>
                 <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
                   {childrenLoading ? 'Loading child information...' : 
@@ -345,81 +385,71 @@ export default function HomeScreen() {
             </ThemedView>
           )}
 
-          {/* Stats Overview - only show when children exist */}
+          {/* Traffic Light Dashboard - only show when children exist */}
           {!noChildrenState && (
-          <ThemedView style={styles.statsContainer}>
-            {/* Loading state for dashboard */}
-            {(childrenLoading || dashboardLoading) && (
-              <View style={[styles.loadingContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <ActivityIndicator size="small" color={colors.tint} />
-                <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-                  Loading dashboard data...
-                </ThemedText>
-              </View>
-            )}
-            
-            {/* Error state */}
-            {dashboardError && (
-              <View style={[styles.errorContainer, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-                <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.error} />
-                <ThemedText style={[styles.errorText, { color: colors.error }]}>
-                  Unable to load dashboard data. Please try again.
-                </ThemedText>
-              </View>
-            )}
-            
-            <View style={styles.statsGrid}>
-              {/* Days Remaining Card */}
-              <View style={[
-                styles.statCard, 
-                styles.statCardLarge,
-                { backgroundColor: colors.surface, borderColor: colors.border }
-              ]}>
-                <View style={styles.statHeader}>
-                  <IconSymbol name="calendar.circle.fill" size={28} color={colors.success} />
-                  <ThemedText type="defaultSemiBold" style={styles.statLabel}>
-                    Days of Cover
+            <ThemedView style={styles.trafficLightSection}>
+              {/* Section Header */}
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Inventory Status
+              </ThemedText>
+              
+              {/* Loading state for traffic light data */}
+              {(childrenLoading || trafficLightLoading) && (
+                <View style={[styles.loadingContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <ActivityIndicator size="small" color={colors.tint} />
+                  <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+                    Loading inventory status...
                   </ThemedText>
                 </View>
-                <ThemedText type="title" style={[styles.statNumber, { color: colors.success }]}>
-                  {dashboardStats.daysRemaining}
-                </ThemedText>
-                <ThemedText style={[styles.statSubtext, { color: colors.textSecondary }]}>
-                  At current usage rate
-                </ThemedText>
-              </View>
-
-              {/* Diapers Left Card */}
-              <View style={[
-                styles.statCard,
-                styles.statCardSmall,
-                { backgroundColor: colors.surface, borderColor: colors.border }
-              ]}>
-                <IconSymbol name="cube.box" size={20} color={colors.tint} />
-                <ThemedText type="title" style={[styles.statNumber, { color: colors.tint }]}>
-                  {dashboardStats.diapersLeft}
-                </ThemedText>
-                <ThemedText style={[styles.statText, { color: colors.textSecondary }]}>
-                  Diapers Left
-                </ThemedText>
-              </View>
-
-              {/* Today's Changes Card */}
-              <View style={[
-                styles.statCard,
-                styles.statCardSmall,
-                { backgroundColor: colors.surface, borderColor: colors.border }
-              ]}>
-                <IconSymbol name="checkmark.circle" size={20} color={colors.accent} />
-                <ThemedText type="title" style={[styles.statNumber, { color: colors.accent }]}>
-                  {dashboardStats.todayChanges}
-                </ThemedText>
-                <ThemedText style={[styles.statText, { color: colors.textSecondary }]}>
-                  Today
-                </ThemedText>
-              </View>
-            </View>
-          </ThemedView>
+              )}
+              
+              {/* Error state for traffic light data */}
+              {trafficLightError && (
+                <View style={[styles.errorContainer, { backgroundColor: colors.surface, borderColor: colors.error }]}>
+                  <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.error} />
+                  <ThemedText style={[styles.errorText, { color: colors.error }]}>
+                    Unable to load inventory data. Please try again.
+                  </ThemedText>
+                </View>
+              )}
+              
+              {/* 4-Card Traffic Light System */}
+              {!trafficLightLoading && !trafficLightError && (
+                <StatusOverviewGrid cards={trafficLightCards} />
+              )}
+              
+              {/* Legacy Dashboard Stats - Keep for additional metrics */}
+              {dashboardData?.getDashboardStats && (
+                <View style={styles.legacyStatsRow}>
+                  <View style={styles.legacyStatItem}>
+                    <ThemedText style={[styles.legacyStatLabel, { color: colors.textSecondary }]}>
+                      Days Remaining
+                    </ThemedText>
+                    <ThemedText style={[styles.legacyStatValue, { color: colors.text }]}>
+                      {dashboardStats.daysRemaining}
+                    </ThemedText>
+                  </View>
+                  
+                  <View style={styles.legacyStatItem}>
+                    <ThemedText style={[styles.legacyStatLabel, { color: colors.textSecondary }]}>
+                      Today's Changes
+                    </ThemedText>
+                    <ThemedText style={[styles.legacyStatValue, { color: colors.text }]}>
+                      {dashboardStats.todayChanges}
+                    </ThemedText>
+                  </View>
+                  
+                  <View style={styles.legacyStatItem}>
+                    <ThemedText style={[styles.legacyStatLabel, { color: colors.textSecondary }]}>
+                      Current Size
+                    </ThemedText>
+                    <ThemedText style={[styles.legacyStatValue, { color: colors.text }]}>
+                      {formatDiaperSize(dashboardStats.currentSize)}
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
+            </ThemedView>
           )}
 
           <ThemedView style={styles.section}>
@@ -474,38 +504,21 @@ export default function HomeScreen() {
               </View>
             )}
             
-            {/* Activity items */}
+            {/* Activity items - Optimized rendering with map */}
             {recentActivity.map((activity) => (
-              <View
-                key={activity.id}
-                style={[styles.activityItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              >
-                <View style={styles.activityIcon}>
-                  <IconSymbol 
-                    name={getActivityIcon(activity.type)} 
-                    size={20} 
-                    color={getActivityColor(activity.type)} 
-                  />
-                </View>
-                <View style={styles.activityContent}>
-                  <ThemedText type="defaultSemiBold" style={styles.activityDescription}>
-                    {activity.description}
-                  </ThemedText>
-                  <ThemedText style={[styles.activityTime, { color: colors.textSecondary }]}>
-                    {activity.time}
-                  </ThemedText>
-                </View>
-              </View>
+              <ActivityItem key={activity.id} item={activity} colors={colors} />
             ))}
 
-            {recentActivity.length > 0 && (
+            {/* View All Button - Show only if there are more activities */}
+            {hasMoreActivities && (
               <TouchableOpacity
                 style={[styles.viewAllButton, { borderColor: colors.border }]}
+                onPress={() => Alert.alert('Coming Soon', 'Full activity timeline will be available in a future update!')}
                 accessibilityRole="button"
                 accessibilityLabel="View all activity"
               >
                 <ThemedText style={[styles.viewAllText, { color: colors.tint }]}>
-                  View All Activity
+                  View All Activity ({usageLogsData?.getUsageLogs?.edges?.length || 0} total)
                 </ThemedText>
                 <IconSymbol name="chevron.right" size={16} color={colors.tint} />
               </TouchableOpacity>
@@ -521,7 +534,7 @@ export default function HomeScreen() {
               </ThemedText>
             </View>
             <ThemedText style={[styles.statusText, { color: colors.textSecondary }]}>
-              Using {dashboardStats.currentSize} • Last change {dashboardStats.lastChange} • On track with schedule
+              Using {formatDiaperSize(dashboardStats.currentSize)} • Last change {safeFormatTimeAgo(dashboardStats.lastChange, 'status-card')} • On track with schedule
             </ThemedText>
           </ThemedView>
 
@@ -604,6 +617,30 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     marginBottom: 24,
+  },
+  trafficLightSection: {
+    marginBottom: 24,
+  },
+  legacyStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  legacyStatItem: {
+    alignItems: 'center',
+  },
+  legacyStatLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  legacyStatValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   statsGrid: {
     flexDirection: 'row',

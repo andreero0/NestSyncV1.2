@@ -26,6 +26,8 @@ from .types import (
     LogDiaperChangeResponse,
     UpdateInventoryItemInput,
     UpdateInventoryItemResponse,
+    DeleteInventoryItemInput,
+    DeleteInventoryItemResponse,
     InventoryConnection,
     InventoryItemEdge,
     UsageLogConnection,
@@ -511,7 +513,7 @@ class InventoryMutations:
                         else:
                             logger.warning(f"Could not use diaper from inventory item {inventory_item.id}")
                     else:
-                        logger.warning(f"No diaper inventory available for child {child_uuid} size {child.current_diaper_size}")
+                        logger.info(f"No diaper inventory available for child {child_uuid} size {child.current_diaper_size} - diaper change logged without inventory tracking")
                 
                 await session.commit()
                 
@@ -667,4 +669,91 @@ class InventoryMutations:
             return UpdateInventoryItemResponse(
                 success=False,
                 error=f"Failed to update inventory item: {str(e)}"
+            )
+    
+    @strawberry.mutation
+    async def delete_inventory_item(
+        self,
+        inventory_item_id: strawberry.ID,
+        input: DeleteInventoryItemInput,
+        info: Info
+    ) -> DeleteInventoryItemResponse:
+        """
+        Delete an inventory item with safety confirmation
+        Uses soft delete for PIPEDA compliance and data integrity
+        """
+        try:
+            async for session in get_async_session():
+                item_uuid = uuid.UUID(inventory_item_id)
+                
+                # Get inventory item
+                item_query = select(InventoryItem).where(
+                    and_(
+                        InventoryItem.id == item_uuid,
+                        InventoryItem.is_deleted == False
+                    )
+                )
+                item_result = await session.execute(item_query)
+                inventory_item = item_result.scalar_one_or_none()
+                
+                if not inventory_item:
+                    return DeleteInventoryItemResponse(
+                        success=False,
+                        error="Inventory item not found or already deleted"
+                    )
+                
+                # Safety confirmation check
+                expected_confirmation = f"DELETE {inventory_item.brand} {inventory_item.size}"
+                if input.confirmation_text.strip() != expected_confirmation:
+                    return DeleteInventoryItemResponse(
+                        success=False,
+                        error=f"Confirmation text must be exactly: {expected_confirmation}"
+                    )
+                
+                # Check if item is currently being used (has remaining quantity and recent usage)
+                if inventory_item.quantity_remaining > 0:
+                    # Check for recent usage logs to warn about active items
+                    recent_usage_query = select(UsageLog).where(
+                        and_(
+                            UsageLog.inventory_item_id == item_uuid,
+                            UsageLog.logged_at >= datetime.now(timezone.utc) - timedelta(days=7),
+                            UsageLog.is_deleted == False
+                        )
+                    ).limit(1)
+                    recent_usage_result = await session.execute(recent_usage_query)
+                    recent_usage = recent_usage_result.scalar_one_or_none()
+                    
+                    if recent_usage:
+                        logger.warning(f"Deleting active inventory item {item_uuid} with {inventory_item.quantity_remaining} remaining and recent usage")
+                
+                # Soft delete the inventory item
+                inventory_item.soft_delete()
+                
+                # Also soft delete any usage logs associated with this item for data consistency
+                related_usage_logs = await session.execute(
+                    select(UsageLog).where(
+                        and_(
+                            UsageLog.inventory_item_id == item_uuid,
+                            UsageLog.is_deleted == False
+                        )
+                    )
+                )
+                for usage_log in related_usage_logs.scalars():
+                    usage_log.soft_delete()
+                
+                await session.commit()
+                
+                logger.info(f"Inventory item {item_uuid} and related usage logs soft deleted successfully")
+                
+                return DeleteInventoryItemResponse(
+                    success=True,
+                    message="Inventory item deleted successfully",
+                    deleted_item_id=str(item_uuid)
+                )
+                
+        except Exception as e:
+            logger.error(f"Error deleting inventory item: {e}")
+            return DeleteInventoryItemResponse(
+                success=False,
+                error=f"Failed to delete inventory item: {str(e)}"
             )

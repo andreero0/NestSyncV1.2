@@ -66,9 +66,10 @@ class Settings(BaseSettings):
     password_require_numbers: bool = Field(default=True, env="PASSWORD_REQUIRE_NUMBERS")
     password_require_symbols: bool = Field(default=False, env="PASSWORD_REQUIRE_SYMBOLS")
     
-    # Rate limiting
-    rate_limit_requests: int = Field(default=100, env="RATE_LIMIT_REQUESTS")
-    rate_limit_window: int = Field(default=900, env="RATE_LIMIT_WINDOW")  # 15 minutes
+    # Rate limiting - Adjusted for development and real-time dashboard updates
+    rate_limit_requests: int = Field(default=300, env="RATE_LIMIT_REQUESTS")  # Increased for dashboard polling
+    rate_limit_window: int = Field(default=300, env="RATE_LIMIT_WINDOW")  # 5 minutes - more reasonable window
+    rate_limiting_enabled: bool = Field(default=True, env="RATE_LIMITING_ENABLED")  # Toggle rate limiting on/off
     
     # =============================================================================
     # CORS Configuration
@@ -76,11 +77,13 @@ class Settings(BaseSettings):
     cors_origins: List[str] = Field(
         default=[
             "http://localhost:3000",
-            "http://localhost:19006",
             "http://localhost:8082",
-            "http://localhost:8083",
+            "http://localhost:8083", 
+            "http://localhost:8084",
             "http://localhost:8088",
-            "https://*.nestsync.ca"
+            "http://localhost:19006", 
+            "https://nestsync.ca",
+            "http://localhost:8000"
         ],
         env="CORS_ORIGINS"
     )
@@ -200,7 +203,7 @@ class Settings(BaseSettings):
         return v
     
     class Config:
-        env_file = ".env"
+        env_file = [".env.local", ".env"]  # Load .env.local first, then .env
         env_file_encoding = "utf-8"
         case_sensitive = False
         extra = "ignore"  # Allow extra fields from environment

@@ -594,28 +594,8 @@ export interface SetInitialInventoryMutationVariables {
 // DASHBOARD AND ACTIVITY QUERIES
 // =============================================================================
 
-export const USAGE_LOG_FRAGMENT = gql`
-  fragment UsageLogFragment on UsageLog {
-    id
-    childId
-    inventoryItemId
-    usageType
-    loggedAt
-    quantityUsed
-    context
-    caregiverName
-    wasWet
-    wasSoiled
-    diaperCondition
-    hadLeakage
-    productRating
-    timeSinceLastChange
-    changeDuration
-    notes
-    healthNotes
-    createdAt
-  }
-`;
+// Import fragments from mutations.ts to avoid duplication
+import { USAGE_LOG_FRAGMENT, INVENTORY_ITEM_FRAGMENT } from './mutations';
 
 export const GET_USAGE_LOGS_QUERY = gql`
   query GetUsageLogs(
@@ -633,7 +613,10 @@ export const GET_USAGE_LOGS_QUERY = gql`
       offset: $offset
     ) {
       edges {
-        ...UsageLogFragment
+        node {
+          ...UsageLogFragment
+        }
+        cursor
       }
       pageInfo {
         hasNextPage
@@ -645,6 +628,37 @@ export const GET_USAGE_LOGS_QUERY = gql`
     }
   }
   ${USAGE_LOG_FRAGMENT}
+`;
+
+export const GET_INVENTORY_ITEMS_QUERY = gql`
+  query GetInventoryItems(
+    $childId: ID!
+    $productType: ProductTypeEnum
+    $limit: Int! = 500
+    $offset: Int! = 0
+  ) {
+    getInventoryItems(
+      childId: $childId
+      productType: $productType
+      limit: $limit
+      offset: $offset
+    ) {
+      edges {
+        node {
+          ...InventoryItemFragment
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+        totalCount
+      }
+    }
+  }
+  ${INVENTORY_ITEM_FRAGMENT}
 `;
 
 // Query Variables Types for Dashboard

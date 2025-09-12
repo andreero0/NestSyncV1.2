@@ -19,8 +19,13 @@ from .types import (
     ChildProfile,
     CreateChildInput,
     UpdateChildInput,
+    DeleteChildInput,
+    RecreateChildProfileInput,
     CreateChildResponse,
     UpdateChildResponse,
+    DeleteChildResponse,
+    RecreateChildProfileResponse,
+    DeletionAuditInfo,
     OnboardingWizardStepInput,
     InitialInventoryInput,
     OnboardingStatusResponse,
@@ -30,7 +35,8 @@ from .types import (
     ChildEdge,
     PageInfo,
     DiaperSizeType,
-    GenderType
+    GenderType,
+    DeletionType
 )
 
 logger = logging.getLogger(__name__)
@@ -483,42 +489,366 @@ class ChildMutations:
     async def delete_child(
         self,
         child_id: strawberry.ID,
+        input: DeleteChildInput,
         info: Info
-    ) -> MutationResponse:
+    ) -> DeleteChildResponse:
         """
-        Soft delete a child profile (PIPEDA compliance)
+        Enhanced child profile deletion with comprehensive cleanup options
+        Supports both soft delete (PIPEDA compliant) and hard delete (with CASCADE cleanup)
         """
+        from graphql import GraphQLError
+        
         try:
+            # Get authenticated user from context
+            from app.graphql.context import require_context_user
+            current_user = await require_context_user(info)
+            
+        except GraphQLError as auth_error:
+            logger.error(f"Authentication error in delete_child: {auth_error}")
+            from graphql import GraphQLError as GQLError
+            raise GQLError(
+                message="Authentication required to delete child profile",
+                extensions={
+                    "code": "UNAUTHENTICATED",
+                    "category": "AUTHENTICATION_ERROR"
+                }
+            )
+        
+        try:
+            # Import related models for cleanup counting
+            from app.models import InventoryItem, UsageLog, StockThreshold
+            from sqlalchemy import func, and_
+            
             async for session in get_async_session():
-                # Get child
+                child_uuid = uuid.UUID(child_id)
+                
+                # Get child and verify ownership
                 result = await session.execute(
                     select(Child).where(
-                        Child.id == uuid.UUID(child_id),
+                        Child.id == child_uuid,
+                        Child.parent_id == current_user.id,  # Ensure user owns child
                         Child.is_deleted == False
                     )
                 )
                 child = result.scalar_one_or_none()
                 
                 if not child:
-                    return MutationResponse(
+                    return DeleteChildResponse(
                         success=False,
-                        error="Child not found"
+                        error="Child not found or access denied"
                     )
                 
-                # Soft delete
-                child.soft_delete()
-                await session.commit()
+                # Validate confirmation text (safety mechanism)
+                expected_confirmation = f"DELETE {child.name}"
+                if input.confirmation_text.strip() != expected_confirmation:
+                    return DeleteChildResponse(
+                        success=False,
+                        error=f"Confirmation text must be exactly: {expected_confirmation}"
+                    )
                 
-                return MutationResponse(
+                # Count related data before deletion (for audit)
+                inventory_count = await session.execute(
+                    select(func.count(InventoryItem.id)).where(
+                        InventoryItem.child_id == child_uuid,
+                        InventoryItem.is_deleted == False
+                    )
+                )
+                inventory_count = inventory_count.scalar() or 0
+                
+                usage_logs_count = await session.execute(
+                    select(func.count(UsageLog.id)).where(
+                        UsageLog.child_id == child_uuid,
+                        UsageLog.is_deleted == False
+                    )
+                )
+                usage_logs_count = usage_logs_count.scalar() or 0
+                
+                thresholds_count = await session.execute(
+                    select(func.count(StockThreshold.id)).where(
+                        StockThreshold.child_id == child_uuid,
+                        StockThreshold.is_deleted == False
+                    )
+                )
+                thresholds_count = thresholds_count.scalar() or 0
+                
+                # Prepare audit information
+                items_deleted = {
+                    "child_profiles": 1,
+                    "inventory_items": inventory_count,
+                    "usage_logs": usage_logs_count,
+                    "stock_thresholds": thresholds_count
+                }
+                
+                # Convert items_deleted to string summary for GraphQL compatibility
+                items_summary = ", ".join([f"{k}: {v}" for k, v in items_deleted.items()])
+                
+                deletion_audit = DeletionAuditInfo(
+                    deleted_at=datetime.now(timezone.utc),
+                    deleted_by=current_user.email,
+                    deletion_type=input.deletion_type,
+                    reason=input.reason,
+                    items_deleted_summary=items_summary,
+                    retention_period_days=2555 if input.deletion_type == DeletionType.SOFT_DELETE else None  # 7 years for PIPEDA compliance
+                )
+                
+                # Perform deletion based on type
+                if input.deletion_type == DeletionType.SOFT_DELETE:
+                    # PIPEDA-compliant soft delete (preserves data for compliance)
+                    child.soft_delete(deleted_by=current_user.id)
+                    
+                    # Soft delete related records
+                    if not input.retain_audit_logs:
+                        # Also soft delete related records if requested
+                        inventory_items = await session.execute(
+                            select(InventoryItem).where(
+                                InventoryItem.child_id == child_uuid,
+                                InventoryItem.is_deleted == False
+                            )
+                        )
+                        for item in inventory_items.scalars():
+                            item.soft_delete(deleted_by=current_user.id)
+                        
+                        usage_logs = await session.execute(
+                            select(UsageLog).where(
+                                UsageLog.child_id == child_uuid,
+                                UsageLog.is_deleted == False
+                            )
+                        )
+                        for log in usage_logs.scalars():
+                            log.soft_delete(deleted_by=current_user.id)
+                        
+                        thresholds = await session.execute(
+                            select(StockThreshold).where(
+                                StockThreshold.child_id == child_uuid,
+                                StockThreshold.is_deleted == False
+                            )
+                        )
+                        for threshold in thresholds.scalars():
+                            threshold.soft_delete(deleted_by=current_user.id)
+                    
+                    await session.commit()
+                    
+                    logger.info(f"Soft deleted child {child_uuid} and {sum(items_deleted.values())-1} related records")
+                    
+                elif input.deletion_type == DeletionType.HARD_DELETE:
+                    # Hard delete with CASCADE cleanup (triggers database CASCADE deletion)
+                    # This will automatically delete all related records due to ondelete="CASCADE"
+                    
+                    # Log the operation before deletion
+                    logger.info(f"Hard deleting child {child_uuid} with {sum(items_deleted.values())-1} related records")
+                    
+                    # Perform hard delete - this triggers CASCADE deletion
+                    await session.delete(child)
+                    await session.commit()
+                    
+                    logger.info(f"Hard deleted child {child_uuid} and all related data via CASCADE")
+                
+                return DeleteChildResponse(
                     success=True,
-                    message="Child profile deleted successfully"
+                    message=f"Child profile {'soft deleted' if input.deletion_type == DeletionType.SOFT_DELETE else 'permanently deleted'} successfully",
+                    deleted_child_id=str(child_uuid),
+                    audit_info=deletion_audit
                 )
                 
         except Exception as e:
             logger.error(f"Error deleting child: {e}")
-            return MutationResponse(
+            return DeleteChildResponse(
                 success=False,
                 error="Failed to delete child profile"
+            )
+    
+    @strawberry.mutation
+    async def recreate_child_profile(
+        self,
+        input: RecreateChildProfileInput,
+        info: Info
+    ) -> RecreateChildProfileResponse:
+        """
+        Recreate a child profile with comprehensive data integrity verification
+        Ensures clean state after deletion and prevents data inconsistencies
+        """
+        from graphql import GraphQLError
+        
+        try:
+            # Get authenticated user from context
+            from app.graphql.context import require_context_user
+            current_user = await require_context_user(info)
+            
+        except GraphQLError as auth_error:
+            logger.error(f"Authentication error in recreate_child_profile: {auth_error}")
+            from graphql import GraphQLError as GQLError
+            raise GQLError(
+                message="Authentication required to recreate child profile",
+                extensions={
+                    "code": "UNAUTHENTICATED",
+                    "category": "AUTHENTICATION_ERROR"
+                }
+            )
+        
+        try:
+            # Import related models for integrity checks
+            from app.models import InventoryItem, UsageLog, StockThreshold
+            from sqlalchemy import func
+            
+            async for session in get_async_session():
+                # Check for any existing child with same name (safety check)
+                existing_child = await session.execute(
+                    select(Child).where(
+                        Child.parent_id == current_user.id,
+                        Child.name == input.name.strip(),
+                        Child.is_deleted == False
+                    )
+                )
+                existing_child = existing_child.scalar_one_or_none()
+                
+                if existing_child:
+                    return RecreateChildProfileResponse(
+                        success=False,
+                        error=f"Active child profile with name '{input.name}' already exists"
+                    )
+                
+                # Check for any orphaned data that might indicate incomplete cleanup
+                orphaned_inventory = await session.execute(
+                    select(func.count(InventoryItem.id)).where(
+                        InventoryItem.child_id.notin_(
+                            select(Child.id).where(
+                                Child.parent_id == current_user.id,
+                                Child.is_deleted == False
+                            )
+                        )
+                    )
+                )
+                orphaned_inventory_count = orphaned_inventory.scalar() or 0
+                
+                orphaned_usage_logs = await session.execute(
+                    select(func.count(UsageLog.id)).where(
+                        UsageLog.child_id.notin_(
+                            select(Child.id).where(
+                                Child.parent_id == current_user.id,
+                                Child.is_deleted == False
+                            )
+                        )
+                    )
+                )
+                orphaned_usage_count = orphaned_usage_logs.scalar() or 0
+                
+                # Data integrity verification
+                data_integrity_verified = (orphaned_inventory_count == 0 and orphaned_usage_count == 0)
+                
+                if not data_integrity_verified:
+                    logger.warning(f"Data integrity issues detected for user {current_user.id}: {orphaned_inventory_count} orphaned inventory, {orphaned_usage_count} orphaned usage logs")
+                
+                # Validate input data
+                if not input.name or not input.name.strip():
+                    return RecreateChildProfileResponse(
+                        success=False,
+                        error="Child name is required"
+                    )
+                
+                # Validate date of birth - allow future dates for expectant parents (up to 9 months)
+                from datetime import timedelta
+                max_future_date = date.today() + timedelta(days=270)  # ~9 months for pregnancy planning
+                if input.date_of_birth > max_future_date:
+                    return RecreateChildProfileResponse(
+                        success=False,
+                        error="Due date cannot be more than 9 months in the future"
+                    )
+                
+                if input.daily_usage_count and (input.daily_usage_count < 1 or input.daily_usage_count > 20):
+                    return RecreateChildProfileResponse(
+                        success=False,
+                        error="Daily usage count must be between 1 and 20"
+                    )
+                
+                # Create new child record with clean state
+                diaper_size = str(input.current_diaper_size.value)
+                gender_value = str(input.gender.value) if input.gender else None
+                
+                new_child = Child(
+                    parent_id=current_user.id,
+                    name=input.name.strip(),
+                    date_of_birth=input.date_of_birth,
+                    gender=gender_value,
+                    current_diaper_size=diaper_size,
+                    current_weight_kg=input.current_weight_kg,
+                    current_height_cm=input.current_height_cm,
+                    daily_usage_count=input.daily_usage_count or 8,  # Default to 8 if not specified
+                    has_sensitive_skin=input.has_sensitive_skin,
+                    has_allergies=input.has_allergies,
+                    allergies_notes=input.allergies_notes,
+                    special_needs=input.special_needs,
+                    preferred_brands=input.preferred_brands,
+                    province=input.province,
+                    onboarding_completed=False,  # Reset onboarding status
+                    onboarding_step="basic_info",
+                    wizard_data={
+                        "basic_info": {
+                            "completed_at": datetime.now(timezone.utc).isoformat(),
+                            "data": {
+                                "name": input.name,
+                                "date_of_birth": input.date_of_birth.isoformat(),
+                                "gender": gender_value,
+                                "current_diaper_size": diaper_size,
+                                "weight_kg": input.current_weight_kg,
+                                "height_cm": input.current_height_cm,
+                                "recreated": True,
+                                "recreated_at": datetime.now(timezone.utc).isoformat()
+                            }
+                        }
+                    }
+                )
+                
+                # Set age-appropriate daily usage if not specified
+                if not input.daily_usage_count:
+                    age_in_days = (date.today() - input.date_of_birth).days
+                    age_in_weeks = age_in_days // 7
+                    
+                    # Age-based usage recommendations
+                    if age_in_weeks < 4:  # Newborn
+                        new_child.daily_usage_count = 12
+                    elif age_in_weeks < 12:  # 0-3 months
+                        new_child.daily_usage_count = 10
+                    elif age_in_weeks < 26:  # 3-6 months
+                        new_child.daily_usage_count = 8
+                    elif age_in_weeks < 52:  # 6-12 months
+                        new_child.daily_usage_count = 7
+                    elif age_in_weeks < 104:  # 12-24 months
+                        new_child.daily_usage_count = 6
+                    else:  # 24+ months
+                        new_child.daily_usage_count = 5
+                
+                session.add(new_child)
+                await session.commit()
+                await session.refresh(new_child)
+                
+                # Create audit information about previous deletion (if any)
+                previous_deletion_info = None
+                if not data_integrity_verified:
+                    # Convert items_deleted to string summary for GraphQL compatibility
+                    orphaned_items_summary = f"orphaned_inventory: {orphaned_inventory_count}, orphaned_usage_logs: {orphaned_usage_count}"
+                    previous_deletion_info = DeletionAuditInfo(
+                        deleted_at=datetime.now(timezone.utc),  # Approximation
+                        deleted_by="System Cleanup",
+                        deletion_type=DeletionType.HARD_DELETE,
+                        reason="Orphaned data detected during recreation",
+                        items_deleted_summary=orphaned_items_summary
+                    )
+                
+                logger.info(f"Child profile recreated successfully: {new_child.id} for user {current_user.id}")
+                
+                return RecreateChildProfileResponse(
+                    success=True,
+                    message="Child profile recreated successfully with clean state",
+                    child=child_to_graphql(new_child),
+                    previous_deletion_info=previous_deletion_info,
+                    data_integrity_verified=data_integrity_verified
+                )
+                
+        except Exception as e:
+            logger.error(f"Error recreating child profile: {e}")
+            return RecreateChildProfileResponse(
+                success=False,
+                error="Failed to recreate child profile"
             )
 
 
@@ -539,10 +869,14 @@ class ChildQueries:
         from graphql import GraphQLError
         from base64 import b64encode, b64decode
         
+        # DEBUG: Log that the resolver is being called
+        logger.info(f"MY_CHILDREN_QUERY resolver called with first={first}, after={after}")
+        
         try:
             # Get authenticated user from context
             from app.graphql.context import require_context_user
             current_user = await require_context_user(info)
+            logger.info(f"MY_CHILDREN_QUERY - authenticated user: {current_user.id} ({current_user.email})")
             
         except GraphQLError as auth_error:
             logger.error(f"Authentication error in my_children: {auth_error}")

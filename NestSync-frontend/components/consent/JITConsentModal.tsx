@@ -189,7 +189,7 @@ export function JITConsentModal() {
                   What this enables:
                 </Text>
                 {config.benefits.map((benefit, index) => (
-                  <View key={index} style={styles.listItem}>
+                  <View key={`benefit-${benefit.slice(0, 20).replace(/\s+/g, '-')}-${index}`} style={styles.listItem}>
                     <Text style={[styles.bullet, { color: config.primaryColor }]}>•</Text>
                     <Text style={[styles.listText, { color: colors.text }]}>{benefit}</Text>
                   </View>
@@ -204,7 +204,7 @@ export function JITConsentModal() {
                   Data involved:
                 </Text>
                 {(dataCategories.length > 0 ? dataCategories : config.dataUsed).map((data, index) => (
-                  <View key={index} style={styles.listItem}>
+                  <View key={`data-${data.slice(0, 20).replace(/\s+/g, '-')}-${index}`} style={styles.listItem}>
                     <Text style={[styles.bullet, { color: colors.textSecondary }]}>•</Text>
                     <Text style={[styles.listText, { color: colors.text }]}>{data}</Text>
                   </View>

@@ -147,20 +147,29 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
                 del self.requests[client_id]
     
     async def dispatch(self, request: Request, call_next):
-        # Skip rate limiting for health checks
-        if request.url.path in ["/health", "/health/simple"]:
+        # Skip rate limiting entirely if disabled in settings
+        if not settings.rate_limiting_enabled:
+            return await call_next(request)
+        
+        # Skip rate limiting for health checks and OPTIONS requests (CORS preflight)
+        if request.url.path in ["/health", "/health/simple"] or request.method == "OPTIONS":
+            return await call_next(request)
+        
+        # Skip rate limiting for authentication operations to prevent login blocking
+        auth_operations = ["/auth/signin", "/auth/signout", "/auth/refresh", "/auth/signup"]
+        if any(request.url.path.startswith(op) for op in auth_operations):
             return await call_next(request)
         
         client_id = self.get_client_identifier(request)
         
-        # Different limits for different endpoints
+        # More reasonable limits for different endpoints
         if request.url.path.startswith("/graphql"):
-            # More restrictive for GraphQL
-            max_requests = 50
+            # Increased GraphQL limits for normal user operations
+            max_requests = 200 if settings.environment == "development" else 150
             window = 900  # 15 minutes
         elif request.url.path.startswith("/auth"):
-            # Very restrictive for auth endpoints
-            max_requests = 10
+            # Relaxed auth limits (non-core auth operations)
+            max_requests = 50 if settings.environment == "development" else 30
             window = 300  # 5 minutes
         else:
             # Default limits
@@ -324,7 +333,12 @@ def setup_security_middleware(app: FastAPI):
     # 4. Security headers (outermost - applied to all responses)
     app.add_middleware(SecurityHeadersMiddleware)
     
-    logger.info("Security middleware configured for PIPEDA compliance")
+    # Log rate limiting status for debugging
+    rate_limit_status = "enabled" if settings.rate_limiting_enabled else "disabled"
+    logger.info(f"Security middleware configured for PIPEDA compliance - Rate limiting: {rate_limit_status}")
+    
+    if not settings.rate_limiting_enabled:
+        logger.warning("Rate limiting is DISABLED - suitable for development only")
 
 
 # =============================================================================

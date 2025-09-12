@@ -66,8 +66,12 @@ def get_development_cors_origins() -> List[str]:
         dynamic_origins = [
             f"http://{local_ip}:8001",
             f"http://{local_ip}:8082",
+            f"http://{local_ip}:8083",
+            f"http://{local_ip}:8084",
             f"http://{local_ip}:19006",
-            f"http://{local_ip}:3000"
+            f"http://{local_ip}:3000",
+            # Add localhost origins for all ports
+            "http://localhost:8084"
         ]
         
         base_origins.extend(dynamic_origins)
@@ -87,6 +91,8 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {APP_NAME} v{API_VERSION} in {ENVIRONMENT} mode")
     logger.info(f"Data region: {settings.data_region}")
     logger.info(f"PIPEDA compliance: Active")
+    logger.info(f"Rate limiting enabled: {settings.rate_limiting_enabled}")
+    logger.info(f"Environment: {settings.environment}")
     
     try:
         # Initialize database connections

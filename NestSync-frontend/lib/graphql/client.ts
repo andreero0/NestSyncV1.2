@@ -9,14 +9,31 @@ import {
   InMemoryCache,
   createHttpLink,
   from,
-  ApolloLink,
-  Observable,
 } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { ErrorLink } from '@apollo/client/link/error';
+import { RetryLink } from '@apollo/client/link/retry';
 // Apollo Client 3.x compatible imports
 import { ApolloError } from '@apollo/client/errors';
 import { StorageHelpers } from '../../hooks/useUniversalStorage';
+import { RateLimitFeedbackManager, parseRetryAfter } from '../utils/rateLimitFeedback';
+
+// Suppress specific Apollo Client warnings in development
+if (__DEV__) {
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    // Suppress canonizeResults deprecation warning from Apollo Client internals
+    if (args[0]?.includes?.('canonizeResults') || 
+        (typeof args[0] === 'string' && args[0].includes('cache.diff'))) {
+      return; // Suppress this specific warning
+    }
+    // Suppress Apollo error URL warnings (they're handled by error links)
+    if (args[0]?.includes?.('go.apollo.dev/c/err')) {
+      return; // Suppress Apollo error URL warnings
+    }
+    originalWarn.apply(console, args);
+  };
+}
 
 // GraphQL endpoint configuration
 const GRAPHQL_ENDPOINT = __DEV__
@@ -114,7 +131,9 @@ const performGlobalTokenRefresh = async (): Promise<string | null> => {
       // Create a temporary client for the refresh mutation to avoid circular dependency
       const refreshClient = new ApolloClient({
         link: httpLink,
-        cache: new InMemoryCache(),
+        cache: new InMemoryCache({
+          // Remove deprecated addTypename option - Apollo Client 3.x sets this to true by default
+        }),
       });
       
       const { data } = await refreshClient.mutate({
@@ -132,7 +151,7 @@ const performGlobalTokenRefresh = async (): Promise<string | null> => {
         }
         return data.refreshToken.session.accessToken;
       } else {
-        throw new Error(data?.refreshToken?.error || 'Token refresh failed');
+        throw new Error((data?.refreshToken as any)?.error || 'Token refresh failed');
       }
     } catch (error) {
       if (__DEV__) {
@@ -197,7 +216,7 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
       err.extensions?.code === 'FORBIDDEN'
     ));
 
-  // Don't attempt token refresh on rate limiting errors
+  // Don't attempt token refresh on rate limiting errors (handled by RetryLink)
   const isRateLimited = error.networkError && 'statusCode' in error.networkError && (error.networkError as any).statusCode === 429;
 
   if (isAuthError && !operation.getContext().skipTokenRefresh && !isRateLimited) {
@@ -225,7 +244,7 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
             }));
             
             // Retry the operation
-            const retryObservable = forward(retryOperation);
+            const retryObservable = forward(retryOperation) as Observable<any>;
             if (retryObservable) {
               retryObservable.subscribe({
                 next: (result) => observer.next(result),
@@ -260,7 +279,7 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
   return;
 });
 
-// Error logging link - handles non-auth errors and logging using Apollo Client 3.x patterns
+// Error logging link - only handles logging, not retries (RetryLink handles retries)
 const errorLoggingLink = new ErrorLink(({ error }) => {
   if (!error) {
     return;
@@ -295,12 +314,12 @@ const errorLoggingLink = new ErrorLink(({ error }) => {
           console.error('Access forbidden - insufficient permissions');
           break;
         case 429:
-          console.error('Rate limit exceeded (429) - requests are being throttled. Please wait before retrying.');
+          console.error('Rate limit exceeded (429) - handled by RetryLink');
           break;
         case 500:
         case 502:
         case 503:
-          console.error('Server error - will retry');
+          console.error('Server error - handled by RetryLink if retryable');
           break;
       }
     }
@@ -312,69 +331,145 @@ const errorLoggingLink = new ErrorLink(({ error }) => {
   }
 });
 
-// Simple retry logic without external dependency
-const createRetryLink = () => {
-  return new ApolloLink((operation, forward) => {
-    return new Observable((observer) => {
-      let attempt = 0;
-      const maxAttempts = 1; // Disable retries temporarily to prevent 429 errors
-      const initialDelay = 2000; // Increased delay for any retries
-
-      const tryRequest = () => {
-        forward(operation).subscribe({
-          next: (result) => {
-            observer.next(result);
-          },
-          error: (error) => {
-            // Don't retry mutations or on rate limiting/auth errors
-            const shouldNotRetry = 
-              operation.query.definitions.some((def: any) => 
-                def.kind === 'OperationDefinition' && def.operation === 'mutation'
-              ) ||
-              (error.networkError && 'statusCode' in error.networkError && (error.networkError as any).statusCode === 429) ||
-              (error.networkError && 'statusCode' in error.networkError && (error.networkError as any).statusCode === 401) ||
-              (error.graphQLErrors && error.graphQLErrors.some((err: any) => 
-                err.extensions?.code === 'UNAUTHENTICATED' ||
-                err.extensions?.code === 'FORBIDDEN'
-              ));
-
-            if (
-              attempt < maxAttempts &&
-              error.networkError &&
-              !error.result &&
-              !shouldNotRetry
-            ) {
-              attempt++;
-              const delay = initialDelay * Math.pow(2, attempt - 1);
-              if (__DEV__) {
-                console.log(`Retrying request (attempt ${attempt}/${maxAttempts}) after ${delay}ms delay`);
-              }
-              setTimeout(tryRequest, delay);
-            } else {
-              if (__DEV__ && shouldNotRetry) {
-                console.log('Not retrying - mutation or rate limiting/auth error');
-              }
-              observer.error(error);
-            }
-          },
-          complete: () => {
-            observer.complete();
-          },
-        });
-      };
-
-      tryRequest();
-    });
-  });
-};
+// Rate limiting link using Apollo Client's built-in RetryLink
+// This prevents React re-render loops and follows Apollo Client best practices
+const rateLimitingRetryLink = new RetryLink({
+  attempts: (attempt, operation, error) => {
+    const rateLimitManager = RateLimitFeedbackManager.getInstance();
+    
+    // Don't retry mutations to prevent data corruption
+    const isMutation = operation.query.definitions.some((def: any) => 
+      def.kind === 'OperationDefinition' && def.operation === 'mutation'
+    );
+    
+    if (isMutation) {
+      if (__DEV__) {
+        console.log('Not retrying mutation operation');
+      }
+      return false;
+    }
+    
+    // Don't retry authentication errors
+    const isAuthError = error?.networkError && 
+      'statusCode' in error.networkError && 
+      [(error.networkError as any).statusCode].includes(401);
+    
+    const hasAuthGraphQLError = error?.graphQLErrors?.some((err: any) => 
+      err.extensions?.code === 'UNAUTHENTICATED' ||
+      err.extensions?.code === 'FORBIDDEN'
+    );
+    
+    if (isAuthError || hasAuthGraphQLError) {
+      if (__DEV__) {
+        console.log('Not retrying authentication error');
+      }
+      return false;
+    }
+    
+    // Handle rate limiting (429) and network connectivity errors
+    const isRateLimited = error?.networkError && 
+      'statusCode' in error.networkError && 
+      (error.networkError as any).statusCode === 429;
+    
+    const isNetworkError = error?.networkError?.message?.includes('Failed to fetch');
+    
+    // Reduce retries for rate limiting to prevent amplification, keep low for other network issues
+    const maxAttempts = isRateLimited ? 2 : 2;
+    
+    if (attempt <= maxAttempts && (isRateLimited || isNetworkError)) {
+      if (__DEV__) {
+        const errorType = isRateLimited ? 'Rate limit' : 'Network';
+        console.log(`${errorType} error - retry attempt ${attempt}/${maxAttempts}`);
+      }
+      
+      // Update rate limit feedback for UI
+      if (isRateLimited) {
+        rateLimitManager.setRateLimited(0, 0, attempt, maxAttempts);
+      }
+      
+      return true;
+    }
+    
+    // Clear rate limiting feedback after all retries exhausted or on success
+    if (attempt > 1) {
+      rateLimitManager.clearRateLimit();
+    }
+    
+    return false;
+  },
+  
+  delay: (attempt, operation, error) => {
+    // Extract Retry-After header from 429 responses
+    let retryAfter = 0;
+    if (error?.networkError && 'response' in error.networkError) {
+      const response = (error.networkError as any).response;
+      if (response?.headers) {
+        const retryAfterHeader = response.headers.get ? 
+          response.headers.get('retry-after') : 
+          response.headers['retry-after'];
+        retryAfter = parseRetryAfter(retryAfterHeader);
+      }
+    }
+    
+    // Check if this is a rate limiting error
+    const isRateLimited = error?.networkError && 
+      'statusCode' in error.networkError && 
+      (error.networkError as any).statusCode === 429;
+    
+    if (isRateLimited) {
+      // Use server's retry-after if provided, otherwise exponential backoff
+      if (retryAfter > 0) {
+        const serverDelay = retryAfter * 1000; // Convert to milliseconds
+        // Add jitter to prevent thundering herd (±25% variation)
+        const jitter = serverDelay * (0.75 + Math.random() * 0.5);
+        const finalDelay = Math.round(jitter);
+        
+        if (__DEV__) {
+          console.log(`Rate limit retry delay: ${finalDelay}ms (server: ${retryAfter}s)`);
+        }
+        
+        // Update feedback manager with actual delay
+        const rateLimitManager = RateLimitFeedbackManager.getInstance();
+        rateLimitManager.setRateLimited(retryAfter, finalDelay, attempt, 2);
+        
+        return finalDelay;
+      } else {
+        // Enhanced exponential backoff for rate limiting: 2s, 5s (reduced retries to prevent amplification)
+        const exponentialDelay = Math.min(2000 * Math.pow(2.5, attempt - 1), 30000);
+        // Add jitter to prevent thundering herd
+        const jitter = exponentialDelay * (0.75 + Math.random() * 0.5);
+        const finalDelay = Math.round(jitter);
+        
+        if (__DEV__) {
+          console.log(`Rate limit exponential backoff: ${finalDelay}ms (attempt ${attempt})`);
+        }
+        
+        // Update feedback manager
+        const rateLimitManager = RateLimitFeedbackManager.getInstance();
+        rateLimitManager.setRateLimited(Math.ceil(finalDelay / 1000), finalDelay, attempt, 2);
+        
+        return finalDelay;
+      }
+    } else {
+      // For other network errors, use simple linear backoff
+      const networkDelay = 1000 * attempt; // 1s, 2s
+      
+      if (__DEV__) {
+        console.log(`Network error retry delay: ${networkDelay}ms`);
+      }
+      
+      return networkDelay;
+    }
+  },
+});
 
 // Create Apollo Client with optimized link order
 export const apolloClient = new ApolloClient({
   link: from([
     // Error logging should come first to catch all errors
     errorLoggingLink,
-    // Retry logic for network failures
-    createRetryLink(),
+    // Apollo Client's built-in RetryLink for rate limiting (prevents React re-render loops)
+    rateLimitingRetryLink,
     // Token refresh must come before auth to handle expired tokens
     tokenRefreshLink,
     // Auth link adds tokens to requests
@@ -383,7 +478,6 @@ export const apolloClient = new ApolloClient({
     httpLink,
   ]),
   cache: new InMemoryCache({
-    addTypename: true,
     typePolicies: {
       Query: {
         fields: {
@@ -479,6 +573,9 @@ export const resetApolloCache = async (): Promise<void> => {
     }
   }
 };
+
+// Export rate limiting manager for component use
+export const rateLimitingManager = RateLimitFeedbackManager.getInstance();
 
 // Export client as default
 export default apolloClient;

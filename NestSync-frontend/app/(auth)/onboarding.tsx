@@ -562,19 +562,25 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Gender</Text>
-          <Dropdown
-            style={styles.dropdown}
-            placeholderStyle={styles.placeholderStyle}
-            selectedTextStyle={styles.selectedTextStyle}
-            data={GENDER_OPTIONS}
-            maxHeight={300}
-            labelField="label"
-            valueField="value"
-            placeholder="Select gender"
-            value={childInfo.gender}
-            onChange={(item) => setChildInfo(prev => ({ ...prev, gender: item.value as any }))}
-          />
+          <Text style={[styles.label, { color: colors.textEmphasis }]}>Gender</Text>
+          <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Dropdown
+              style={[styles.picker, { color: colors.text }]}
+              placeholderStyle={{ color: colors.placeholder }}
+              selectedTextStyle={{ color: colors.text }}
+              itemTextStyle={{ color: colors.text }}
+              data={GENDER_OPTIONS}
+              maxHeight={300}
+              labelField="label"
+              valueField="value"
+              placeholder="Select gender"
+              value={childInfo.gender}
+              onChange={(item) => setChildInfo(prev => ({ ...prev, gender: item.value as any }))}
+              dropdownPosition="auto"
+              containerStyle={{ backgroundColor: colors.background, borderColor: colors.border }}
+              itemContainerStyle={{ backgroundColor: colors.background }}
+            />
+          </View>
         </View>
 
         <WeightInput
@@ -649,18 +655,25 @@ export default function OnboardingScreen() {
 
         <View style={styles.rowContainer}>
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>Size</Text>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={DIAPER_SIZE_OPTIONS}
-              maxHeight={300}
-              labelField="label"
-              valueField="value"
-              value={inventoryItem.size}
-              onChange={(item) => setInventoryItem(prev => ({ ...prev, size: item.value as any }))}
-            />
+            <Text style={[styles.label, { color: colors.textEmphasis }]}>Size</Text>
+            <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Dropdown
+                style={[styles.picker, { color: colors.text }]}
+                placeholderStyle={{ color: colors.placeholder }}
+                selectedTextStyle={{ color: colors.text }}
+                itemTextStyle={{ color: colors.text }}
+                data={DIAPER_SIZE_OPTIONS}
+                maxHeight={300}
+                labelField="label"
+                valueField="value"
+                placeholder="Select size"
+                value={inventoryItem.size}
+                onChange={(item) => setInventoryItem(prev => ({ ...prev, size: item.value as any }))}
+                dropdownPosition="auto"
+                containerStyle={{ backgroundColor: colors.background, borderColor: colors.border }}
+                itemContainerStyle={{ backgroundColor: colors.background }}
+              />
+            </View>
           </View>
 
           <View style={styles.halfWidth}>
@@ -682,33 +695,47 @@ export default function OnboardingScreen() {
 
         <View style={styles.rowContainer}>
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>Type</Text>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={DIAPER_TYPE_OPTIONS}
-              maxHeight={300}
-              labelField="label"
-              valueField="value"
-              value={inventoryItem.type}
-              onChange={(item) => setInventoryItem(prev => ({ ...prev, type: item.value as any }))}
-            />
+            <Text style={[styles.label, { color: colors.textEmphasis }]}>Type</Text>
+            <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Dropdown
+                style={[styles.picker, { color: colors.text }]}
+                placeholderStyle={{ color: colors.placeholder }}
+                selectedTextStyle={{ color: colors.text }}
+                itemTextStyle={{ color: colors.text }}
+                data={DIAPER_TYPE_OPTIONS}
+                maxHeight={300}
+                labelField="label"
+                valueField="value"
+                placeholder="Select type"
+                value={inventoryItem.type}
+                onChange={(item) => setInventoryItem(prev => ({ ...prev, type: item.value as any }))}
+                dropdownPosition="auto"
+                containerStyle={{ backgroundColor: colors.background, borderColor: colors.border }}
+                itemContainerStyle={{ backgroundColor: colors.background }}
+              />
+            </View>
           </View>
 
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>Absorbency</Text>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={ABSORBENCY_OPTIONS}
-              maxHeight={300}
-              labelField="label"
-              valueField="value"
-              value={inventoryItem.absorbency}
-              onChange={(item) => setInventoryItem(prev => ({ ...prev, absorbency: item.value as any }))}
-            />
+            <Text style={[styles.label, { color: colors.textEmphasis }]}>Absorbency</Text>
+            <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Dropdown
+                style={[styles.picker, { color: colors.text }]}
+                placeholderStyle={{ color: colors.placeholder }}
+                selectedTextStyle={{ color: colors.text }}
+                itemTextStyle={{ color: colors.text }}
+                data={ABSORBENCY_OPTIONS}
+                maxHeight={300}
+                labelField="label"
+                valueField="value"
+                placeholder="Select absorbency"
+                value={inventoryItem.absorbency}
+                onChange={(item) => setInventoryItem(prev => ({ ...prev, absorbency: item.value as any }))}
+                dropdownPosition="auto"
+                containerStyle={{ backgroundColor: colors.background, borderColor: colors.border }}
+                itemContainerStyle={{ backgroundColor: colors.background }}
+              />
+            </View>
           </View>
         </View>
 
@@ -724,7 +751,7 @@ export default function OnboardingScreen() {
           <View style={styles.inventoryList}>
             <Text style={[styles.sectionTitle, { color: colors.textEmphasis }]}>Current Inventory ({onboardingData.inventory.length} items)</Text>
             {onboardingData.inventory.map((item, index) => (
-              <View key={index} style={styles.inventoryItem}>
+              <View key={`${item.brandName}-${item.size}-${item.type}-${index}`} style={styles.inventoryItem}>
                 <View style={styles.inventoryItemInfo}>
                   <Text style={[styles.inventoryItemTitle, { color: colors.textEmphasis }]}>{item.brandName} - Size {item.size.replace('SIZE_', '')}</Text>
                   <Text style={[styles.inventoryItemDetails, { color: colors.textSecondary }]}>
@@ -1015,17 +1042,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
-  dropdown: {
-    height: 50,
+  pickerContainer: {
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 16,
+    marginTop: 8,
+    overflow: 'hidden',
   },
-  placeholderStyle: {
-    fontSize: 16,
-  },
-  selectedTextStyle: {
-    fontSize: 16,
+  picker: {
+    height: 50,
   },
   navigationButtons: {
     flexDirection: 'row',

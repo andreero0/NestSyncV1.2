@@ -332,7 +332,7 @@ This architecture supports a comprehensive Canadian diaper planning application 
 ### Development Testing Account
 For consistent development and testing access across the team:
 
-**Email**: andre_ero@yahoo.ca  
+**Email**: parents@nestsync.com  
 **Password**: Shazam11#
 
 **Usage Notes**:
@@ -461,17 +461,49 @@ Use mcp__sequential-thinking__sequentialthinking for:
 
 ### Quality Assurance Standards
 
+**MANDATORY END-TO-END VERIFICATION WORKFLOW:**
+Every feature implementation MUST follow this verification process:
+
+1. **Pre-Implementation State Check**
+   - Use Playwright to test current functionality before making changes
+   - Document existing behavior and any issues found
+   - Take snapshots of current state for comparison
+
+2. **Implementation with Progressive Testing**
+   - Test functionality incrementally during development
+   - Use sequential thinking for complex debugging when issues arise
+   - Never claim completion without actual functional verification
+
+3. **Post-Implementation Verification**
+   - Use Playwright to test ALL affected functionality end-to-end
+   - Verify that claimed fixes actually work in real browser environment
+   - Test both primary functionality and edge cases
+   - Document before/after states with evidence
+
+4. **Proactive Problem Resolution**
+   - If verification reveals issues, immediately use sequential thinking to analyze
+   - Research solutions using Context7 when needed
+   - Fix problems completely before moving to next task
+   - Never leave broken functionality or incomplete fixes
+
 **Before Task Completion:**
-- All code must pass Playwright testing validation
+- All code must pass Playwright testing validation with real browser verification
 - Context7 research must inform implementation decisions
 - Agent specialization must be properly utilized
 - Sequential thinking must be used for complex problems
+- End-to-end verification must prove functionality works as claimed
+
+**Verification Evidence Requirements:**
+- Screenshot or snapshot evidence of before/after states
+- Console logs showing no critical errors
+- Functional testing demonstrating claimed features work
+- Real user credential testing (parents@nestsync.com / Shazam11#) when applicable
 
 **Documentation Requirements:**
 - Update CLAUDE.md with new patterns or discoveries
-- Record agent assignment decisions and outcomes
+- Record agent assignment decisions and outcomes  
 - Document Context7 research findings
-- Maintain testing validation records
+- Maintain testing validation records with verification evidence
 
 ## Professional Development Standards
 

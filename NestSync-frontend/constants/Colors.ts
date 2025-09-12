@@ -68,6 +68,14 @@ export const NestSyncColors = {
     red: '#FF0000',      // Only for Canadian flag context, never for errors
     trust: '#0891B2',    // Alias for "🇨🇦 Data stored in Canada" messaging
   },
+
+  // Traffic Light System Colors - Psychology-Driven Inventory Status
+  trafficLight: {
+    critical: '#DC2626',  // Critical Red - items ≤3 days remaining (urgent but not alarming)
+    low: '#D97706',       // Low Stock Amber - items 4-7 days remaining (attention without panic)
+    stocked: '#059669',   // Well Stocked Green - items >7 days remaining (reassurance and calm)
+    pending: '#0891B2',   // Pending Orders Blue - incoming inventory (hope and progress)
+  },
 };
 
 /**
@@ -96,6 +104,11 @@ export const Colors = {
     error: NestSyncColors.semantic.error,       // Error states - use sparingly
     info: NestSyncColors.semantic.info,         // Informational messages
     
+    // Background colors for validation feedback
+    successBackground: NestSyncColors.secondary.greenPale,  // Success message backgrounds
+    warningBackground: '#FEF3C7',               // Warning message backgrounds  
+    errorBackground: '#FEE2E2',                 // Error message backgrounds
+    
     // Accent colors for variety without overwhelming stressed parents
     accent: NestSyncColors.accent.orange,       // Important non-urgent actions
     accentSecondary: NestSyncColors.accent.amber, // Warnings, attention
@@ -122,6 +135,11 @@ export const Colors = {
     warning: '#FBBF24',                          // Brighter warning for dark backgrounds
     error: '#F87171',                            // Softer error red for dark mode
     info: tintColorDark,                         // Info uses primary blue color
+    
+    // Background colors for validation feedback (dark mode)
+    successBackground: '#064E3B',                // Dark green background for success
+    warningBackground: '#78350F',               // Dark amber background for warnings
+    errorBackground: '#7F1D1D',                 // Dark red background for errors
     
     // Accent colors maintained for consistency
     accent: NestSyncColors.accent.orange,       // Consistent accent colors
@@ -185,6 +203,9 @@ export interface ColorPalette {
   warning: string;
   error: string;
   info: string;
+  successBackground: string;
+  warningBackground: string;
+  errorBackground: string;
   accent: string;
   accentSecondary: string;
   premium: string;
@@ -227,5 +248,11 @@ export interface NestSyncColorSystem {
   canadian: {
     red: string;
     trust: string;
+  };
+  trafficLight: {
+    critical: string;
+    low: string;
+    stocked: string;
+    pending: string;
   };
 }

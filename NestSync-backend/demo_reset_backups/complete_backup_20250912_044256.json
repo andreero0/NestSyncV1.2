@@ -1,0 +1,224 @@
+{
+  "timestamp": "20250912_044256",
+  "users": [
+    {
+      "id": "1f715a9e-aaef-4aa8-a009-1d82a07084a5",
+      "email": "ma@gmail.com",
+      "first_name": "May",
+      "last_name": "Ik",
+      "status": "pending_verification",
+      "created_at": "2025-09-06T10:51:47.123225+00:00",
+      "children_count": 0
+    },
+    {
+      "id": "23fbfbf8-7f9f-40a6-87d7-c58282819461",
+      "email": "39yogic-hairpin@icloud.com",
+      "first_name": "Yo",
+      "last_name": "Yo",
+      "status": "pending_verification",
+      "created_at": "2025-09-05T05:46:08.837545+00:00",
+      "children_count": 0
+    },
+    {
+      "id": "354ff756-807a-40f1-b1d4-cc993597ca42",
+      "email": "may@gmail.com",
+      "first_name": "May",
+      "last_name": "Ik",
+      "status": "active",
+      "created_at": "2025-09-06T17:23:06.108859+00:00",
+      "children_count": 1
+    },
+    {
+      "id": "0fc9fa58-177a-4a6e-aa0f-2367f301cce7",
+      "email": "sarah.test.2025@gmail.com",
+      "first_name": "Sarah",
+      "last_name": "Thompson",
+      "status": "active",
+      "created_at": "2025-09-07T21:03:06.255684+00:00",
+      "children_count": 0
+    },
+    {
+      "id": "89e857f1-06e4-4edc-ba34-a732761fddb9",
+      "email": "tobe.chukwu.ubah@gmail.com",
+      "first_name": "Andre",
+      "last_name": "Ero",
+      "status": "active",
+      "created_at": "2025-09-05T02:39:47.139964+00:00",
+      "children_count": 1
+    },
+    {
+      "id": "4ee58bcc-9e37-41f1-8a71-b6299566723a",
+      "email": "test@example.com",
+      "first_name": null,
+      "last_name": null,
+      "status": "pending_verification",
+      "created_at": "2025-09-07T21:00:01.442150+00:00",
+      "children_count": 0
+    },
+    {
+      "id": "71f61c31-7eca-4341-9cbe-2ea1fd0b3c1f",
+      "email": "testparent@example.com",
+      "first_name": "Test",
+      "last_name": "Parent",
+      "status": "pending_verification",
+      "created_at": "2025-09-07T22:07:08.750255+00:00",
+      "children_count": 1
+    },
+    {
+      "id": "1485005a-8713-4cd8-9c50-b514fc8f6255",
+      "email": "andre_ero@yahoo.ca",
+      "first_name": "Andre",
+      "last_name": "Ero",
+      "status": "active",
+      "created_at": "2025-09-04T20:50:29.433766+00:00",
+      "children_count": 1
+    },
+    {
+      "id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+      "email": "parents@nestsync.com",
+      "first_name": "Prof",
+      "last_name": "X",
+      "status": "active",
+      "created_at": "2025-09-11T01:28:04.072183+00:00",
+      "children_count": 0
+    }
+  ],
+  "children": [
+    {
+      "id": "ded36755-70e6-44af-98f5-3ac08fc8cdda",
+      "parent_id": "354ff756-807a-40f1-b1d4-cc993597ca42",
+      "name": "Ze",
+      "date_of_birth": "2025-09-08",
+      "current_diaper_size": "size_1",
+      "is_deleted": false,
+      "created_at": "2025-09-08T00:55:50.308282+00:00"
+    },
+    {
+      "id": "87dae0ad-718a-424a-8f81-98fa8b046eaf",
+      "parent_id": "89e857f1-06e4-4edc-ba34-a732761fddb9",
+      "name": "Zee",
+      "date_of_birth": "2025-09-09",
+      "current_diaper_size": "size_1",
+      "is_deleted": false,
+      "created_at": "2025-09-09T21:47:07.405553+00:00"
+    },
+    {
+      "id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+      "parent_id": "71f61c31-7eca-4341-9cbe-2ea1fd0b3c1f",
+      "name": "Tobe",
+      "date_of_birth": "2025-09-07",
+      "current_diaper_size": "size_1",
+      "is_deleted": false,
+      "created_at": "2025-09-08T01:38:04.120396+00:00"
+    },
+    {
+      "id": "38e5b650-62f6-4305-aecf-41187514bd54",
+      "parent_id": "1485005a-8713-4cd8-9c50-b514fc8f6255",
+      "name": "Ose",
+      "date_of_birth": "2025-09-11",
+      "current_diaper_size": "size_1",
+      "is_deleted": false,
+      "created_at": "2025-09-11T01:30:44.240731+00:00"
+    }
+  ],
+  "inventory_items": [
+    {
+      "id": "ab5205b4-879d-4ae9-b6ae-96ebc7bdf2f0",
+      "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+      "product_type": "wipes",
+      "brand": "XYZ",
+      "quantity": null,
+      "created_at": "2025-09-09T11:46:00.179073+00:00"
+    },
+    {
+      "id": "a312eed1-b730-4dbc-a34f-5b56305e5126",
+      "child_id": "ded36755-70e6-44af-98f5-3ac08fc8cdda",
+      "product_type": "diaper",
+      "brand": "Rascals",
+      "quantity": null,
+      "created_at": "2025-09-08T00:55:52.050617+00:00"
+    },
+    {
+      "id": "e641a748-2070-4a48-a4ab-d340f911aa08",
+      "child_id": "87dae0ad-718a-424a-8f81-98fa8b046eaf",
+      "product_type": "diaper",
+      "brand": "Rascals",
+      "quantity": null,
+      "created_at": "2025-09-09T21:48:04.048544+00:00"
+    },
+    {
+      "id": "3eb242e5-25b0-41a9-b8eb-9c1cd4697261",
+      "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+      "product_type": "diaper",
+      "brand": "Huggies",
+      "quantity": null,
+      "created_at": "2025-09-10T01:20:35.742931+00:00"
+    },
+    {
+      "id": "6fa6d744-7be7-4e73-bb7d-67b475bf7cea",
+      "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+      "product_type": "diaper",
+      "brand": "Pampers",
+      "quantity": null,
+      "created_at": "2025-09-10T01:26:08.233600+00:00"
+    },
+    {
+      "id": "e635d321-07df-477d-8347-158f7c3f7158",
+      "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+      "product_type": "wipes",
+      "brand": "Huggies",
+      "quantity": null,
+      "created_at": "2025-09-10T01:27:26.980624+00:00"
+    },
+    {
+      "id": "b7fdb1eb-331f-4f59-8f4e-2db918646df5",
+      "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+      "product_type": "diaper",
+      "brand": "Rascals + Friends",
+      "quantity": null,
+      "created_at": "2025-09-08T13:50:19.908545+00:00"
+    },
+    {
+      "id": "b574e288-11f1-422f-bab0-a99567a16452",
+      "child_id": "87dae0ad-718a-424a-8f81-98fa8b046eaf",
+      "product_type": "diaper",
+      "brand": "Rascals",
+      "quantity": null,
+      "created_at": "2025-09-11T00:35:08.801748+00:00"
+    },
+    {
+      "id": "c2fbb591-8ca0-46ff-b49d-e0bdd0883a25",
+      "child_id": "0961f7cb-5c48-433a-984d-44910ff24f7e",
+      "product_type": "diaper",
+      "brand": "Pampers",
+      "quantity": null,
+      "created_at": "2025-09-08T06:43:17.247610+00:00"
+    },
+    {
+      "id": "d8e3b6be-40d4-4106-ae3c-85f1b31892d1",
+      "child_id": "38e5b650-62f6-4305-aecf-41187514bd54",
+      "product_type": "diaper",
+      "brand": "Honest",
+      "quantity": null,
+      "created_at": "2025-09-11T04:47:27.117072+00:00"
+    },
+    {
+      "id": "7c0699ca-df3d-4eff-a12f-d7e73420dc88",
+      "child_id": "38e5b650-62f6-4305-aecf-41187514bd54",
+      "product_type": "diaper",
+      "brand": "Huggies",
+      "quantity": null,
+      "created_at": "2025-09-11T04:47:27.117057+00:00"
+    },
+    {
+      "id": "51b4f8be-bd7e-413d-b1b9-39f2c6dc49b8",
+      "child_id": "38e5b650-62f6-4305-aecf-41187514bd54",
+      "product_type": "diaper",
+      "brand": "Pampers",
+      "quantity": null,
+      "created_at": "2025-09-11T04:47:27.117067+00:00"
+    }
+  ],
+  "usage_logs": [],
+  "consent_records": []
+}

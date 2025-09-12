@@ -16,6 +16,7 @@ import { Colors } from '../constants/Colors';
 import apolloClient from '../lib/graphql/client';
 import { useAuthStore } from '../stores/authStore';
 import { JITConsentModal } from '../components/consent/JITConsentModal';
+import NestSyncSplashScreen from '../components/splash/SplashScreen';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -25,7 +26,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
   const [appIsReady, setAppIsReady] = useState(false);
-  const [hasSeenSplash, setHasSeenSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashCompleted, setSplashCompleted] = useState(false);
 
   // Get theme colors for loading screen
   let loadingColors;
@@ -57,11 +59,26 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
+  // Handle splash screen completion
+  const handleSplashComplete = () => {
+    setSplashCompleted(true);
+    setShowSplash(false);
+    
+    if (__DEV__) {
+      console.log('AuthGuard: Splash screen completed, hiding native splash');
+    }
+    
+    // Hide the native splash screen
+    SplashScreen.hideAsync().catch((error) => {
+      console.error('Failed to hide native splash screen:', error);
+    });
+  };
+
   useEffect(() => {
-    if (!isInitialized) return; // Wait for auth to initialize
+    if (!isInitialized || !splashCompleted) return; // Wait for both auth and splash to complete
 
     if (__DEV__) {
-      console.log('AuthGuard: Auth initialized, handling navigation...', {
+      console.log('AuthGuard: Auth initialized and splash completed, handling navigation...', {
         isAuthenticated,
         segments,
         userOnboardingCompleted: user?.onboardingCompleted
@@ -69,21 +86,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inSplashScreen = segments[0] === 'splash';
 
-    // Check if user should see splash screen first (first time app launch)
-    if (!hasSeenSplash && !inSplashScreen) {
-      if (__DEV__) {
-        console.log('AuthGuard: Showing splash screen for first time user');
-      }
-      setHasSeenSplash(true);
-      router.replace('/splash');
-      return; // Exit early to show splash
-    }
-
-
-    if (!isAuthenticated && !inAuthGroup && !inSplashScreen) {
-      // User is not authenticated and not in protected screens, redirect to login
+    if (!isAuthenticated && !inAuthGroup) {
+      // User is not authenticated, redirect to login
       if (__DEV__) {
         console.log('AuthGuard: Redirecting to login - user not authenticated');
       }
@@ -108,17 +113,18 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     // Mark app as ready once navigation is determined
     if (!appIsReady) {
       if (__DEV__) {
-        console.log('AuthGuard: App is ready, hiding splash screen');
+        console.log('AuthGuard: App is ready for navigation');
       }
       setAppIsReady(true);
-      SplashScreen.hideAsync().catch((error) => {
-        // Critical error - should be logged in production
-        console.error('Failed to hide splash screen:', error);
-      });
     }
-  }, [isAuthenticated, isInitialized, user?.onboardingCompleted, segments, appIsReady]);
+  }, [isAuthenticated, isInitialized, user?.onboardingCompleted, segments, appIsReady, splashCompleted]);
 
-  // Show loading screen while initializing
+  // Show splash screen first, then loading screen while initializing
+  if (showSplash) {
+    return <NestSyncSplashScreen onComplete={handleSplashComplete} />;
+  }
+  
+  // Show loading screen while initializing auth (after splash)
   if (!isInitialized) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: loadingColors.background }]}>
@@ -166,7 +172,6 @@ function ThemedNavigationWrapper() {
     <ThemeProvider value={actualTheme === 'dark' ? nestSyncDarkTheme : nestSyncLightTheme}>
       <AuthGuard>
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="splash" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />

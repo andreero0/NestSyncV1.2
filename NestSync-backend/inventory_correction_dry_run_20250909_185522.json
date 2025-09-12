@@ -1,0 +1,61 @@
+{
+  "workflow_started_at": "2025-09-09T22:55:21.533720+00:00",
+  "dry_run_mode": true,
+  "target_user_id": null,
+  "backup_created": null,
+  "pre_correction_validation": {
+    "inventory_items_count": 5,
+    "usage_logs_count": 29,
+    "negative_inventory_items": 0,
+    "high_inventory_items": 0
+  },
+  "corrections_applied": {
+    "dry_run": true,
+    "corrections_count": 2
+  },
+  "post_correction_validation": {},
+  "errors": [],
+  "summary": {
+    "dry_run_mode": true,
+    "target_user_id": null,
+    "total_corrections_calculated": 0,
+    "total_items_affected": 0,
+    "backup_file": null,
+    "workflow_completed_at": "2025-09-09T22:55:22.742727+00:00"
+  },
+  "corrections_plan": {
+    "calculated_at": "2025-09-09T22:55:21.943400+00:00",
+    "target_user_id": null,
+    "corrections": [
+      {
+        "inventory_item_id": "a312eed1-b730-4dbc-a34f-5b56305e5126",
+        "child_id": "ded36755-70e6-44af-98f5-3ac08fc8cdda",
+        "brand": "Rascals",
+        "product_name": "Rascals Diapers",
+        "size": "size_1",
+        "current_quantity_remaining": 99,
+        "total_quantity_to_deduct": 1,
+        "corrected_quantity_remaining": 98,
+        "historical_usage_count": 1,
+        "needs_correction": true
+      },
+      {
+        "inventory_item_id": "e641a748-2070-4a48-a4ab-d340f911aa08",
+        "child_id": "87dae0ad-718a-424a-8f81-98fa8b046eaf",
+        "brand": "Rascals",
+        "product_name": null,
+        "size": "SIZE_1",
+        "current_quantity_remaining": 5,
+        "total_quantity_to_deduct": 5,
+        "corrected_quantity_remaining": 0,
+        "historical_usage_count": 5,
+        "needs_correction": true,
+        "cost_impact_cad": 13.0
+      }
+    ],
+    "total_corrections": 6,
+    "total_items_affected": 2,
+    "potential_issues": [],
+    "total_cost_impact": 13.0
+  }
+}

@@ -6,6 +6,7 @@
 
 import { apolloClient, clearApolloCache } from '../graphql/client';
 import { StorageHelpers, BiometricHelpers } from '../../hooks/useUniversalStorage';
+import { privacyIsolationManager } from '../utils/privacyIsolation';
 import {
   SIGN_UP_MUTATION,
   SIGN_IN_MUTATION,
@@ -197,17 +198,25 @@ export class AuthService {
       }
 
       if (response.success && response.user && response.session) {
+        const userProfile = response.user as UserProfile;
+        
+        // CRITICAL: Ensure cache isolation for new users (PIPEDA compliance)
+        await privacyIsolationManager.ensureCacheIsolationOnSignIn({
+          userId: userProfile.id,
+          email: userProfile.email
+        });
+        
         // Store session securely
-        await this.storeSession(response.user as UserProfile, response.session);
+        await this.storeSession(userProfile, response.session);
         
         // Set current user and session
-        this.currentUser = response.user as UserProfile;
+        this.currentUser = userProfile;
         this.currentSession = response.session;
 
         return {
           success: true,
           message: response.message,
-          user: response.user as UserProfile,
+          user: userProfile,
           session: response.session,
         };
       }
@@ -269,7 +278,7 @@ export class AuthService {
   }
 
   /**
-   * Sign in user
+   * Sign in user with PIPEDA-compliant cache isolation
    */
   async signIn(input: SignInInput): Promise<AuthResponse> {
     try {
@@ -296,17 +305,25 @@ export class AuthService {
       }
 
       if (response.success && response.user && response.session) {
+        const userProfile = response.user as UserProfile;
+        
+        // CRITICAL: Ensure cache isolation for PIPEDA compliance
+        await privacyIsolationManager.ensureCacheIsolationOnSignIn({
+          userId: userProfile.id,
+          email: userProfile.email
+        });
+        
         // Store session securely
-        await this.storeSession(response.user as UserProfile, response.session);
+        await this.storeSession(userProfile, response.session);
         
         // Set current user and session
-        this.currentUser = response.user as UserProfile;
+        this.currentUser = userProfile;
         this.currentSession = response.session;
 
         return {
           success: true,
           message: response.message,
-          user: response.user as UserProfile,
+          user: userProfile,
           session: response.session,
         };
       }
@@ -413,7 +430,7 @@ export class AuthService {
   }
 
   /**
-   * Sign out user
+   * Sign out user with PIPEDA-compliant cache clearing
    */
   async signOut(): Promise<MutationResponse> {
     try {
@@ -421,6 +438,9 @@ export class AuthService {
       const { data } = await apolloClient.mutate<SignOutMutationData>({
         mutation: SIGN_OUT_MUTATION,
       });
+
+      // CRITICAL: Ensure complete cache isolation on sign out
+      await privacyIsolationManager.ensureCacheIsolationOnSignOut();
 
       // Clear local session regardless of server response
       await this.clearSession();
@@ -433,7 +453,9 @@ export class AuthService {
       };
     } catch (error) {
       console.error('Sign out error:', error);
-      // Still clear local session on error
+      
+      // CRITICAL: Still clear cache and session on error for privacy
+      await privacyIsolationManager.ensureCacheIsolationOnSignOut();
       await this.clearSession();
       
       return {
