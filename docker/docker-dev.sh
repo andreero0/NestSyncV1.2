@@ -68,6 +68,96 @@ get_script_dir() {
     cd "$SCRIPT_DIR"
 }
 
+# Environment validation functions
+check_environment_mode() {
+    local project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local env_file="$project_root/.env"
+
+    if [ -f "$env_file" ]; then
+        if grep -q "DEVELOPMENT_MODE=production" "$env_file" 2>/dev/null; then
+            return 1  # Production mode detected
+        elif grep -q "DEVELOPMENT_MODE=docker" "$env_file" 2>/dev/null; then
+            return 0  # Docker mode detected
+        else
+            return 2  # Unknown mode
+        fi
+    else
+        return 3  # No env file
+    fi
+}
+
+validate_docker_environment() {
+    local project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+    log_step "Validating environment configuration..."
+
+    check_environment_mode
+    local env_status=$?
+
+    case $env_status in
+        0)
+            log_success "Environment is correctly set to Docker mode"
+            ;;
+        1)
+            log_warning "Environment is set to PRODUCTION mode!"
+            log_warning "You are trying to start Docker services but environment is configured for production."
+            echo ""
+            echo -e "${RED}This could cause conflicts or unexpected behavior.${NC}"
+            echo -e "${YELLOW}Recommended actions:${NC}"
+            echo "  1. Switch to Docker mode: $project_root/dev.sh switch docker"
+            echo "  2. Or use: $project_root/dev.sh docker start (which will auto-switch)"
+            echo ""
+            read -p "Continue with Docker startup anyway? (y/N): " -r
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_info "Docker startup cancelled"
+                exit 0
+            fi
+            ;;
+        2)
+            log_warning "Environment mode is not clearly defined"
+            log_warning "Consider using the environment toggle system for clearer configuration"
+            echo ""
+            echo -e "${BLUE}Quick setup:${NC}"
+            echo "  $project_root/dev.sh docker start  # Auto-configure and start"
+            echo ""
+            ;;
+        3)
+            log_warning "No .env file found"
+            log_info "This is normal for first-time setup"
+            echo ""
+            echo -e "${BLUE}Recommended setup:${NC}"
+            echo "  $project_root/dev.sh docker start  # Auto-configure and start"
+            echo ""
+            ;;
+    esac
+}
+
+check_conflicting_services() {
+    log_step "Checking for conflicting services..."
+
+    # Check if manual backend is running
+    if curl -f http://localhost:8001/health > /dev/null 2>&1; then
+        log_warning "Manual backend service detected on port 8001"
+        log_warning "This may conflict with Docker backend container"
+        echo ""
+        echo -e "${YELLOW}Please stop manual backend service before starting Docker environment${NC}"
+        echo "  - Stop backend server (Ctrl+C in terminal)"
+        echo "  - Or use: $project_root/dev.sh docker start (which will warn and proceed)"
+        echo ""
+        read -p "Continue anyway? (y/N): " -r
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Docker startup cancelled"
+            exit 0
+        fi
+    fi
+
+    # Check if frontend dev server is running on 8082
+    if curl -f http://localhost:8082 > /dev/null 2>&1; then
+        log_warning "Service detected on port 8082 (frontend port)"
+        log_warning "This may conflict with Docker frontend container"
+    fi
+}
+
 # Function to start the development environment
 up() {
     log_info
@@ -76,6 +166,10 @@ up() {
     check_docker
     check_compose
     get_script_dir
+
+    # Validate environment configuration
+    validate_docker_environment
+    check_conflicting_services
 
     # Create network if it doesn't exist
     if ! docker network ls | grep -q "$NETWORK_NAME"; then

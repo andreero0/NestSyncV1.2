@@ -10,6 +10,7 @@
 .env
 .env.*
 !.env.example
+!.env.*.template
 
 # Node/Expo/React Native
 node_modules/
