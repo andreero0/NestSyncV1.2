@@ -38,22 +38,37 @@ export interface UseInventoryTrafficLightResult {
  */
 export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLightResult {
   const router = useRouter();
+
   // Fetch inventory data from GraphQL
-  const { 
-    data: inventoryData, 
-    loading, 
-    error 
+  const {
+    data: inventoryData,
+    loading,
+    error,
+    startPolling,
+    stopPolling
   } = useQuery(GET_INVENTORY_ITEMS_QUERY, {
-    variables: { 
+    variables: {
       childId,
       productType: 'DIAPER', // Focus on diaper inventory for traffic light system
       limit: 500 // Increased from 100 to 500 for development
     },
     skip: !childId,
-    pollInterval: 30000, // Poll every 30 seconds for real-time updates
-    errorPolicy: 'all', // Return partial data even on error
+    pollInterval: 60000, // Poll every 60 seconds by default
+    errorPolicy: 'none', // Fail fast on network errors to prevent infinite loops
     notifyOnNetworkStatusChange: true, // Update loading state on network changes
+    fetchPolicy: 'cache-first', // Use cache when network is unavailable
   });
+
+  // Handle polling behavior based on error state
+  useEffect(() => {
+    if (error) {
+      // Stop polling when there's an error to prevent infinite retry loops
+      stopPolling();
+    } else if (!loading && childId) {
+      // Resume polling when error is resolved and we have a valid childId
+      startPolling(60000);
+    }
+  }, [error, loading, childId, startPolling, stopPolling]);
 
   // Debug logging for development
   useEffect(() => {

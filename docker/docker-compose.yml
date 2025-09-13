@@ -1,0 +1,282 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: nestsync-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: nestsync
+    ports:
+      - "54320:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nestsync-network
+
+  # Supabase Services
+  supabase-db:
+    image: supabase/postgres:15.1.0.117
+    container_name: nestsync-supabase-db
+    ports:
+      - "54322:5432"
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - supabase_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nestsync-network
+
+  supabase-kong:
+    image: kong:2.8.1
+    container_name: nestsync-supabase-kong
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+    volumes:
+      - ./kong/kong.yml:/var/lib/kong/kong.yml:ro
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nestsync-network
+
+  supabase-auth:
+    image: supabase/gotrue:v2.99.0
+    container_name: nestsync-supabase-auth
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    ports:
+      - "9999:9999"
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:8000
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:password@supabase-db:5432/postgres?search_path=auth
+      GOTRUE_SITE_URL: http://localhost:8082
+      GOTRUE_URI_ALLOW_LIST: http://localhost:8082,http://localhost:19006
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "false"
+      GOTRUE_SMTP_ADMIN_EMAIL: admin@nestsync.com
+      GOTRUE_SMTP_HOST: mailhog
+      GOTRUE_SMTP_PORT: 1025
+      GOTRUE_SMTP_SENDER_NAME: NestSync
+    networks:
+      - nestsync-network
+
+  supabase-rest:
+    image: postgrest/postgrest:v11.2.0
+    container_name: nestsync-supabase-rest
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      PGRST_DB_URI: postgres://postgres:password@supabase-db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,auth
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+    networks:
+      - nestsync-network
+
+  supabase-storage:
+    image: supabase/storage-api:v0.43.11
+    container_name: nestsync-supabase-storage
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvY2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDMzNjU2NzgsImV4cCI6MTk1ODk0MTY3OH0.6_Zy7WGt_XRfr0e-i_N8JdZCvqnHxXQnKr-wm-NN6kA
+      SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvY2FsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0MzM2NTY3OCwiZXhwIjoxOTU4OTQxNjc4fQ.fSiVfBkvLGGdTmjHlL0m_lVJtGO5TwCKsh-X0Ul_Hdw
+      POSTGREST_URL: http://supabase-rest:3000
+      DATABASE_URL: postgres://postgres:password@supabase-db:5432/postgres
+      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+    volumes:
+      - storage_data:/var/lib/storage
+    networks:
+      - nestsync-network
+
+  supabase-meta:
+    image: supabase/postgres-meta:v0.68.0
+    container_name: nestsync-supabase-meta
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: supabase-db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: postgres
+      PG_META_DB_PASSWORD: password
+    networks:
+      - nestsync-network
+
+  supabase-studio:
+    image: supabase/studio:20231123-64a766a
+    container_name: nestsync-supabase-studio
+    depends_on:
+      supabase-kong:
+        condition: service_healthy
+    ports:
+      - "54323:3000"
+    environment:
+      STUDIO_PG_META_URL: http://supabase-meta:8080
+      POSTGRES_PASSWORD: password
+      DEFAULT_ORGANIZATION_NAME: NestSync
+      DEFAULT_PROJECT_NAME: NestSync
+      SUPABASE_URL: http://supabase-kong:8000
+      SUPABASE_PUBLIC_URL: http://localhost:8000
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvY2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDMzNjU2NzgsImV4cCI6MTk1ODk0MTY3OH0.6_Zy7WGt_XRfr0e-i_N8JdZCvqnHxXQnKr-wm-NN6kA
+      SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvY2FsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0MzM2NTY3OCwiZXhwIjoxOTU4OTQxNjc4fQ.fSiVfBkvLGGdTmjHlL0m_lVJtGO5TwCKsh-X0Ul_Hdw
+    networks:
+      - nestsync-network
+
+  supabase-inbucket:
+    image: inbucket/inbucket:3.0.3
+    container_name: nestsync-supabase-inbucket
+    ports:
+      - "54324:9000"
+      - "54325:8025"
+      - "54326:1100"
+    networks:
+      - nestsync-network
+
+  # Redis for caching and background jobs
+  redis:
+    image: redis:7-alpine
+    container_name: nestsync-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nestsync-network
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: nestsync-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - nestsync-network
+
+  # Backend FastAPI application
+  backend:
+    build:
+      context: ../NestSync-backend
+      dockerfile: Dockerfile
+    container_name: nestsync-backend
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@supabase-db:5432/postgres
+      SUPABASE_URL: http://supabase-kong:8000
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvY2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDMzNjU2NzgsImV4cCI6MTk1ODk0MTY3OH0.6_Zy7WGt_XRfr0e-i_N8JdZCvqnHxXQnKr-wm-NN6kA
+      SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvY2FsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0MzM2NTY3OCwiZXhwIjoxOTU4OTQxNjc4fQ.fSiVfBkvLGGdTmjHlL0m_lVJtGO5TwCKsh-X0Ul_Hdw
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      CORS_ORIGINS: '["http://localhost:8082","http://localhost:19006","http://localhost:19000"]'
+      ENVIRONMENT: development
+      DEBUG: "true"
+      TZ: America/Toronto
+    volumes:
+      - ../NestSync-backend:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - nestsync-network
+
+  # Frontend React Native/Expo application
+  frontend:
+    build:
+      context: ../NestSync-frontend
+      dockerfile: Dockerfile
+    container_name: nestsync-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    environment:
+      EXPO_PUBLIC_API_URL: http://backend:8001
+      EXPO_PUBLIC_GRAPHQL_URL: http://backend:8001/graphql
+      EXPO_PUBLIC_SUPABASE_URL: http://supabase-kong:8000
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvY2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDMzNjU2NzgsImV4cCI6MTk1ODk0MTY3OH0.6_Zy7WGt_XRfr0e-i_N8JdZCvqnHxXQnKr-wm-NN6kA
+      NODE_ENV: development
+      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
+    volumes:
+      - ../NestSync-frontend:/app
+      - /app/node_modules
+    networks:
+      - nestsync-network
+
+networks:
+  nestsync-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  supabase_data:
+  storage_data:
+  redis_data:

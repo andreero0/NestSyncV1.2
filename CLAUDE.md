@@ -4,7 +4,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Frontend (React Native + Expo)
+### Docker Development Environment (RECOMMENDED)
+
+#### Quick Start - Complete Environment
+```bash
+# Start entire development stack with one command
+./docker/docker-dev.sh up
+
+# View status
+./docker/docker-dev.sh status
+
+# View logs
+./docker/docker-dev.sh logs
+
+# Stop environment
+./docker/docker-dev.sh down
+```
+
+#### Docker Commands Reference
+```bash
+# Development environment management
+./docker/docker-dev.sh up           # Start development environment
+./docker/docker-dev.sh down         # Stop development environment
+./docker/docker-dev.sh restart      # Restart development environment
+./docker/docker-dev.sh build        # Rebuild all containers
+./docker/docker-dev.sh logs         # Show logs from all services
+./docker/docker-dev.sh status       # Show status of all services
+
+# Service-specific commands
+./docker/docker-dev.sh logs-frontend    # Frontend logs only
+./docker/docker-dev.sh logs-backend     # Backend logs only
+./docker/docker-dev.sh shell backend    # Open shell in backend container
+./docker/docker-dev.sh shell frontend   # Open shell in frontend container
+
+# Cleanup
+./docker/docker-dev.sh clean            # Remove all containers/images
+```
+
+### Manual Development (Alternative to Docker)
+
+#### Frontend (React Native + Expo)
 **Location**: `NestSync-frontend/`
 
 ```bash
@@ -234,6 +273,49 @@ import SecureStorage from '../lib/storage/SecureStorage';  // Will fail on web
 - **Canadian Context**: "🇨🇦 Data stored in Canada" trust indicators, PIPEDA compliance UI
 
 ## File Structure Patterns
+
+### Project Root Organization (Handover-Ready)
+```
+NestSync/
+├── README.md                    # Main project overview
+├── CLAUDE.md                   # Development guide
+├── tech-stack-pref.md          # Architecture decisions
+├── .env                        # Environment configuration
+├── .gitignore                  # Git ignore rules
+│
+├── docker/                     # Docker infrastructure
+│   ├── docker-compose.yml      # Base Docker configuration
+│   ├── docker-compose.dev.yml  # Development overrides
+│   ├── docker-dev.sh           # Docker management script
+│   └── kong/                   # Kong API gateway config
+│
+├── scripts/                    # All shell scripts
+│   ├── start-dev-servers.sh    # Development server startup
+│   ├── export-env-secure.sh    # Environment setup
+│   ├── verify-environment.sh   # Environment validation
+│   └── work-setup-complete.sh  # Setup completion
+│
+├── docs/                       # Organized documentation
+│   ├── setup/                  # Setup and onboarding guides
+│   │   └── WORK-COMPUTER-SETUP.md
+│   ├── troubleshooting/        # Debugging and solutions
+│   │   ├── TROUBLESHOOTING-GUIDE.md
+│   │   └── bottlenecks.md
+│   ├── audits/                 # Compliance and security audits
+│   │   └── PIPEDA_COMPLIANCE_FIX_AUDIT.md
+│   └── architecture/           # Technical architecture docs
+│       ├── high-level.md
+│       ├── git-navigation-guide.md
+│       ├── custom-animation-roadmap.md
+│       ├── CLAUDE-HANDOFF.md
+│       └── APOLLO_CLIENT_ERROR_HANDLING_SOLUTION.md
+│
+├── design-documentation/       # UX patterns and feature specs
+├── project-documentation/      # Business strategy and architecture
+├── NestSync-frontend/         # React Native application
+├── NestSync-backend/          # FastAPI backend
+└── worktrees/                 # Git worktrees for parallel development
+```
 
 ### Frontend Organization
 ```

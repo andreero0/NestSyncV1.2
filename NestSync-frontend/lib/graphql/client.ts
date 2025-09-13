@@ -574,6 +574,74 @@ export const resetApolloCache = async (): Promise<void> => {
   }
 };
 
+// Connection health check function
+export const checkGraphQLConnection = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: '{ __typename }', // Simple introspection query
+      }),
+    });
+
+    return response.ok;
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('GraphQL connection health check failed:', error);
+    }
+    return false;
+  }
+};
+
+// Enhanced connection validator with timeout
+export const validateConnection = async (timeoutMs: number = 5000): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const timeoutId = setTimeout(() => resolve(false), timeoutMs);
+
+    checkGraphQLConnection()
+      .then((isHealthy) => {
+        clearTimeout(timeoutId);
+        resolve(isHealthy);
+      })
+      .catch(() => {
+        clearTimeout(timeoutId);
+        resolve(false);
+      });
+  });
+};
+
+// Connection-aware query wrapper
+export const safeQuery = async (query: any, variables?: any): Promise<any> => {
+  // Check connection health before executing query
+  const isConnected = await validateConnection(3000);
+
+  if (!isConnected) {
+    if (__DEV__) {
+      console.warn('GraphQL server is not available. Skipping query.');
+    }
+    throw new Error('Network unavailable - GraphQL server not responding');
+  }
+
+  try {
+    const result = await apolloClient.query({
+      query,
+      variables,
+      errorPolicy: 'all',
+      fetchPolicy: 'network-only', // Always check server when connection is verified
+    });
+
+    return result;
+  } catch (error) {
+    if (__DEV__) {
+      console.error('GraphQL query failed after connection check:', error);
+    }
+    throw error;
+  }
+};
+
 // Export rate limiting manager for component use
 export const rateLimitingManager = RateLimitFeedbackManager.getInstance();
 

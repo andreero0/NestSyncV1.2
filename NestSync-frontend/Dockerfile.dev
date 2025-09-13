@@ -1,0 +1,48 @@
+# NestSync Frontend Development Dockerfile
+# Optimized for Expo development with hot reload and debugging
+
+FROM node:20-alpine as development
+
+# Set development environment
+ENV NODE_ENV=development \
+    EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 \
+    REACT_NATIVE_PACKAGER_HOSTNAME=localhost \
+    EXPO_PUBLIC_BUNDLER_IP=0.0.0.0 \
+    PORT=8082
+
+# Install global development tools
+RUN npm install -g @expo/cli@latest
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package*.json ./
+
+# Install dependencies with development optimizations
+RUN npm install --legacy-peer-deps && npm cache clean --force
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S expo && \
+    adduser -S expo -u 1001 -G expo
+
+# Create directories with proper ownership
+RUN mkdir -p /app/.expo /app/node_modules && \
+    chown -R expo:expo /app
+
+# Switch to non-root user
+USER expo
+
+# Expose development ports
+# 8082: Expo web development server
+# 19000: Expo development tools
+# 19001: Expo Metro bundler
+# 19002: Expo development server
+EXPOSE 8082 19000 19001 19002
+
+# Health check for development server
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8082 || exit 1
+
+# Development command with web platform and debugging
+CMD ["npx", "expo", "start", "--web", "--port", "8082", "--dev-client"]

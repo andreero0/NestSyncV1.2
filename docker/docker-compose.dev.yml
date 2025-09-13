@@ -1,0 +1,63 @@
+version: '3.8'
+
+# Development environment overrides
+services:
+  backend:
+    build:
+      context: ../NestSync-backend
+      dockerfile: Dockerfile.dev
+    environment:
+      DEBUG: "true"
+      RELOAD: "true"
+      LOG_LEVEL: "debug"
+    volumes:
+      - ../NestSync-backend:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+  frontend:
+    build:
+      context: ../NestSync-frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
+      REACT_NATIVE_PACKAGER_HOSTNAME: localhost
+    volumes:
+      - ../NestSync-frontend:/app
+      - /app/node_modules
+      - /app/.expo
+    command: npx expo start --port 8082 --web
+
+  # Development-only services
+  redis:
+    ports:
+      - "6379:6379"
+    command: redis-server --loglevel debug
+
+  mailhog:
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # Add volume mounts for hot reload
+  supabase-db:
+    volumes:
+      - supabase_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+
+  # Enable debug logging
+  supabase-kong:
+    environment:
+      KONG_LOG_LEVEL: debug
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+
+  # Development studio settings
+  supabase-studio:
+    environment:
+      NEXT_PUBLIC_ENABLE_LOGS: "true"
+      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres

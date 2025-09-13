@@ -10,14 +10,22 @@ from datetime import datetime, timezone
 import os
 import psutil
 
-# These imports would need to be available in your actual application
+# Import dependencies for health checks
 try:
     import redis
+except ImportError:
+    redis = None
+
+try:
     from sqlalchemy import create_engine, text
+except ImportError:
+    create_engine = None
+    text = None
+
+try:
     from supabase import create_client
 except ImportError:
-    # Graceful degradation if dependencies aren't available during health check
-    redis = None
+    create_client = None
 
 
 class HealthChecker:
@@ -50,26 +58,37 @@ class HealthChecker:
             ("external_apis", self._check_external_apis),
             ("storage", self._check_storage),
         ]
-        
+
+        # Define critical services that must be healthy for overall health
+        critical_services = {"system", "database"}
+
         overall_healthy = True
-        
+        critical_failures = []
+
         for check_name, check_func in checks:
             try:
                 check_result = await check_func()
                 health_data["checks"][check_name] = check_result
-                
-                if check_result.get("status") != "healthy":
+
+                # Only consider critical services for overall health status
+                if check_name in critical_services and check_result.get("status") not in ["healthy", "warning"]:
                     overall_healthy = False
-                    
+                    critical_failures.append(f"{check_name}: {check_result.get('error', 'unknown error')}")
+
             except Exception as e:
                 health_data["checks"][check_name] = {
                     "status": "error",
                     "error": str(e),
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }
-                overall_healthy = False
-        
+                # Only consider critical service failures
+                if check_name in critical_services:
+                    overall_healthy = False
+                    critical_failures.append(f"{check_name}: {str(e)}")
+
         health_data["status"] = "healthy" if overall_healthy else "unhealthy"
+        if critical_failures:
+            health_data["critical_failures"] = critical_failures
         return health_data
     
     async def _check_system_health(self) -> Dict[str, Any]:
@@ -132,23 +151,33 @@ class HealthChecker:
                     "message": "DATABASE_URL not configured",
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }
-            
+
+            if not create_engine or not text:
+                return {
+                    "status": "warning",
+                    "message": "SQLAlchemy not available for database health check",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+
             start_time = time.time()
-            
+
+            # Convert async database URL to sync for health check
+            sync_database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+
             # Create synchronous connection for health check
-            engine = create_engine(database_url)
+            engine = create_engine(sync_database_url)
             with engine.connect() as conn:
                 result = conn.execute(text("SELECT 1 as health_check"))
                 result.fetchone()
-            
+
             response_time = (time.time() - start_time) * 1000
-            
+
             return {
                 "status": "healthy",
                 "response_time_ms": int(response_time),
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             return {
                 "status": "unhealthy",
@@ -201,28 +230,35 @@ class HealthChecker:
         """Check Supabase connectivity"""
         try:
             supabase_url = os.getenv("SUPABASE_URL")
-            supabase_key = os.getenv("SUPABASE_ANON_KEY")
-            
+            supabase_key = os.getenv("SUPABASE_KEY")
+
             if not supabase_url or not supabase_key:
                 return {
                     "status": "warning",
                     "message": "Supabase credentials not configured",
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }
-            
+
+            if not create_client:
+                return {
+                    "status": "warning",
+                    "message": "Supabase client not available",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+
             start_time = time.time()
-            
+
             # Simple health check - try to create client
             supabase_client = create_client(supabase_url, supabase_key)
-            
+
             response_time = (time.time() - start_time) * 1000
-            
+
             return {
                 "status": "healthy",
                 "response_time_ms": int(response_time),
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             return {
                 "status": "unhealthy",
