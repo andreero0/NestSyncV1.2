@@ -67,14 +67,13 @@ import { ThemedText } from '../ThemedText';
 import { IconSymbol } from '../ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { 
-  UPDATE_INVENTORY_ITEM_MUTATION, 
+import {
+  UPDATE_INVENTORY_ITEM_MUTATION,
   DELETE_INVENTORY_ITEM_MUTATION,
-  GET_DASHBOARD_STATS_QUERY,
-  GET_INVENTORY_ITEMS_QUERY,
   UpdateInventoryItemInput,
   DeleteInventoryItemInput
 } from '@/lib/graphql/mutations';
+import { GET_DASHBOARD_STATS_QUERY, GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/queries';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 

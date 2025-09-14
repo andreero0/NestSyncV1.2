@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Switch, Alert, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import NotificationPreferencesModal from '@/components/settings/NotificationPreferences';
+
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -28,7 +30,9 @@ export default function SettingsScreen() {
   const [dataSharing, setDataSharing] = useState(false);
   const [analyticsOptIn, setAnalyticsOptIn] = useState(false);
   const [marketingEmails, setMarketingEmails] = useState(false);
-  const [pushNotifications, setPushNotifications] = useState(true);
+
+  // Notification preferences modal state
+  const [showNotificationPreferences, setShowNotificationPreferences] = useState(false);
 
   // Inventory preferences state
   const [inventoryPreferences, setInventoryPreferences] = useAsyncStorage('nestsync_inventory_preferences');
@@ -178,12 +182,11 @@ export default function SettingsScreen() {
     },
     {
       id: 'notifications',
-      title: 'Push Notifications',
-      description: 'Receive alerts and reminders',
+      title: 'Notification Settings',
+      description: 'Manage alerts, reminders, and delivery preferences',
       icon: 'bell.fill',
-      type: 'toggle',
-      value: pushNotifications,
-      onToggle: setPushNotifications
+      type: 'navigation',
+      onPress: () => setShowNotificationPreferences(true)
     }
   ];
 
@@ -444,6 +447,16 @@ export default function SettingsScreen() {
           {/* Bottom spacing for tab bar */}
           <View style={{ height: 100 }} />
         </ScrollView>
+
+        {/* Notification Preferences Modal */}
+        <Modal
+          visible={showNotificationPreferences}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowNotificationPreferences(false)}
+        >
+          <NotificationPreferencesModal onClose={() => setShowNotificationPreferences(false)} />
+        </Modal>
 
         {/* Threshold Editing Modal */}
         <Modal

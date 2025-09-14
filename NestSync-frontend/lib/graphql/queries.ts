@@ -4,47 +4,17 @@
  */
 
 import { gql } from '@apollo/client';
-
-// =============================================================================
-// FRAGMENTS
-// =============================================================================
-
-export const USER_PROFILE_FRAGMENT = gql`
-  fragment UserProfileFragment on UserProfile {
-    id
-    email
-    firstName
-    lastName
-    displayName
-    timezone
-    language
-    currency
-    province
-    status
-    emailVerified
-    onboardingCompleted
-    createdAt
-  }
-`;
-
-export const USER_SESSION_FRAGMENT = gql`
-  fragment UserSessionFragment on UserSession {
-    accessToken
-    refreshToken
-    expiresIn
-  }
-`;
-
-export const USER_CONSENT_FRAGMENT = gql`
-  fragment UserConsentFragment on UserConsent {
-    consentType
-    status
-    grantedAt
-    withdrawnAt
-    expiresAt
-    consentVersion
-  }
-`;
+import {
+  USER_PROFILE_FRAGMENT,
+  USER_SESSION_FRAGMENT,
+  USER_CONSENT_FRAGMENT,
+  CHILD_PROFILE_FRAGMENT,
+  USAGE_LOG_FRAGMENT,
+  INVENTORY_ITEM_FRAGMENT,
+  DASHBOARD_STATS_FRAGMENT,
+  NOTIFICATION_PREFERENCES_FRAGMENT,
+  NOTIFICATION_DELIVERY_LOG_FRAGMENT
+} from './fragments';
 
 // =============================================================================
 // QUERIES
@@ -263,23 +233,11 @@ export const CREATE_CHILD_MUTATION = gql`
       message
       error
       child {
-        id
-        name
-        dateOfBirth
-        gender
-        currentDiaperSize
-        currentWeightKg
-        currentHeightCm
-        dailyUsageCount
-        hasSensitiveSkin
-        hasAllergies
-        allergiesNotes
-        onboardingCompleted
-        province
-        createdAt
+        ...ChildProfileFragment
       }
     }
   }
+  ${CHILD_PROFILE_FRAGMENT}
 `;
 
 export const SET_INITIAL_INVENTORY_MUTATION = gql`
@@ -594,9 +552,6 @@ export interface SetInitialInventoryMutationVariables {
 // DASHBOARD AND ACTIVITY QUERIES
 // =============================================================================
 
-// Import fragments from mutations.ts to avoid duplication
-import { USAGE_LOG_FRAGMENT, INVENTORY_ITEM_FRAGMENT } from './mutations';
-
 export const GET_USAGE_LOGS_QUERY = gql`
   query GetUsageLogs(
     $childId: ID!
@@ -661,10 +616,169 @@ export const GET_INVENTORY_ITEMS_QUERY = gql`
   ${INVENTORY_ITEM_FRAGMENT}
 `;
 
+export const GET_DASHBOARD_STATS_QUERY = gql`
+  query GetDashboardStats($childId: ID!) {
+    getDashboardStats(childId: $childId) {
+      ...DashboardStatsFragment
+    }
+  }
+  ${DASHBOARD_STATS_FRAGMENT}
+`;
+
 // Query Variables Types for Dashboard
 export interface GetUsageLogsVariables {
   childId: string;
   usageType?: 'DIAPER_CHANGE' | 'WIPE_USE' | 'CREAM_APPLICATION' | 'ACCIDENT_CLEANUP' | 'PREVENTIVE_CHANGE' | 'OVERNIGHT_CHANGE';
+  daysBack?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface GetDashboardStatsVariables {
+  childId: string;
+}
+
+export interface DashboardStats {
+  daysRemaining?: number;
+  diapersLeft: number;
+  lastChange?: string;
+  todayChanges: number;
+  currentSize?: string;
+}
+
+export interface GetDashboardStatsQueryData {
+  getDashboardStats: DashboardStats;
+}
+
+// =============================================================================
+// NOTIFICATION QUERIES
+// =============================================================================
+
+export const GET_NOTIFICATION_PREFERENCES_QUERY = gql`
+  query GetNotificationPreferences {
+    getNotificationPreferences {
+      ...NotificationPreferencesFragment
+    }
+  }
+  ${NOTIFICATION_PREFERENCES_FRAGMENT}
+`;
+
+export const GET_NOTIFICATION_HISTORY_QUERY = gql`
+  query GetNotificationHistory(
+    $notificationType: NotificationTypeEnum
+    $daysBack: Int! = 30
+    $limit: Int! = 50
+    $offset: Int! = 0
+  ) {
+    getNotificationHistory(
+      notificationType: $notificationType
+      daysBack: $daysBack
+      limit: $limit
+      offset: $offset
+    ) {
+      edges {
+        node {
+          ...NotificationDeliveryLogFragment
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+        totalCount
+      }
+    }
+  }
+  ${NOTIFICATION_DELIVERY_LOG_FRAGMENT}
+`;
+
+// =============================================================================
+// NOTIFICATION QUERY TYPES
+// =============================================================================
+
+export interface NotificationPreferences {
+  id: string;
+  userId: string;
+  notificationsEnabled: boolean;
+  criticalNotifications: boolean;
+  importantNotifications: boolean;
+  optionalNotifications: boolean;
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStart?: string; // HH:MM format
+  quietHoursEnd?: string; // HH:MM format
+  stockAlertEnabled: boolean;
+  stockAlertThreshold: number;
+  changeReminderEnabled: boolean;
+  changeReminderIntervalHours: number;
+  expiryWarningEnabled: boolean;
+  expiryWarningDays: number;
+  healthTipsEnabled: boolean;
+  marketingEnabled: boolean;
+  deviceTokens: Array<{
+    token: string;
+    platform: string;
+    registered_at: string;
+  }>;
+  userTimezone: string;
+  dailyNotificationLimit: number;
+  notificationConsentGranted: boolean;
+  notificationConsentDate?: string;
+  marketingConsentGranted: boolean;
+  marketingConsentDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetNotificationPreferencesQueryData {
+  getNotificationPreferences?: NotificationPreferences;
+}
+
+export interface GetNotificationHistoryQueryData {
+  getNotificationHistory: {
+    edges: Array<{
+      node: {
+        id: string;
+        userId: string;
+        queueItemId?: string;
+        preferencesId?: string;
+        notificationType: string;
+        priority: string;
+        channel: string;
+        title: string;
+        message: string;
+        deliveryStatus: string;
+        sentAt?: string;
+        deliveredAt?: string;
+        externalId?: string;
+        externalResponse?: string;
+        errorCode?: string;
+        errorMessage?: string;
+        processingTimeMs?: number;
+        dataRetentionDate?: string;
+        openedAt?: string;
+        clickedAt?: string;
+        dismissedAt?: string;
+        createdAt: string;
+      };
+      cursor: string;
+    }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor?: string;
+      endCursor?: string;
+      totalCount: number;
+    };
+  };
+}
+
+export interface GetNotificationHistoryQueryVariables {
+  notificationType?: 'STOCK_ALERT' | 'CHANGE_REMINDER' | 'EXPIRY_WARNING' | 'HEALTH_TIP' | 'MARKETING' | 'SYSTEM_UPDATE';
   daysBack?: number;
   limit?: number;
   offset?: number;

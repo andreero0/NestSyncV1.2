@@ -1,0 +1,203 @@
+# Test GraphQL Queries for Notification System
+# These queries can be used with GraphQL Playground or similar tools
+
+# Query to get user's notification preferences
+query GetNotificationPreferences {
+  getNotificationPreferences {
+    id
+    notificationsEnabled
+    criticalNotifications
+    importantNotifications
+    optionalNotifications
+    pushNotifications
+    emailNotifications
+    stockAlertEnabled
+    stockAlertThreshold
+    changeReminderEnabled
+    expiredWarningEnabled
+    healthTipsEnabled
+    marketingEnabled
+    userTimezone
+    notificationConsentGranted
+    marketingConsentGranted
+    createdAt
+  }
+}
+
+# Query to get notification delivery history
+query GetNotificationHistory($limit: Int = 10, $offset: Int = 0) {
+  getNotificationHistory(limit: $limit, offset: $offset) {
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      totalCount
+    }
+    edges {
+      node {
+        id
+        notificationType
+        priority
+        channel
+        title
+        message
+        deliveryStatus
+        sentAt
+        deliveredAt
+        openedAt
+        clickedAt
+        createdAt
+      }
+      cursor
+    }
+  }
+}
+
+# Query to get pending notifications
+query GetPendingNotifications($limit: Int = 10) {
+  getPendingNotifications(limit: $limit) {
+    pageInfo {
+      hasNextPage
+      totalCount
+    }
+    edges {
+      node {
+        id
+        notificationType
+        priority
+        title
+        message
+        scheduledFor
+        status
+        attempts
+        maxAttempts
+        createdAt
+      }
+      cursor
+    }
+  }
+}
+
+# Mutation to update notification preferences
+mutation UpdateNotificationPreferences($input: UpdateNotificationPreferencesInput!) {
+  updateNotificationPreferences(input: $input) {
+    success
+    message
+    error
+    preferences {
+      id
+      notificationsEnabled
+      criticalNotifications
+      importantNotifications
+      pushNotifications
+      emailNotifications
+      stockAlertEnabled
+      stockAlertThreshold
+      notificationConsentGranted
+      marketingConsentGranted
+      updatedAt
+    }
+  }
+}
+
+# Mutation to register device token for push notifications
+mutation RegisterDeviceToken($input: RegisterDeviceTokenInput!) {
+  registerDeviceToken(input: $input) {
+    success
+    message
+    error
+    preferences {
+      id
+      deviceTokens
+      updatedAt
+    }
+  }
+}
+
+# Mutation to create a notification (admin/system use)
+mutation CreateNotification($input: CreateNotificationInput!) {
+  createNotification(input: $input) {
+    success
+    message
+    error
+    notification {
+      id
+      title
+      message
+      notificationType
+      priority
+      scheduledFor
+      status
+      createdAt
+    }
+  }
+}
+
+# Mutation to mark notification as read
+mutation MarkNotificationRead($notificationId: ID!, $action: String!) {
+  markNotificationRead(notificationId: $notificationId, action: $action) {
+    success
+    message
+    error
+  }
+}
+
+# Mutation to send test notification (development only)
+mutation TestNotification($message: String!) {
+  testNotification(message: $message) {
+    success
+    message
+    error
+    testSent
+    deliveryLog {
+      id
+      title
+      message
+      deliveryStatus
+      sentAt
+      processingTimeMs
+    }
+  }
+}
+
+# Example variables for UpdateNotificationPreferences mutation:
+# {
+#   "input": {
+#     "notificationsEnabled": true,
+#     "criticalNotifications": true,
+#     "importantNotifications": true,
+#     "optionalNotifications": false,
+#     "pushNotifications": true,
+#     "emailNotifications": true,
+#     "stockAlertEnabled": true,
+#     "stockAlertThreshold": 5,
+#     "changeReminderEnabled": false,
+#     "expiredWarningEnabled": true,
+#     "expiredWarningDays": 7,
+#     "healthTipsEnabled": false,
+#     "marketingEnabled": false,
+#     "dailyNotificationLimit": 10,
+#     "notificationConsentGranted": true,
+#     "marketingConsentGranted": false
+#   }
+# }
+
+# Example variables for RegisterDeviceToken mutation:
+# {
+#   "input": {
+#     "deviceToken": "ExponentPushToken[abc123def456]",
+#     "platform": "ios"
+#   }
+# }
+
+# Example variables for CreateNotification mutation:
+# {
+#   "input": {
+#     "userId": "user-uuid-here",
+#     "notificationType": "STOCK_ALERT",
+#     "priority": "IMPORTANT",
+#     "channels": ["PUSH", "EMAIL"],
+#     "title": "Low Diaper Stock Alert",
+#     "message": "Your diaper supply is running low. You have 2 days remaining.",
+#     "dataPayload": "{\"childId\": \"child-uuid\", \"daysRemaining\": 2}"
+#   }
+# }

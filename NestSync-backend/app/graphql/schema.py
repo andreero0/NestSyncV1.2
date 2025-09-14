@@ -10,14 +10,18 @@ from strawberry.types import Info
 from .auth_resolvers import AuthMutations, AuthQueries
 from .child_resolvers import ChildMutations, ChildQueries
 from .inventory_resolvers import InventoryMutations, InventoryQueries
+from .notification_resolvers import NotificationMutations, NotificationQueries
 from .types import (
     UserProfile,
-    ChildProfile, 
+    ChildProfile,
     OnboardingStatusResponse,
     MutationResponse,
     DashboardStats,
     InventoryConnection,
-    UsageLogConnection
+    UsageLogConnection,
+    NotificationPreferences,
+    NotificationQueueConnection,
+    NotificationDeliveryLogConnection
 )
 
 
@@ -38,6 +42,11 @@ class Query:
     get_dashboard_stats: DashboardStats = strawberry.field(resolver=InventoryQueries.get_dashboard_stats)
     get_inventory_items: InventoryConnection = strawberry.field(resolver=InventoryQueries.get_inventory_items)
     get_usage_logs: UsageLogConnection = strawberry.field(resolver=InventoryQueries.get_usage_logs)
+
+    # Notification queries
+    get_notification_preferences: Optional[NotificationPreferences] = strawberry.field(resolver=NotificationQueries.get_notification_preferences)
+    get_notification_history: NotificationDeliveryLogConnection = strawberry.field(resolver=NotificationQueries.get_notification_history)
+    get_pending_notifications: NotificationQueueConnection = strawberry.field(resolver=NotificationQueries.get_pending_notifications)
     
     @strawberry.field
     async def health_check(self) -> str:
@@ -78,6 +87,13 @@ class Mutation:
     create_inventory_item = strawberry.field(resolver=InventoryMutations.create_inventory_item)
     update_inventory_item = strawberry.field(resolver=InventoryMutations.update_inventory_item)
     delete_inventory_item = strawberry.field(resolver=InventoryMutations.delete_inventory_item)
+
+    # Notification mutations
+    update_notification_preferences = strawberry.field(resolver=NotificationMutations.update_notification_preferences)
+    register_device_token = strawberry.field(resolver=NotificationMutations.register_device_token)
+    create_notification = strawberry.field(resolver=NotificationMutations.create_notification)
+    mark_notification_read = strawberry.field(resolver=NotificationMutations.mark_notification_read)
+    test_notification = strawberry.field(resolver=NotificationMutations.test_notification)
 
 
 @strawberry.type

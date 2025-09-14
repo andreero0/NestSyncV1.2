@@ -208,6 +208,55 @@ async def close_database():
 # Database Health Check
 # =============================================================================
 
+async def refresh_database_metadata():
+    """
+    Refresh SQLAlchemy metadata to recognize newly created tables
+    This is useful when tables are created after application startup
+    """
+    try:
+        if not async_engine:
+            logger.error("Cannot refresh metadata: async engine not initialized")
+            return False
+
+        # Reflect the current database schema
+        async with async_engine.begin() as conn:
+            await conn.run_sync(metadata.reflect)
+            logger.info("Database metadata refreshed successfully")
+            return True
+
+    except Exception as e:
+        logger.error(f"Failed to refresh database metadata: {e}")
+        return False
+
+
+async def verify_table_exists(table_name: str) -> bool:
+    """
+    Verify if a specific table exists in the database
+    """
+    try:
+        if not AsyncSessionLocal:
+            return False
+
+        async with AsyncSessionLocal() as session:
+            # Query information_schema to check if table exists
+            result = await session.execute(
+                text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                    AND table_name = :table_name
+                )
+                """),
+                {"table_name": table_name}
+            )
+            exists = result.scalar()
+            return bool(exists)
+
+    except Exception as e:
+        logger.error(f"Failed to verify table {table_name} exists: {e}")
+        return False
+
+
 async def check_database_health() -> dict:
     """
     Check database connectivity and performance for health checks
@@ -218,16 +267,16 @@ async def check_database_health() -> dict:
                 "status": "unhealthy",
                 "error": "Database not initialized"
             }
-        
+
         # Test connection and query performance
         import time
         start_time = time.time()
-        
+
         async with AsyncSessionLocal() as session:
             await session.execute(text("SELECT 1"))
-            
+
         response_time = round((time.time() - start_time) * 1000, 2)  # ms
-        
+
         return {
             "status": "healthy",
             "response_time_ms": response_time,
@@ -235,7 +284,7 @@ async def check_database_health() -> dict:
             "region": settings.data_region,
             "timezone": settings.timezone
         }
-        
+
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         return {
@@ -274,7 +323,7 @@ class DatabaseTransaction:
 
 __all__ = [
     "Base",
-    "metadata", 
+    "metadata",
     "async_engine",
     "sync_engine",
     "get_async_session",
@@ -282,6 +331,8 @@ __all__ = [
     "init_database",
     "close_database",
     "check_database_health",
+    "refresh_database_metadata",
+    "verify_table_exists",
     "DatabaseTransaction",
     "create_database_engines"
 ]

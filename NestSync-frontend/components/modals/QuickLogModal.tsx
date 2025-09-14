@@ -27,8 +27,8 @@ import { ThemedText } from '../ThemedText';
 import { IconSymbol } from '../ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { LOG_DIAPER_CHANGE_MUTATION, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/mutations';
-import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
+import { LOG_DIAPER_CHANGE_MUTATION } from '@/lib/graphql/mutations';
+import { MY_CHILDREN_QUERY, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 

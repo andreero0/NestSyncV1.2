@@ -1,0 +1,189 @@
+{
+  "startTime": "2025-09-14T03:07:06.042Z",
+  "tests": [
+    {
+      "name": "Navigate to Frontend",
+      "status": "passed",
+      "duration": 16190,
+      "error": null
+    },
+    {
+      "name": "Verify Backend Connectivity",
+      "status": "passed",
+      "duration": 141,
+      "error": null
+    },
+    {
+      "name": "Wait for App to Load",
+      "status": "passed",
+      "duration": 10052,
+      "error": null
+    },
+    {
+      "name": "Test Authentication Process",
+      "status": "passed",
+      "duration": 49,
+      "error": null
+    },
+    {
+      "name": "Navigate to Settings Screen",
+      "status": "failed",
+      "duration": 1108,
+      "error": "Could not locate Settings navigation element"
+    },
+    {
+      "name": "Open Notification Settings Modal",
+      "status": "failed",
+      "duration": 51,
+      "error": "Could not locate Notification Settings option"
+    },
+    {
+      "name": "Test Master Notification Toggle",
+      "status": "passed",
+      "duration": 9,
+      "error": null
+    },
+    {
+      "name": "Test Form Controls and Inputs",
+      "status": "passed",
+      "duration": 41,
+      "error": null
+    },
+    {
+      "name": "Test Time Picker Components",
+      "status": "passed",
+      "duration": 3220,
+      "error": null
+    },
+    {
+      "name": "Test GraphQL Integration",
+      "status": "passed",
+      "duration": 47,
+      "error": null
+    },
+    {
+      "name": "Test Data Persistence",
+      "status": "passed",
+      "duration": 1,
+      "error": null
+    },
+    {
+      "name": "Test Network Error Handling",
+      "status": "passed",
+      "duration": 4,
+      "error": null
+    },
+    {
+      "name": "Test Form Validation",
+      "status": "passed",
+      "duration": 44,
+      "error": null
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "01-initial-load",
+      "description": "Initial page load",
+      "filename": "1757819244223-01-initial-load.png",
+      "filepath": "test-screenshots/1757819244223-01-initial-load.png",
+      "timestamp": "2025-09-14T03:07:24.344Z"
+    },
+    {
+      "name": "02-app-loaded",
+      "description": "App loaded state",
+      "filename": "1757819254512-02-app-loaded.png",
+      "filepath": "test-screenshots/1757819254512-02-app-loaded.png",
+      "timestamp": "2025-09-14T03:07:34.555Z"
+    },
+    {
+      "name": "04-post-auth",
+      "description": "After authentication attempt",
+      "filename": "1757819254559-04-post-auth.png",
+      "filepath": "test-screenshots/1757819254559-04-post-auth.png",
+      "timestamp": "2025-09-14T03:07:34.604Z"
+    },
+    {
+      "name": "06-looking-for-settings",
+      "description": "Searching for settings navigation",
+      "filename": "1757819255628-06-looking-for-settings.png",
+      "filepath": "test-screenshots/1757819255628-06-looking-for-settings.png",
+      "timestamp": "2025-09-14T03:07:35.663Z"
+    },
+    {
+      "name": "error-Navigate to Settings Screen",
+      "description": "Error screenshot for Navigate to Settings Screen",
+      "filename": "1757819255664-error-Navigate to Settings Screen.png",
+      "filepath": "test-screenshots/1757819255664-error-Navigate to Settings Screen.png",
+      "timestamp": "2025-09-14T03:07:35.713Z"
+    },
+    {
+      "name": "error-Open Notification Settings Modal",
+      "description": "Error screenshot for Open Notification Settings Modal",
+      "filename": "1757819255718-error-Open Notification Settings Modal.png",
+      "filepath": "test-screenshots/1757819255718-error-Open Notification Settings Modal.png",
+      "timestamp": "2025-09-14T03:07:35.763Z"
+    },
+    {
+      "name": "09-form-controls",
+      "description": "Form controls overview",
+      "filename": "1757819255777-09-form-controls.png",
+      "filepath": "test-screenshots/1757819255777-09-form-controls.png",
+      "timestamp": "2025-09-14T03:07:35.814Z"
+    },
+    {
+      "name": "10-time-picker",
+      "description": "Time picker interaction",
+      "filename": "1757819258981-10-time-picker.png",
+      "filepath": "test-screenshots/1757819258981-10-time-picker.png",
+      "timestamp": "2025-09-14T03:07:39.034Z"
+    },
+    {
+      "name": "11-integration-test",
+      "description": "After integration testing",
+      "filename": "1757819259036-11-integration-test.png",
+      "filepath": "test-screenshots/1757819259036-11-integration-test.png",
+      "timestamp": "2025-09-14T03:07:39.081Z"
+    },
+    {
+      "name": "15-validation-test",
+      "description": "Form validation test",
+      "filename": "1757819259087-15-validation-test.png",
+      "filepath": "test-screenshots/1757819259087-15-validation-test.png",
+      "timestamp": "2025-09-14T03:07:39.130Z"
+    }
+  ],
+  "errors": [
+    {
+      "test": "Navigate to Settings Screen",
+      "error": "Could not locate Settings navigation element",
+      "stack": "Error: Could not locate Settings navigation element\n    at /Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:281:15\n    at async NotificationSystemTester.runTest (/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:88:7)\n    at async NotificationSystemTester.testPhase3_NavigateToSettings (/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:242:5)\n    at async NotificationSystemTester.runAllTests (/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:537:7)\n    at async main (/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:717:3)"
+    },
+    {
+      "test": "Open Notification Settings Modal",
+      "error": "Could not locate Notification Settings option",
+      "stack": "Error: Could not locate Notification Settings option\n    at /Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:313:15\n    at async NotificationSystemTester.runTest (/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:88:7)\n    at async NotificationSystemTester.testPhase3_NavigateToSettings (/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:285:5)\n    at async NotificationSystemTester.runAllTests (/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:537:7)\n    at async main (/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-backend/test-notification-system.js:717:3)"
+    }
+  ],
+  "summary": {
+    "total": 13,
+    "passed": 11,
+    "failed": 2
+  },
+  "endTime": "2025-09-14T03:07:39.397Z",
+  "totalDuration": 33355,
+  "config": {
+    "frontendUrl": "http://localhost:8082",
+    "backendUrl": "http://localhost:8001",
+    "testCredentials": {
+      "email": "parents@nestsync.com",
+      "password": "Shazam11#"
+    },
+    "screenshotDir": "./test-screenshots",
+    "testTimeout": 30000
+  },
+  "systemInfo": {
+    "timestamp": "2025-09-14T03:07:39.397Z",
+    "nodeVersion": "v23.11.0",
+    "platform": "darwin"
+  }
+}

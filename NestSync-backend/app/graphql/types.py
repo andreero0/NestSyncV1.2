@@ -721,13 +721,268 @@ class UsageLogConnection:
 
 
 # =============================================================================
+# Notification Types
+# =============================================================================
+
+@strawberry.enum
+class NotificationPriorityType(Enum):
+    """Notification priority levels"""
+    CRITICAL = "critical"
+    IMPORTANT = "important"
+    OPTIONAL = "optional"
+
+
+@strawberry.enum
+class NotificationTypeEnum(Enum):
+    """Types of notifications"""
+    STOCK_ALERT = "stock_alert"
+    DIAPER_CHANGE_REMINDER = "diaper_change_reminder"
+    EXPIRY_WARNING = "expiry_warning"
+    HEALTH_TIP = "health_tip"
+    SYSTEM_UPDATE = "system_update"
+    MARKETING = "marketing"
+
+
+@strawberry.enum
+class NotificationChannelEnum(Enum):
+    """Notification delivery channels"""
+    PUSH = "push"
+    EMAIL = "email"
+    SMS = "sms"
+    IN_APP = "in_app"
+
+
+@strawberry.enum
+class NotificationStatusEnum(Enum):
+    """Notification delivery status"""
+    PENDING = "pending"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+@strawberry.type
+class NotificationPreferences:
+    """User notification preferences"""
+    id: strawberry.ID
+    user_id: strawberry.ID
+    notifications_enabled: bool
+    critical_notifications: bool
+    important_notifications: bool
+    optional_notifications: bool
+    push_notifications: bool
+    email_notifications: bool
+    sms_notifications: bool
+    quiet_hours_enabled: bool
+    quiet_hours_start: Optional[str] = None  # Time as string "HH:MM"
+    quiet_hours_end: Optional[str] = None    # Time as string "HH:MM"
+    stock_alert_enabled: bool
+    stock_alert_threshold: Optional[int] = None
+    change_reminder_enabled: bool
+    change_reminder_interval_hours: Optional[int] = None
+    expiry_warning_enabled: bool
+    expiry_warning_days: Optional[int] = None
+    health_tips_enabled: bool
+    marketing_enabled: bool
+    device_tokens: List[str]
+    user_timezone: str
+    daily_notification_limit: int
+    notification_consent_granted: bool
+    notification_consent_date: Optional[datetime] = None
+    marketing_consent_granted: bool
+    marketing_consent_date: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+@strawberry.type
+class NotificationQueue:
+    """Notification queue item"""
+    id: strawberry.ID
+    user_id: strawberry.ID
+    child_id: Optional[strawberry.ID] = None
+    notification_type: NotificationTypeEnum
+    priority: NotificationPriorityType
+    channels: List[NotificationChannelEnum]
+    title: str
+    message: str
+    data_payload: Optional[str] = None  # JSON as string
+    scheduled_for: datetime
+    status: NotificationStatusEnum
+    attempts: int
+    max_attempts: int
+    last_error: Optional[str] = None
+    batch_id: Optional[strawberry.ID] = None
+    created_at: datetime
+
+
+@strawberry.type
+class NotificationDeliveryLog:
+    """Notification delivery audit log"""
+    id: strawberry.ID
+    user_id: strawberry.ID
+    queue_item_id: Optional[strawberry.ID] = None
+    preferences_id: Optional[strawberry.ID] = None
+    notification_type: NotificationTypeEnum
+    priority: NotificationPriorityType
+    channel: NotificationChannelEnum
+    title: str
+    message: str
+    delivery_status: NotificationStatusEnum
+    sent_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    external_id: Optional[str] = None
+    external_response: Optional[str] = None  # JSON as string
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+    processing_time_ms: Optional[int] = None
+    data_retention_date: Optional[datetime] = None
+    opened_at: Optional[datetime] = None
+    clicked_at: Optional[datetime] = None
+    dismissed_at: Optional[datetime] = None
+    created_at: datetime
+
+
+# =============================================================================
+# Notification Input Types
+# =============================================================================
+
+@strawberry.input
+class UpdateNotificationPreferencesInput:
+    """Update notification preferences input"""
+    notifications_enabled: Optional[bool] = None
+    critical_notifications: Optional[bool] = None
+    important_notifications: Optional[bool] = None
+    optional_notifications: Optional[bool] = None
+    push_notifications: Optional[bool] = None
+    email_notifications: Optional[bool] = None
+    sms_notifications: Optional[bool] = None
+    quiet_hours_enabled: Optional[bool] = None
+    quiet_hours_start: Optional[str] = None  # "HH:MM"
+    quiet_hours_end: Optional[str] = None    # "HH:MM"
+    stock_alert_enabled: Optional[bool] = None
+    stock_alert_threshold: Optional[int] = None
+    change_reminder_enabled: Optional[bool] = None
+    change_reminder_interval_hours: Optional[int] = None
+    expiry_warning_enabled: Optional[bool] = None
+    expiry_warning_days: Optional[int] = None
+    health_tips_enabled: Optional[bool] = None
+    marketing_enabled: Optional[bool] = None
+    user_timezone: Optional[str] = None
+    daily_notification_limit: Optional[int] = None
+
+    # PIPEDA consent updates
+    notification_consent_granted: Optional[bool] = None
+    marketing_consent_granted: Optional[bool] = None
+
+
+@strawberry.input
+class CreateNotificationInput:
+    """Create notification input"""
+    user_id: strawberry.ID
+    child_id: Optional[strawberry.ID] = None
+    notification_type: NotificationTypeEnum
+    priority: NotificationPriorityType
+    channels: List[NotificationChannelEnum]
+    title: str
+    message: str
+    data_payload: Optional[str] = None  # JSON as string
+    scheduled_for: Optional[datetime] = None
+
+
+@strawberry.input
+class RegisterDeviceTokenInput:
+    """Register device token for push notifications"""
+    device_token: str
+    platform: str  # "ios", "android", "web"
+
+
+# =============================================================================
+# Notification Response Types
+# =============================================================================
+
+@strawberry.type
+class UpdateNotificationPreferencesResponse(MutationResponse):
+    """Update notification preferences response"""
+    preferences: Optional[NotificationPreferences] = None
+
+
+@strawberry.type
+class CreateNotificationResponse(MutationResponse):
+    """Create notification response"""
+    notification: Optional[NotificationQueue] = None
+
+
+@strawberry.type
+class RegisterDeviceTokenResponse(MutationResponse):
+    """Register device token response"""
+    preferences: Optional[NotificationPreferences] = None
+
+
+@strawberry.type
+class TestNotificationResponse(MutationResponse):
+    """Test notification response"""
+    test_sent: bool = False
+    delivery_log: Optional[NotificationDeliveryLog] = None
+
+
+# =============================================================================
+# Notification Connection Types
+# =============================================================================
+
+@strawberry.type
+class NotificationQueueEdge:
+    """An edge in a notification queue connection."""
+    node: NotificationQueue = strawberry.field(
+        description="The item at the end of the edge."
+    )
+    cursor: str = strawberry.field(
+        description="A cursor for use in pagination."
+    )
+
+
+@strawberry.type
+class NotificationQueueConnection:
+    """A connection to a list of notification queue items."""
+    page_info: PageInfo = strawberry.field(
+        description="Information to aid in pagination."
+    )
+    edges: List[NotificationQueueEdge] = strawberry.field(
+        description="A list of edges."
+    )
+
+
+@strawberry.type
+class NotificationDeliveryLogEdge:
+    """An edge in a notification delivery log connection."""
+    node: NotificationDeliveryLog = strawberry.field(
+        description="The item at the end of the edge."
+    )
+    cursor: str = strawberry.field(
+        description="A cursor for use in pagination."
+    )
+
+
+@strawberry.type
+class NotificationDeliveryLogConnection:
+    """A connection to a list of notification delivery logs."""
+    page_info: PageInfo = strawberry.field(
+        description="Information to aid in pagination."
+    )
+    edges: List[NotificationDeliveryLogEdge] = strawberry.field(
+        description="A list of edges."
+    )
+
+
+# =============================================================================
 # Export Types
 # =============================================================================
 
 __all__ = [
     # Enums
     "UserStatusType",
-    "DiaperSizeType", 
+    "DiaperSizeType",
     "GenderType",
     "ConsentStatusType",
     "ConsentTypeEnum",
@@ -735,22 +990,31 @@ __all__ = [
     "UsageTypeEnum",
     "UsageContextEnum",
     "DeletionType",
-    
+    "NotificationPriorityType",
+    "NotificationTypeEnum",
+    "NotificationChannelEnum",
+    "NotificationStatusEnum",
+
     # User Types
     "UserProfile",
     "UserSession",
-    "AuthResponse", 
+    "AuthResponse",
     "UserConsent",
-    
+
     # Child Types
     "ChildProfile",
     "OnboardingWizardStep",
-    
+
     # Inventory Types
     "InventoryItem",
     "UsageLog",
     "DashboardStats",
-    
+
+    # Notification Types
+    "NotificationPreferences",
+    "NotificationQueue",
+    "NotificationDeliveryLog",
+
     # Input Types
     "SignUpInput",
     "SignInInput",
@@ -768,7 +1032,10 @@ __all__ = [
     "LogDiaperChangeInput",
     "UpdateInventoryItemInput",
     "DeleteInventoryItemInput",
-    
+    "UpdateNotificationPreferencesInput",
+    "CreateNotificationInput",
+    "RegisterDeviceTokenInput",
+
     # Response Types
     "MutationResponse",
     "CreateChildResponse",
@@ -782,7 +1049,11 @@ __all__ = [
     "LogDiaperChangeResponse",
     "UpdateInventoryItemResponse",
     "DeleteInventoryItemResponse",
-    
+    "UpdateNotificationPreferencesResponse",
+    "CreateNotificationResponse",
+    "RegisterDeviceTokenResponse",
+    "TestNotificationResponse",
+
     # Connection Types
     "PageInfo",
     "ChildEdge",
@@ -793,7 +1064,11 @@ __all__ = [
     "InventoryConnection",
     "UsageLogEdge",
     "UsageLogConnection",
-    
+    "NotificationQueueEdge",
+    "NotificationQueueConnection",
+    "NotificationDeliveryLogEdge",
+    "NotificationDeliveryLogConnection",
+
     # Error Types
     "ValidationError",
     "ErrorResponse"

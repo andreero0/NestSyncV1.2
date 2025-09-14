@@ -1,0 +1,249 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NestSync Notification System Test Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .header { background: #0891B2; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .metric { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+        .metric-value { font-size: 2em; font-weight: bold; color: #0891B2; }
+        .test-results { margin-bottom: 30px; }
+        .test { margin-bottom: 10px; padding: 10px; border-radius: 4px; }
+        .test.passed { background: #d4edda; border-left: 4px solid #28a745; }
+        .test.failed { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .screenshots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .screenshot { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .screenshot img { width: 100%; height: 200px; object-fit: cover; }
+        .screenshot-info { padding: 10px; background: #f8f9fa; }
+        .errors { background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+        .timestamp { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 NestSync Notification System E2E Test Report</h1>
+            <p>Comprehensive end-to-end testing of notification preferences functionality</p>
+            <p class="timestamp">Generated: 2025-09-14T03:07:39.397Z</p>
+        </div>
+
+        <div class="summary">
+            <div class="metric">
+                <div class="metric-value">13</div>
+                <div>Total Tests</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" style="color: #28a745">11</div>
+                <div>Passed</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" style="color: #dc3545">2</div>
+                <div>Failed</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">85%</div>
+                <div>Success Rate</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">33s</div>
+                <div>Duration</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">10</div>
+                <div>Screenshots</div>
+            </div>
+        </div>
+
+        
+        <div class="errors">
+            <h3>❌ Errors Encountered</h3>
+            
+                <div><strong>Navigate to Settings Screen:</strong> Could not locate Settings navigation element</div>
+            
+                <div><strong>Open Notification Settings Modal:</strong> Could not locate Notification Settings option</div>
+            
+        </div>
+        
+
+        <div class="test-results">
+            <h2>🧪 Test Results</h2>
+            
+                <div class="test passed">
+                    <strong>Navigate to Frontend</strong> - PASSED (16190ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Verify Backend Connectivity</strong> - PASSED (141ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Wait for App to Load</strong> - PASSED (10052ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Test Authentication Process</strong> - PASSED (49ms)
+                    
+                </div>
+            
+                <div class="test failed">
+                    <strong>Navigate to Settings Screen</strong> - FAILED (1108ms)
+                    <br><small style="color: #dc3545">Error: Could not locate Settings navigation element</small>
+                </div>
+            
+                <div class="test failed">
+                    <strong>Open Notification Settings Modal</strong> - FAILED (51ms)
+                    <br><small style="color: #dc3545">Error: Could not locate Notification Settings option</small>
+                </div>
+            
+                <div class="test passed">
+                    <strong>Test Master Notification Toggle</strong> - PASSED (9ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Test Form Controls and Inputs</strong> - PASSED (41ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Test Time Picker Components</strong> - PASSED (3220ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Test GraphQL Integration</strong> - PASSED (47ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Test Data Persistence</strong> - PASSED (1ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Test Network Error Handling</strong> - PASSED (4ms)
+                    
+                </div>
+            
+                <div class="test passed">
+                    <strong>Test Form Validation</strong> - PASSED (44ms)
+                    
+                </div>
+            
+        </div>
+
+        <div class="screenshots">
+            <h2>📸 Test Screenshots</h2>
+            
+                <div class="screenshot">
+                    <img src="1757819244223-01-initial-load.png" alt="Initial page load">
+                    <div class="screenshot-info">
+                        <strong>01-initial-load</strong><br>
+                        <small>Initial page load</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:24 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819254512-02-app-loaded.png" alt="App loaded state">
+                    <div class="screenshot-info">
+                        <strong>02-app-loaded</strong><br>
+                        <small>App loaded state</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:34 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819254559-04-post-auth.png" alt="After authentication attempt">
+                    <div class="screenshot-info">
+                        <strong>04-post-auth</strong><br>
+                        <small>After authentication attempt</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:34 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819255628-06-looking-for-settings.png" alt="Searching for settings navigation">
+                    <div class="screenshot-info">
+                        <strong>06-looking-for-settings</strong><br>
+                        <small>Searching for settings navigation</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:35 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819255664-error-Navigate to Settings Screen.png" alt="Error screenshot for Navigate to Settings Screen">
+                    <div class="screenshot-info">
+                        <strong>error-Navigate to Settings Screen</strong><br>
+                        <small>Error screenshot for Navigate to Settings Screen</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:35 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819255718-error-Open Notification Settings Modal.png" alt="Error screenshot for Open Notification Settings Modal">
+                    <div class="screenshot-info">
+                        <strong>error-Open Notification Settings Modal</strong><br>
+                        <small>Error screenshot for Open Notification Settings Modal</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:35 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819255777-09-form-controls.png" alt="Form controls overview">
+                    <div class="screenshot-info">
+                        <strong>09-form-controls</strong><br>
+                        <small>Form controls overview</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:35 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819258981-10-time-picker.png" alt="Time picker interaction">
+                    <div class="screenshot-info">
+                        <strong>10-time-picker</strong><br>
+                        <small>Time picker interaction</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:39 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819259036-11-integration-test.png" alt="After integration testing">
+                    <div class="screenshot-info">
+                        <strong>11-integration-test</strong><br>
+                        <small>After integration testing</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:39 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+                <div class="screenshot">
+                    <img src="1757819259087-15-validation-test.png" alt="Form validation test">
+                    <div class="screenshot-info">
+                        <strong>15-validation-test</strong><br>
+                        <small>Form validation test</small><br>
+                        <small class="timestamp">Sat Sep 13 2025 23:07:39 GMT-0400 (Eastern Daylight Time)</small>
+                    </div>
+                </div>
+            
+        </div>
+
+        <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3>🔧 Test Configuration</h3>
+            <ul>
+                <li><strong>Frontend URL:</strong> http://localhost:8082</li>
+                <li><strong>Backend URL:</strong> http://localhost:8001</li>
+                <li><strong>Test Account:</strong> parents@nestsync.com</li>
+                <li><strong>Platform:</strong> darwin</li>
+                <li><strong>Node Version:</strong> v23.11.0</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
+    

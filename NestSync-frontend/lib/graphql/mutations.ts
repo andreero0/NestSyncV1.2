@@ -4,94 +4,14 @@
  */
 
 import { gql } from '@apollo/client';
-
-// =============================================================================
-// FRAGMENTS
-// =============================================================================
-
-export const CHILD_PROFILE_FRAGMENT = gql`
-  fragment ChildProfileFragment on ChildProfile {
-    id
-    name
-    dateOfBirth
-    gender
-    currentDiaperSize
-    currentWeightKg
-    currentHeightCm
-    dailyUsageCount
-    hasSensitiveSkin
-    hasAllergies
-    allergiesNotes
-    onboardingCompleted
-    province
-    createdAt
-    ageInDays
-    ageInMonths
-    weeklyUsage
-    monthlyUsage
-  }
-`;
-
-export const USAGE_LOG_FRAGMENT = gql`
-  fragment UsageLogFragment on UsageLog {
-    id
-    childId
-    inventoryItemId
-    usageType
-    loggedAt
-    quantityUsed
-    context
-    caregiverName
-    wasWet
-    wasSoiled
-    diaperCondition
-    hadLeakage
-    productRating
-    timeSinceLastChange
-    changeDuration
-    notes
-    healthNotes
-    createdAt
-  }
-`;
-
-export const INVENTORY_ITEM_FRAGMENT = gql`
-  fragment InventoryItemFragment on InventoryItem {
-    id
-    childId
-    productType
-    brand
-    productName
-    size
-    quantityTotal
-    quantityRemaining
-    quantityReserved
-    purchaseDate
-    costCad
-    expiryDate
-    storageLocation
-    isOpened
-    openedDate
-    notes
-    qualityRating
-    wouldRebuy
-    createdAt
-    quantityAvailable
-    usagePercentage
-    isExpired
-    daysUntilExpiry
-  }
-`;
-
-export const DASHBOARD_STATS_FRAGMENT = gql`
-  fragment DashboardStatsFragment on DashboardStats {
-    daysRemaining
-    diapersLeft
-    lastChange
-    todayChanges
-    currentSize
-  }
-`;
+import {
+  CHILD_PROFILE_FRAGMENT,
+  USAGE_LOG_FRAGMENT,
+  INVENTORY_ITEM_FRAGMENT,
+  DASHBOARD_STATS_FRAGMENT,
+  NOTIFICATION_PREFERENCES_FRAGMENT,
+  NOTIFICATION_DELIVERY_LOG_FRAGMENT
+} from './fragments';
 
 // =============================================================================
 // DIAPER LOGGING MUTATIONS
@@ -233,82 +153,6 @@ export const COMPLETE_ONBOARDING_MUTATION = gql`
   }
 `;
 
-// =============================================================================
-// DASHBOARD QUERIES (included here for refetch purposes)
-// =============================================================================
-
-export const GET_DASHBOARD_STATS_QUERY = gql`
-  query GetDashboardStats($childId: ID!) {
-    getDashboardStats(childId: $childId) {
-      ...DashboardStatsFragment
-    }
-  }
-  ${DASHBOARD_STATS_FRAGMENT}
-`;
-
-export const GET_USAGE_LOGS_QUERY = gql`
-  query GetUsageLogs(
-    $childId: ID!
-    $usageType: UsageTypeEnum
-    $daysBack: Int! = 7
-    $limit: Int! = 50
-    $offset: Int! = 0
-  ) {
-    getUsageLogs(
-      childId: $childId
-      usageType: $usageType
-      daysBack: $daysBack
-      limit: $limit
-      offset: $offset
-    ) {
-      edges {
-        node {
-          ...UsageLogFragment
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        startCursor
-        endCursor
-        totalCount
-      }
-    }
-  }
-  ${USAGE_LOG_FRAGMENT}
-`;
-
-export const GET_INVENTORY_ITEMS_QUERY = gql`
-  query GetInventoryItems(
-    $childId: ID!
-    $productType: ProductTypeEnum
-    $limit: Int! = 500
-    $offset: Int! = 0
-  ) {
-    getInventoryItems(
-      childId: $childId
-      productType: $productType
-      limit: $limit
-      offset: $offset
-    ) {
-      edges {
-        node {
-          ...InventoryItemFragment
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        startCursor
-        endCursor
-        totalCount
-      }
-    }
-  }
-  ${INVENTORY_ITEM_FRAGMENT}
-`;
 
 // =============================================================================
 // TYPE DEFINITIONS FOR TYPESCRIPT
@@ -486,19 +330,6 @@ export interface OnboardingWizardStepInput {
   data?: string;
 }
 
-// Dashboard Stats Types
-export interface DashboardStats {
-  daysRemaining?: number;
-  diapersLeft: number;
-  lastChange?: string;
-  todayChanges: number;
-  currentSize?: string;
-}
-
-// Query Variables Types
-export interface GetDashboardStatsVariables {
-  childId: string;
-}
 
 export interface GetUsageLogsVariables {
   childId: string;
@@ -513,4 +344,210 @@ export interface GetInventoryItemsVariables {
   productType?: 'DIAPER' | 'WIPES' | 'DIAPER_CREAM' | 'POWDER' | 'DIAPER_BAGS' | 'TRAINING_PANTS' | 'SWIMWEAR';
   limit?: number;
   offset?: number;
+}
+
+// =============================================================================
+// NOTIFICATION MUTATIONS
+// =============================================================================
+
+export const UPDATE_NOTIFICATION_PREFERENCES_MUTATION = gql`
+  mutation UpdateNotificationPreferences($input: UpdateNotificationPreferencesInput!) {
+    updateNotificationPreferences(input: $input) {
+      success
+      message
+      error
+      preferences {
+        ...NotificationPreferencesFragment
+      }
+    }
+  }
+  ${NOTIFICATION_PREFERENCES_FRAGMENT}
+`;
+
+export const REGISTER_DEVICE_TOKEN_MUTATION = gql`
+  mutation RegisterDeviceToken($input: RegisterDeviceTokenInput!) {
+    registerDeviceToken(input: $input) {
+      success
+      message
+      error
+      preferences {
+        ...NotificationPreferencesFragment
+      }
+    }
+  }
+  ${NOTIFICATION_PREFERENCES_FRAGMENT}
+`;
+
+export const TEST_NOTIFICATION_MUTATION = gql`
+  mutation TestNotification($message: String!) {
+    testNotification(message: $message) {
+      success
+      message
+      error
+      testSent
+      deliveryLog {
+        ...NotificationDeliveryLogFragment
+      }
+    }
+  }
+  ${NOTIFICATION_DELIVERY_LOG_FRAGMENT}
+`;
+
+export const MARK_NOTIFICATION_READ_MUTATION = gql`
+  mutation MarkNotificationRead($notificationId: ID!, $action: String!) {
+    markNotificationRead(notificationId: $notificationId, action: $action) {
+      success
+      message
+      error
+    }
+  }
+`;
+
+// =============================================================================
+// NOTIFICATION MUTATION TYPES
+// =============================================================================
+
+export interface UpdateNotificationPreferencesInput {
+  notificationsEnabled?: boolean;
+  criticalNotifications?: boolean;
+  importantNotifications?: boolean;
+  optionalNotifications?: boolean;
+  pushNotifications?: boolean;
+  emailNotifications?: boolean;
+  smsNotifications?: boolean;
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string; // HH:MM format
+  quietHoursEnd?: string; // HH:MM format
+  stockAlertEnabled?: boolean;
+  stockAlertThreshold?: number; // 1-30 days
+  changeReminderEnabled?: boolean;
+  changeReminderIntervalHours?: number; // 1-12 hours
+  expiryWarningEnabled?: boolean;
+  expiryWarningDays?: number; // 1-90 days
+  healthTipsEnabled?: boolean;
+  marketingEnabled?: boolean;
+  userTimezone?: string;
+  dailyNotificationLimit?: number; // 1-50
+  notificationConsentGranted?: boolean;
+  marketingConsentGranted?: boolean;
+}
+
+export interface UpdateNotificationPreferencesResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  preferences?: {
+    id: string;
+    userId: string;
+    notificationsEnabled: boolean;
+    criticalNotifications: boolean;
+    importantNotifications: boolean;
+    optionalNotifications: boolean;
+    pushNotifications: boolean;
+    emailNotifications: boolean;
+    smsNotifications: boolean;
+    quietHoursEnabled: boolean;
+    quietHoursStart?: string;
+    quietHoursEnd?: string;
+    stockAlertEnabled: boolean;
+    stockAlertThreshold: number;
+    changeReminderEnabled: boolean;
+    changeReminderIntervalHours: number;
+    expiryWarningEnabled: boolean;
+    expiryWarningDays: number;
+    healthTipsEnabled: boolean;
+    marketingEnabled: boolean;
+    deviceTokens: Array<{
+      token: string;
+      platform: string;
+      registered_at: string;
+    }>;
+    userTimezone: string;
+    dailyNotificationLimit: number;
+    notificationConsentGranted: boolean;
+    notificationConsentDate?: string;
+    marketingConsentGranted: boolean;
+    marketingConsentDate?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface UpdateNotificationPreferencesMutationData {
+  updateNotificationPreferences: UpdateNotificationPreferencesResponse;
+}
+
+export interface UpdateNotificationPreferencesMutationVariables {
+  input: UpdateNotificationPreferencesInput;
+}
+
+export interface RegisterDeviceTokenInput {
+  deviceToken: string;
+  platform: 'ios' | 'android' | 'web';
+}
+
+export interface RegisterDeviceTokenResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  preferences?: {
+    id: string;
+    userId: string;
+    deviceTokens: Array<{
+      token: string;
+      platform: string;
+      registered_at: string;
+    }>;
+  };
+}
+
+export interface RegisterDeviceTokenMutationData {
+  registerDeviceToken: RegisterDeviceTokenResponse;
+}
+
+export interface RegisterDeviceTokenMutationVariables {
+  input: RegisterDeviceTokenInput;
+}
+
+export interface TestNotificationResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  testSent: boolean;
+  deliveryLog?: {
+    id: string;
+    userId: string;
+    notificationType: string;
+    priority: string;
+    channel: string;
+    title: string;
+    message: string;
+    deliveryStatus: string;
+    sentAt?: string;
+    processingTimeMs?: number;
+    createdAt: string;
+  };
+}
+
+export interface TestNotificationMutationData {
+  testNotification: TestNotificationResponse;
+}
+
+export interface TestNotificationMutationVariables {
+  message: string;
+}
+
+export interface MarkNotificationReadResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export interface MarkNotificationReadMutationData {
+  markNotificationRead: MarkNotificationReadResponse;
+}
+
+export interface MarkNotificationReadMutationVariables {
+  notificationId: string;
+  action: 'opened' | 'clicked' | 'dismissed';
 }
