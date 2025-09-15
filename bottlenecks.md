@@ -274,6 +274,52 @@ async def get_or_create_notification_preferences(
 
 ---
 
+## Mobile Development & Build Issues
+
+### 6. Project Path Spaces Breaking iOS Builds (P0 - Critical)
+
+**Date Encountered**: 2025-09-14
+**Feature**: Mobile Testing Setup for SDK Compatibility
+**Impact**: Complete iOS development build failure, blocking mobile testing
+
+**Problem Description**:
+- iOS development build scripts failing with path resolution errors
+- Error: `/bin/sh: /Users/mayenikhalo/Public/From: No such file or directory`
+- Xcode build system cannot handle spaces in project path
+- Affects all iOS development build processes and mobile testing
+
+**Root Cause Analysis**:
+- Project located at `/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/`
+- Spaces in "From aEroPartition" path segment break shell script execution
+- iOS build scripts not properly escaping or quoting paths with spaces
+- Xcode project generation fails when encountering unescaped spaces
+
+**Immediate Solution**:
+- Abandoned mobile testing approach requiring development builds
+- Reverted to web-only development and testing workflow
+- Documented as blocking issue for future mobile development
+
+**Long-Term Solutions**:
+1. **Path Relocation**: Move project to path without spaces (e.g., `/Users/mayenikhalo/Dev/NestSyncv1.2/`)
+2. **Script Hardening**: Update all build scripts to properly handle spaces in paths
+3. **Docker Development**: Use containerized mobile builds to avoid path issues
+4. **Alternative Testing**: Use Expo Go with compatible SDK versions for mobile testing
+
+**Prevention Strategies**:
+1. Always avoid spaces in development project paths
+2. Test build processes in paths with spaces during setup
+3. Use path validation scripts in project initialization
+4. Document path requirements in development setup guides
+
+**Files Affected**:
+- All iOS build scripts and Xcode project files
+- Development build configuration in app.json
+- Mobile testing and debugging workflows
+
+**Status**: Blocking mobile development - requires project relocation or build system redesign
+
+---
+
 ## Development Workflow Learnings
 
 ### Key Patterns for Future Development

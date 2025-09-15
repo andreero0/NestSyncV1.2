@@ -28,7 +28,7 @@ services:
       - ../NestSync-frontend:/app
       - /app/node_modules
       - /app/.expo
-    command: npx expo start --port 8082 --web
+    command: npx expo start --port 8082 --host lan
 
   # Development-only services
   redis:
