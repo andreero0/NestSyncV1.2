@@ -795,6 +795,23 @@ class NotificationPreferences:
     created_at: datetime
     updated_at: Optional[datetime] = None
 
+    # Add field aliases for frontend compatibility
+    @strawberry.field(name="notificationsEnabled")
+    def notifications_enabled_alias(self) -> bool:
+        return self.notifications_enabled
+
+    @strawberry.field(name="stockAlertEnabled")
+    def stock_alert_enabled_alias(self) -> bool:
+        return self.stock_alert_enabled
+
+    @strawberry.field(name="changeReminderEnabled")
+    def change_reminder_enabled_alias(self) -> bool:
+        return self.change_reminder_enabled
+
+    @strawberry.field(name="expiryWarningEnabled")
+    def expiry_warning_enabled_alias(self) -> bool:
+        return self.expiry_warning_enabled
+
 
 @strawberry.type
 class NotificationQueue:
@@ -871,6 +888,12 @@ class UpdateNotificationPreferencesInput:
     marketing_enabled: Optional[bool] = None
     user_timezone: Optional[str] = None
     daily_notification_limit: Optional[int] = None
+
+    # CamelCase aliases for frontend compatibility
+    notifications_enabled_alias: Optional[bool] = strawberry.field(name="notificationsEnabled", default=None)
+    stock_alert_enabled_alias: Optional[bool] = strawberry.field(name="stockAlertEnabled", default=None)
+    change_reminder_enabled_alias: Optional[bool] = strawberry.field(name="changeReminderEnabled", default=None)
+    expiry_warning_enabled_alias: Optional[bool] = strawberry.field(name="expiryWarningEnabled", default=None)
 
     # PIPEDA consent updates
     notification_consent_granted: Optional[bool] = None

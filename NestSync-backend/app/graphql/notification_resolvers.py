@@ -540,9 +540,11 @@ class NotificationMutations:
                 # Get or create preferences
                 prefs = await get_or_create_notification_preferences(user_id, session)
 
-                # Update fields if provided
-                if input.notifications_enabled is not None:
-                    prefs.notifications_enabled = input.notifications_enabled
+                # Update fields if provided (support both snake_case and camelCase)
+                # Check camelCase aliases first, then fall back to snake_case
+                notifications_enabled_value = getattr(input, 'notifications_enabled_alias', None) or input.notifications_enabled
+                if notifications_enabled_value is not None:
+                    prefs.notifications_enabled = notifications_enabled_value
 
                 if input.critical_notifications is not None:
                     prefs.critical_notifications = input.critical_notifications
@@ -571,8 +573,10 @@ class NotificationMutations:
                 if input.quiet_hours_end is not None:
                     prefs.quiet_hours_end = parse_time_string(input.quiet_hours_end)
 
-                if input.stock_alert_enabled is not None:
-                    prefs.stock_alert_enabled = input.stock_alert_enabled
+                # Check camelCase alias first, then fall back to snake_case
+                stock_alert_enabled_value = getattr(input, 'stock_alert_enabled_alias', None) or input.stock_alert_enabled
+                if stock_alert_enabled_value is not None:
+                    prefs.stock_alert_enabled = stock_alert_enabled_value
 
                 if input.stock_alert_threshold is not None:
                     if not (1 <= input.stock_alert_threshold <= 30):
@@ -582,8 +586,10 @@ class NotificationMutations:
                         )
                     prefs.stock_alert_threshold = input.stock_alert_threshold
 
-                if input.change_reminder_enabled is not None:
-                    prefs.change_reminder_enabled = input.change_reminder_enabled
+                # Check camelCase alias first, then fall back to snake_case
+                change_reminder_enabled_value = getattr(input, 'change_reminder_enabled_alias', None) or input.change_reminder_enabled
+                if change_reminder_enabled_value is not None:
+                    prefs.change_reminder_enabled = change_reminder_enabled_value
 
                 if input.change_reminder_interval_hours is not None:
                     if not (1 <= input.change_reminder_interval_hours <= 12):
@@ -593,8 +599,10 @@ class NotificationMutations:
                         )
                     prefs.change_reminder_interval_hours = input.change_reminder_interval_hours
 
-                if input.expiry_warning_enabled is not None:
-                    prefs.expiry_warning_enabled = input.expiry_warning_enabled
+                # Check camelCase alias first, then fall back to snake_case
+                expiry_warning_enabled_value = getattr(input, 'expiry_warning_enabled_alias', None) or input.expiry_warning_enabled
+                if expiry_warning_enabled_value is not None:
+                    prefs.expiry_warning_enabled = expiry_warning_enabled_value
 
                 if input.expiry_warning_days is not None:
                     if not (1 <= input.expiry_warning_days <= 90):

@@ -320,6 +320,78 @@ async def get_or_create_notification_preferences(
 
 ---
 
+### 7. GraphQL Schema Field Name Mismatch (P0 - Critical)
+
+**Date Encountered**: 2025-09-15
+**Feature**: Notification Preferences System UI
+**Impact**: Complete notification preferences UI failure - "Unable to load" error
+
+**Problem Description**:
+- Notification preferences dialog showed "Unable to load notification preferences" error
+- Frontend GraphQL queries expecting camelCase field names (e.g., `notificationsEnabled`)
+- Backend Strawberry GraphQL returning snake_case field names (e.g., `notifications_enabled`)
+- Schema mismatch preventing any notification preference data from loading in UI
+- Affected all users attempting to access notification settings
+
+**Root Cause Analysis**:
+- Frontend Apollo Client configured for camelCase field naming convention
+- Backend Strawberry GraphQL auto-generating field names from Python snake_case attributes
+- No field aliasing or transformation layer between frontend and backend
+- Schema introspection showed mismatch but wasn't caught during initial implementation
+
+**Immediate Solution**:
+```python
+# Added field aliases in app/graphql/types.py
+@strawberry.type
+class NotificationPreferencesType:
+    # Original snake_case fields remain unchanged
+    notifications_enabled: bool
+    stock_alert_enabled: bool
+    # ... other fields
+
+    # Added camelCase aliases for frontend compatibility
+    @strawberry.field(name="notificationsEnabled")
+    def notifications_enabled_alias(self) -> bool:
+        return self.notifications_enabled
+
+    @strawberry.field(name="stockAlertEnabled")
+    def stock_alert_enabled_alias(self) -> bool:
+        return self.stock_alert_enabled
+
+    @strawberry.field(name="changeReminderEnabled")
+    def change_reminder_enabled_alias(self) -> bool:
+        return self.change_reminder_enabled
+
+    # Added aliases for all 20+ fields with snake_case names
+```
+
+**Testing & Validation Process**:
+1. Used Sequential Thinking agent to systematically analyze the problem
+2. Researched best practices with Context7 for SQLAlchemy and Strawberry GraphQL
+3. Delegated backend fix to Senior Backend Engineer agent
+4. Validated with Playwright MCP end-to-end browser testing
+5. Successfully loaded notification preferences dialog with all fields populated
+
+**Prevention Strategies**:
+1. Establish consistent field naming convention across stack (prefer camelCase for GraphQL)
+2. Add GraphQL schema validation tests comparing frontend queries to backend schema
+3. Use GraphQL code generation tools to ensure type safety between frontend and backend
+4. Implement field transformation middleware for automatic case conversion
+5. Add schema introspection validation to CI/CD pipeline
+
+**Files Modified**:
+- `app/graphql/types.py` - Added 20+ field aliases for camelCase compatibility
+- `app/graphql/notification_resolvers.py` - Verified resolver returns correct type
+- Frontend queries remained unchanged (already using camelCase)
+
+**Learning Points**:
+- Field naming inconsistencies are a common GraphQL integration issue
+- Strawberry's field aliasing provides backward-compatible solution
+- Direct browser testing with Playwright MCP essential for UI validation
+- Agent orchestration effective for complex debugging scenarios
+
+---
+
 ## Development Workflow Learnings
 
 ### Key Patterns for Future Development
@@ -391,5 +463,5 @@ npx playwright test --browser=chromium
 
 ---
 
-*Last Updated: 2025-09-14*
-*Next Review: When implementing database-heavy features*
+*Last Updated: 2025-09-15*
+*Next Review: When implementing database-heavy features or GraphQL schema changes*
