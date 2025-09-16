@@ -16,6 +16,12 @@ from sqlalchemy.orm import selectinload, joinedload
 
 from app.config.database import get_async_session
 from app.models import Child, InventoryItem, UsageLog, StockThreshold
+from app.models.user import User
+from app.utils.data_transformations import (
+    get_timezone_aware_today_boundaries,
+    get_timezone_for_province,
+    DEFAULT_CANADIAN_TIMEZONE
+)
 from .types import (
     InventoryItem as InventoryItemType,
     UsageLog as UsageLogType,
@@ -40,6 +46,33 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+async def get_user_timezone_from_child(session: AsyncSession, child_id: uuid.UUID) -> str:
+    """Get user's timezone from child's parent user profile"""
+    try:
+        # Get the child and its parent user
+        child_query = select(Child).options(selectinload(Child.parent)).where(
+            and_(
+                Child.id == child_id,
+                Child.is_deleted == False
+            )
+        )
+        child_result = await session.execute(child_query)
+        child = child_result.scalar_one_or_none()
+
+        if child and child.parent:
+            user = child.parent
+            if user.province:
+                return get_timezone_for_province(user.province)
+            elif user.timezone:
+                return user.timezone
+
+        return DEFAULT_CANADIAN_TIMEZONE
+
+    except Exception as e:
+        logger.warning(f"Could not determine user timezone for child {child_id}: {e}")
+        return DEFAULT_CANADIAN_TIMEZONE
 
 
 def inventory_item_to_graphql(item: InventoryItem) -> InventoryItemType:
@@ -145,16 +178,18 @@ class InventoryQueries:
                 # Calculate total diapers left
                 diapers_left = sum(item.quantity_remaining for item in diaper_items)
                 
-                # Get today's usage logs
-                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-                today_end = today_start + timedelta(days=1)
-                
+                # Get user's timezone and calculate timezone-aware "today" boundaries
+                user_timezone = await get_user_timezone_from_child(session, child_uuid)
+                today_start_utc, today_end_utc = get_timezone_aware_today_boundaries(user_timezone)
+
+                logger.info(f"Dashboard stats timezone calculation for child {child_uuid}: timezone={user_timezone}, today_range={today_start_utc} to {today_end_utc}")
+
                 today_changes_query = select(func.count(UsageLog.id)).where(
                     and_(
                         UsageLog.child_id == child_uuid,
                         UsageLog.usage_type == "diaper_change",
-                        UsageLog.logged_at >= today_start,
-                        UsageLog.logged_at < today_end,
+                        UsageLog.logged_at >= today_start_utc,
+                        UsageLog.logged_at < today_end_utc,
                         UsageLog.is_deleted == False
                     )
                 )
@@ -516,7 +551,18 @@ class InventoryMutations:
                         logger.info(f"No diaper inventory available for child {child_uuid} size {child.current_diaper_size} - diaper change logged without inventory tracking")
                 
                 await session.commit()
-                
+
+                # Trigger analytics processing for the logged diaper change
+                try:
+                    from app.services.enhanced_analytics_service import AnalyticsBackgroundProcessor
+                    analytics_processor = AnalyticsBackgroundProcessor()
+                    logged_date = (input.logged_at or datetime.now(timezone.utc)).date()
+                    await analytics_processor.process_daily_analytics(str(child_uuid), logged_date)
+                    logger.info(f"Analytics processing triggered for child {child_uuid} on {logged_date}")
+                except Exception as analytics_error:
+                    logger.error(f"Analytics processing failed for child {child_uuid}: {analytics_error}")
+                    # Don't fail the diaper change logging if analytics fails
+
                 return LogDiaperChangeResponse(
                     success=True,
                     message="Diaper change logged successfully",

@@ -23,7 +23,10 @@ from app.config.settings import settings
 from app.graphql.schema import schema
 from app.graphql.context import create_graphql_context
 from app.middleware import setup_security_middleware
+from app.api.health import include_health_routes
+from app.services.continuous_monitoring import continuous_monitoring
 from health import get_health, get_simple_health
+from app.health import get_auth_health, get_auth_health_simple
 
 # Configure logging
 logging.basicConfig(
@@ -105,14 +108,23 @@ async def lifespan(app: FastAPI):
             raise Exception(f"Database health check failed: {db_health.get('error')}")
         
         logger.info("Database initialization completed successfully")
-        
+
+        # Initialize observability and continuous monitoring
+        logger.info("Starting continuous monitoring service...")
+
+        # Start monitoring in background (non-blocking)
+        import asyncio
+        asyncio.create_task(continuous_monitoring.start())
+
+        logger.info("Continuous monitoring service started")
+
         # TODO: Initialize other services
         # - Redis connections for caching and background jobs
         # - External API clients (Supabase, OCR services, etc.)
         # - Background job queues (RQ)
         # - ML model loading for predictions
         # - Notification services setup
-        
+
         logger.info("Application startup complete - Ready to serve requests")
         
     except Exception as e:
@@ -125,17 +137,21 @@ async def lifespan(app: FastAPI):
     logger.info("Starting graceful application shutdown")
     
     try:
+        # Stop continuous monitoring
+        logger.info("Stopping continuous monitoring...")
+        continuous_monitoring.stop()
+
         # Close database connections
         logger.info("Closing database connections...")
         await close_database()
-        
+
         # TODO: Clean up other resources
         # - Close Redis connections
         # - Stop background job workers
         # - Clean up temporary files
         # - Flush audit logs
         # - Stop external service connections
-        
+
         logger.info("Application shutdown complete")
         
     except Exception as e:
@@ -263,6 +279,59 @@ async def simple_health_check():
     return JSONResponse(content=health_status, status_code=status_code)
 
 
+@app.get("/health/auth", tags=["Health", "Authentication"])
+async def auth_health_check():
+    """
+    Comprehensive authentication system health check
+    Tests critical auth paths and gotrue compatibility
+    """
+    try:
+        auth_status = await get_auth_health()
+
+        # Return appropriate HTTP status based on auth health
+        if auth_status["status"] == "healthy":
+            return JSONResponse(content=auth_status, status_code=200)
+        elif auth_status["status"] == "unhealthy":
+            return JSONResponse(content=auth_status, status_code=503)
+        else:  # critical
+            return JSONResponse(content=auth_status, status_code=503)
+
+    except Exception as e:
+        logger.error(f"Auth health check failed: {str(e)}")
+        return JSONResponse(
+            content={
+                "status": "critical",
+                "error": str(e),
+                "timestamp": "2024-01-01T00:00:00Z",
+                "critical_failures": ["health_check_exception"]
+            },
+            status_code=503
+        )
+
+
+@app.get("/health/auth/simple", tags=["Health", "Authentication"])
+async def simple_auth_health_check():
+    """
+    Simple authentication health check for monitoring alerts
+    Lightweight endpoint for authentication status monitoring
+    """
+    try:
+        auth_status = await get_auth_health_simple()
+        status_code = 200 if auth_status["healthy"] else 503
+        return JSONResponse(content=auth_status, status_code=status_code)
+    except Exception as e:
+        logger.error(f"Simple auth health check failed: {str(e)}")
+        return JSONResponse(
+            content={
+                "status": "critical",
+                "healthy": False,
+                "error": str(e),
+                "critical_failures": ["health_check_exception"]
+            },
+            status_code=503
+        )
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """
@@ -354,6 +423,9 @@ app.include_router(
     prefix="/graphql",
     tags=["GraphQL API", "Authentication", "Onboarding"]
 )
+
+# Include observability and monitoring health routes
+include_health_routes(app)
 
 # =============================================================================
 # Additional API Routes (Future Implementation)

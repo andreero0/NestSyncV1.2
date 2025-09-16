@@ -279,6 +279,7 @@ export const useAuthStore = create<AuthState>()(
 
         return response;
       } catch (error) {
+        console.error('Sign up error:', error);
         set({
           error: 'Sign up failed. Please try again.',
           isLoading: false,
@@ -320,6 +321,7 @@ export const useAuthStore = create<AuthState>()(
 
         return response;
       } catch (error) {
+        console.error('Sign in error:', error);
         set({
           error: 'Sign in failed. Please try again.',
           isLoading: false,

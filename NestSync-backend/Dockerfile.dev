@@ -69,9 +69,21 @@ WORKDIR /app
 
 # Copy requirements for development
 COPY requirements*.txt ./
+COPY scripts/ ./scripts/
 
 # Install Python dependencies with development tools
 RUN pip install --no-cache-dir -r requirements-minimal-dev.txt
+
+# Copy dependency validation script
+COPY scripts/validate-dependencies.py /app/scripts/
+RUN chmod +x /app/scripts/validate-dependencies.py
+
+# Validate critical authentication dependencies
+RUN python /app/scripts/validate-dependencies.py || \
+    (echo "❌ CRITICAL: Dependency validation failed!" && \
+     echo "This will cause authentication failures in production." && \
+     echo "Fix dependencies before proceeding." && \
+     exit 1)
 
 # Install additional development dependencies
 RUN pip install --no-cache-dir \

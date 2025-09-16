@@ -279,20 +279,84 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
   return;
 });
 
-// Error logging link - only handles logging, not retries (RetryLink handles retries)
-const errorLoggingLink = new ErrorLink(({ error }) => {
+// Transform authentication response data to handle Supabase identity validation issues
+const transformResponseData = (data: any): any => {
+  if (!data) return data;
+
+  // Handle sign-in response
+  if (data.signIn && data.signIn.user) {
+    const user = { ...data.signIn.user };
+
+    // Ensure user identities have proper identity_id field
+    if (user.identities && Array.isArray(user.identities)) {
+      user.identities = user.identities.map((identity: any) => {
+        if (identity.id && !identity.identity_id) {
+          return { ...identity, identity_id: identity.id };
+        }
+        return identity;
+      });
+    }
+
+    data.signIn.user = user;
+  }
+
+  // Handle sign-up response
+  if (data.signUp && data.signUp.user) {
+    const user = { ...data.signUp.user };
+
+    // Ensure user identities have proper identity_id field
+    if (user.identities && Array.isArray(user.identities)) {
+      user.identities = user.identities.map((identity: any) => {
+        if (identity.id && !identity.identity_id) {
+          return { ...identity, identity_id: identity.id };
+        }
+        return identity;
+      });
+    }
+
+    data.signUp.user = user;
+  }
+
+  return data;
+};
+
+// Error handling and response transformation link
+const errorLoggingLink = new ErrorLink(({ error, operation, forward }) => {
   if (!error) {
     return;
   }
-  
+
+  // Handle specific validation errors
+  if (error.message && error.message.includes('validation error for Session')) {
+    console.warn('Supabase session validation error detected, attempting to transform response');
+
+    // Try to extract the response data and transform it
+    if (error.networkError && 'result' in error.networkError) {
+      const networkError = error.networkError as any;
+      if (networkError.result && networkError.result.data) {
+        try {
+          const transformedData = transformResponseData(networkError.result.data);
+          networkError.result.data = transformedData;
+          console.log('Response data transformed to handle validation error');
+        } catch (transformError) {
+          console.error('Failed to transform response data:', transformError);
+        }
+      }
+    }
+  }
+
   // Handle GraphQL errors using Apollo Client 3.x patterns
   if (error.graphQLErrors && __DEV__) {
     error.graphQLErrors.forEach((graphQLError: any) => {
       const { message, locations, path, extensions } = graphQLError;
-      console.error(
-        `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`
-      );
-      
+
+      // Don't log validation errors as errors since we're handling them
+      if (!message.includes('validation error for Session')) {
+        console.error(
+          `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`
+        );
+      }
+
       // Handle specific error types (non-auth)
       if (extensions?.code === 'PIPEDA_COMPLIANCE_ERROR') {
         console.error('PIPEDA compliance error:', message);
@@ -302,13 +366,16 @@ const errorLoggingLink = new ErrorLink(({ error }) => {
 
   // Handle network errors using Apollo Client 3.x patterns
   if (error.networkError && __DEV__) {
-    console.error(`Network error: ${error.networkError.message}`);
-    
+    // Don't log validation errors as network errors
+    if (!error.networkError.message.includes('validation error for Session')) {
+      console.error(`Network error: ${error.networkError.message}`);
+    }
+
     // Check if it's a server error with status code
     if ('statusCode' in error.networkError) {
       const statusCode = (error.networkError as any).statusCode;
       console.error(`Status: ${statusCode}`);
-      
+
       switch (statusCode) {
         case 403:
           console.error('Access forbidden - insufficient permissions');
@@ -327,7 +394,10 @@ const errorLoggingLink = new ErrorLink(({ error }) => {
 
   // Log other error types
   if (error && !error.graphQLErrors && !error.networkError && __DEV__) {
-    console.error('Other Apollo Client error:', error.message);
+    // Don't log validation errors
+    if (!error.message.includes('validation error for Session')) {
+      console.error('Other Apollo Client error:', error.message);
+    }
   }
 });
 

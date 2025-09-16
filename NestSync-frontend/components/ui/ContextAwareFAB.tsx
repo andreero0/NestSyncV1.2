@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Platform, View, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSegments } from 'expo-router';
+import { useSegments, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@apollo/client';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -72,8 +72,13 @@ export function ContextAwareFAB() {
   const rotation = useSharedValue(0);
   const opacity = useSharedValue(1);
   
-  // Get current route context
+  // Get current route context and view state
   const currentRoute = segments[1] || 'index'; // Get the tab route (index, planner, settings)
+  const params = useLocalSearchParams<{ view?: string }>();
+  const currentView = params.view;
+
+  // Hide FAB when in analytics view - analytics should be passive viewing only
+  const shouldHideFAB = currentRoute === 'planner' && currentView === 'analytics';
   
   // Context-aware FAB configurations with enhanced logic for new users
   const fabContexts: FABContextMap = {
@@ -292,6 +297,34 @@ export function ContextAwareFAB() {
   const handleLegalModalClose = () => {
     setLegalModalVisible(false);
   };
+
+  // Don't render FAB in analytics view
+  if (shouldHideFAB) {
+    return (
+      <>
+        {/* Modals still available for other contexts */}
+        <QuickLogModal
+          visible={quickLogModalVisible}
+          onClose={handleQuickLogModalClose}
+          onSuccess={handleQuickLogSuccess}
+          childId={selectedChildId}
+        />
+
+        <AddInventoryModal
+          visible={addInventoryModalVisible}
+          onClose={handleAddInventoryModalClose}
+          onSuccess={handleAddInventorySuccess}
+          childId={selectedChildId}
+        />
+
+        <LegalModal
+          isVisible={legalModalVisible}
+          onClose={handleLegalModalClose}
+          type={legalModalType}
+        />
+      </>
+    );
+  }
 
   return (
     <>

@@ -84,6 +84,23 @@ python auto_fix_supabase.py   # Automated Supabase diagnostics
 python -c "from app.graphql.schema import print_schema; print_schema()"
 ```
 
+### Development Rate Limiting Configuration
+**For analytics dashboard testing and development efficiency:**
+
+```bash
+# Temporarily disable rate limiting (already configured in .env.local)
+# Rate limiting is disabled with RATE_LIMITING_ENABLED=false
+
+# To re-enable rate limiting for production testing:
+# Edit NestSync-backend/.env.local and change:
+# RATE_LIMITING_ENABLED=true
+
+# Restart backend server after changes:
+cd NestSync-backend && source venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+**IMPORTANT**: Rate limiting is currently disabled for development to prevent 15-minute delays during analytics dashboard testing. Remember to re-enable for production deployment.
+
 ### Critical Development Setup
 **Both servers must run simultaneously for the app to function:**
 - Frontend: `http://localhost:8082` (Expo development server)  

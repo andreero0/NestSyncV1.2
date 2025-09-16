@@ -14,6 +14,7 @@ from sqlalchemy import select
 from graphql import GraphQLError
 
 from app.auth import supabase_auth, get_request_context, RequestContext
+from app.auth.supabase import _transform_identity_response
 from app.config.database import get_async_session
 from app.config.settings import settings
 from app.graphql.context import require_context_user
@@ -275,7 +276,17 @@ class AuthMutations:
             
             # Authenticate with Supabase
             auth_result = await supabase_auth.sign_in(input.email, input.password)
-            
+
+            logger.info(f"Sign in auth_result keys: {list(auth_result.keys()) if auth_result else 'None'}")
+            if auth_result.get("session"):
+                logger.info(f"Session keys: {list(auth_result['session'].keys())}")
+            if auth_result.get("user"):
+                logger.info(f"User keys: {list(auth_result['user'].keys())}")
+                if auth_result['user'].get('identities'):
+                    logger.info(f"User has {len(auth_result['user']['identities'])} identities")
+                    for i, identity in enumerate(auth_result['user']['identities']):
+                        logger.info(f"Identity {i} keys: {list(identity.keys())}")
+
             if not auth_result["success"]:
                 return AuthResponse(
                     success=False,

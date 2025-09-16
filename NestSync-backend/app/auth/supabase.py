@@ -16,6 +16,101 @@ from app.config.settings import settings
 logger = logging.getLogger(__name__)
 
 
+def _transform_identity_response(response_data: Any) -> Any:
+    """
+    Transform Supabase response to ensure compatibility with gotrue versions.
+    Maps 'id' field to 'identity_id' in user.identities array to fix
+    Pydantic validation errors in gotrue v2.9.1+
+    """
+    logger.info(f"=== TRANSFORMATION DEBUG START ===")
+    logger.info(f"Response data type: {type(response_data)}")
+    logger.info(f"Response data attributes: {dir(response_data) if hasattr(response_data, '__dict__') else 'No attributes'}")
+
+    # Log the full response structure for debugging
+    try:
+        if hasattr(response_data, '__dict__'):
+            logger.info(f"Response data dict: {response_data.__dict__}")
+        else:
+            logger.info(f"Response data value: {response_data}")
+    except Exception as e:
+        logger.error(f"Error logging response data: {e}")
+
+    if not hasattr(response_data, 'user') or not response_data.user:
+        logger.info("No user in response_data, returning unchanged")
+        return response_data
+
+    user = response_data.user
+    logger.info(f"User object type: {type(user)}")
+    logger.info(f"User attributes: {dir(user) if hasattr(user, '__dict__') else 'No attributes'}")
+
+    # Log user properties
+    try:
+        if hasattr(user, '__dict__'):
+            logger.info(f"User dict: {user.__dict__}")
+        logger.info(f"User id: {getattr(user, 'id', 'NO ID')}")
+        logger.info(f"User email: {getattr(user, 'email', 'NO EMAIL')}")
+    except Exception as e:
+        logger.error(f"Error logging user data: {e}")
+
+    # Check if user has identities and they need transformation
+    if hasattr(user, 'identities') and user.identities:
+        logger.info(f"Found {len(user.identities)} identities to transform")
+        logger.info(f"Identities type: {type(user.identities)}")
+
+        # Log the raw identities structure
+        try:
+            logger.info(f"Raw identities: {user.identities}")
+        except Exception as e:
+            logger.error(f"Error logging identities: {e}")
+
+        for i, identity in enumerate(user.identities):
+            logger.info(f"=== IDENTITY {i} DEBUG ===")
+            logger.info(f"Identity type: {type(identity)}")
+
+            if isinstance(identity, dict):
+                logger.info(f"Identity keys: {list(identity.keys())}")
+                logger.info(f"Identity values: {identity}")
+
+                if 'id' in identity and 'identity_id' not in identity:
+                    logger.info(f"TRANSFORMING identity {i}: adding identity_id = {identity['id']}")
+                    identity['identity_id'] = identity['id']
+                    logger.info(f"Identity after transformation: {identity}")
+                else:
+                    logger.info(f"Identity {i} already has identity_id or missing id")
+                    if 'identity_id' in identity:
+                        logger.info(f"Existing identity_id: {identity['identity_id']}")
+                    if 'id' not in identity:
+                        logger.info(f"No 'id' field found in identity")
+
+            # Handle object-like identities
+            elif hasattr(identity, '__dict__'):
+                logger.info(f"Identity attributes: {dir(identity)}")
+                logger.info(f"Identity dict: {identity.__dict__}")
+
+                if hasattr(identity, 'id') and not hasattr(identity, 'identity_id'):
+                    id_value = getattr(identity, 'id', None)
+                    logger.info(f"TRANSFORMING object identity {i}: adding identity_id = {id_value}")
+                    setattr(identity, 'identity_id', id_value)
+                    logger.info(f"Identity after transformation - dict: {identity.__dict__}")
+                else:
+                    logger.info(f"Object identity {i} doesn't need transformation")
+                    if hasattr(identity, 'identity_id'):
+                        logger.info(f"Existing identity_id: {getattr(identity, 'identity_id', 'ERROR')}")
+
+            else:
+                logger.info(f"Identity {i} is neither dict nor object: {identity}")
+
+    else:
+        logger.info("No identities found in user")
+        if hasattr(user, 'identities'):
+            logger.info(f"User has identities attribute but it's: {user.identities}")
+        else:
+            logger.info("User has no identities attribute")
+
+    logger.info("=== TRANSFORMATION DEBUG END ===")
+    return response_data
+
+
 class SupabaseAuth:
     """
     Supabase authentication service with Canadian compliance
@@ -57,6 +152,9 @@ class SupabaseAuth:
                     "data": user_metadata
                 }
             })
+
+            # Transform response for gotrue compatibility
+            response = _transform_identity_response(response)
             
             if response.user:
                 logger.info(f"User created successfully: {response.user.id}")
@@ -90,10 +188,22 @@ class SupabaseAuth:
         Authenticate user with Supabase Auth
         """
         try:
+            logger.info("=== SIGN_IN DEBUG START ===")
+            logger.info(f"Attempting sign in for email: {email}")
+
             response = self.client.auth.sign_in_with_password({
                 "email": email,
                 "password": password
             })
+
+            logger.info(f"Supabase auth response received, type: {type(response)}")
+            logger.info("About to call _transform_identity_response")
+
+            # Transform response for gotrue compatibility
+            response = _transform_identity_response(response)
+
+            logger.info("_transform_identity_response completed")
+            logger.info("=== SIGN_IN DEBUG END ===")
             
             if response.user and response.session:
                 logger.info(f"User signed in successfully: {response.user.id}")
@@ -148,6 +258,9 @@ class SupabaseAuth:
         """
         try:
             response = self.client.auth.refresh_session(refresh_token)
+
+            # Transform response for gotrue compatibility
+            response = _transform_identity_response(response)
             
             if response.session:
                 return {

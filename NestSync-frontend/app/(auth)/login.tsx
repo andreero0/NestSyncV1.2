@@ -25,6 +25,7 @@ import { SignInInput } from '../../lib/types/auth';
 import { NestSyncButton, NestSyncInput } from '@/components/ui';
 import { Colors } from '../../constants/Colors';
 import { useColorScheme } from '../../hooks/useColorScheme';
+import { handleAuthError, contactSupport } from '../../lib/auth/errorHandler';
 
 // Validation schema
 const loginSchema = z.object({
@@ -115,16 +116,29 @@ export default function LoginScreen() {
         }
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert(
-          'Sign In Failed',
-          response.error || 'Please check your email and password and try again.',
-          [{ text: 'OK', style: 'default' }]
-        );
+
+        // Use user-friendly error handling instead of raw error message
+        const errorMessage = response.error || 'Please check your email and password and try again.';
+        handleAuthError(errorMessage, 'login', {
+          onRetry: () => {
+            // Clear form errors and allow retry
+            clearError();
+          },
+          onContactSupport: contactSupport
+        });
       }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       console.error('Login error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+
+      // Handle unexpected errors with user-friendly messages
+      const errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+      handleAuthError(errorMessage, 'login', {
+        onRetry: () => {
+          clearError();
+        },
+        onContactSupport: contactSupport
+      });
     }
   };
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -14,8 +14,27 @@ import { NestSyncColors } from '@/constants/Colors';
 import { formatDiaperSize } from '@/utils/formatters';
 import { EditInventoryModal } from '@/components/modals/EditInventoryModal';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
+// Analytics imports temporarily disabled - preserved for future enhancement
+// import { useAnalyticsDashboard } from '@/hooks/useAnalytics';
+// import { useEnhancedAnalytics } from '@/hooks/useEnhancedAnalytics';
+// import {
+//   ParentFriendlyProgressCard,
+//   SimpleUsageIndicator,
+//   ConsistencyCircle,
+//   // Legacy complex components (commented out for parent-friendly experience)
+//   // AnalyticsBarChart,
+//   // AnalyticsLineChart,
+//   // AnalyticsPieChart,
+//   // AnalyticsProgressCard,
+// } from '@/components/charts';
+// import {
+//   YourBabysPatternsCard,
+//   SmartPredictionsCard,
+//   SmartInsightsCard,
+//   QuickActionsCard,
+// } from '@/components/analytics';
 
-type PlannerView = 'planner' | 'inventory';
+type PlannerView = 'planner' | 'analytics' | 'inventory';
 type FilterType = 'all' | 'critical' | 'low' | 'stocked' | 'pending';
 
 interface PlannerItem {
@@ -56,9 +75,9 @@ interface InventoryItem {
 export default function PlannerScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const params = useLocalSearchParams<{ filter?: FilterType; childId?: string }>();
+  const params = useLocalSearchParams<{ filter?: FilterType; childId?: string; view?: PlannerView }>();
   
-  const [currentView, setCurrentView] = useState<PlannerView>('planner');
+  const [currentView, setCurrentView] = useState<PlannerView>(params.view || 'planner');
   const [activeFilter, setActiveFilter] = useState<FilterType>(params.filter || 'all');
   
   // Modal state for editing inventory items
@@ -76,6 +95,25 @@ export default function PlannerScreen() {
   
   // Use the childId from params, stored value, or first available child
   const childId = params.childId || storedChildId || childrenData?.myChildren?.edges?.[0]?.node?.id || '';
+
+  // Analytics hooks temporarily disabled - preserved for future enhancement
+  // const {
+  //   overview,
+  //   usage,
+  //   trends,
+  //   inventory: inventoryInsights,
+  //   loading: analyticsLoading,
+  //   error: analyticsError,
+  //   refetch: refetchAnalytics,
+  // } = useAnalyticsDashboard(childId);
+
+  // const {
+  //   enhancedData,
+  //   insights: enhancedInsights,
+  //   loading: enhancedLoading,
+  //   error: enhancedError,
+  //   refetch: refetchEnhanced,
+  // } = useEnhancedAnalytics({ childId });
 
   // Fetch inventory data
   const { 
@@ -292,11 +330,13 @@ export default function PlannerScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         {/* Header */}
         <ThemedView style={styles.header}>
-          <ThemedText type="title" style={styles.headerTitle}>Planner</ThemedText>
+          <ThemedText type="title" style={styles.headerTitle}>Dashboard</ThemedText>
           <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {currentView === 'planner' ? 'Planning and inventory management' : 'Filtered inventory view'}
+            {currentView === 'planner' ? 'Upcoming tasks and insights' : 'Inventory management'}
           </ThemedText>
         </ThemedView>
+
+        {/* Canadian Trust Indicator - temporarily hidden with analytics */}
 
         {/* Filter Toggle - only show in inventory view */}
         {currentView === 'inventory' && (
@@ -342,7 +382,7 @@ export default function PlannerScreen() {
           </ThemedView>
         )}
         
-        {/* View Toggle */}
+        {/* View Toggle - Analytics temporarily hidden */}
         <ThemedView style={styles.viewToggle}>
           <TouchableOpacity
             style={[
@@ -350,7 +390,10 @@ export default function PlannerScreen() {
               { backgroundColor: currentView === 'planner' ? colors.tint : colors.surface },
               { borderColor: colors.border }
             ]}
-            onPress={() => setCurrentView('planner')}
+            onPress={() => {
+              setCurrentView('planner');
+              router.setParams({ view: 'planner' });
+            }}
             accessibilityRole="button"
             accessibilityLabel="Switch to planner view"
           >
@@ -361,13 +404,38 @@ export default function PlannerScreen() {
               Planner
             </Text>
           </TouchableOpacity>
+          {/* Analytics toggle temporarily hidden for UI/UX improvements
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              { backgroundColor: currentView === 'analytics' ? colors.tint : colors.surface },
+              { borderColor: colors.border }
+            ]}
+            onPress={() => {
+              setCurrentView('analytics');
+              router.setParams({ view: 'analytics' });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Switch to analytics view"
+          >
+            <Text style={[
+              styles.toggleText,
+              { color: currentView === 'analytics' ? '#FFFFFF' : colors.text }
+            ]}>
+              Analytics
+            </Text>
+          </TouchableOpacity>
+          */}
           <TouchableOpacity
             style={[
               styles.toggleButton,
               { backgroundColor: currentView === 'inventory' ? colors.tint : colors.surface },
               { borderColor: colors.border }
             ]}
-            onPress={() => setCurrentView('inventory')}
+            onPress={() => {
+              setCurrentView('inventory');
+              router.setParams({ view: 'inventory' });
+            }}
             accessibilityRole="button"
             accessibilityLabel="Switch to inventory view"
           >
@@ -386,7 +454,33 @@ export default function PlannerScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {currentView === 'planner' ? (
+          {currentView === 'analytics' ? (
+            /* Analytics View - Coming Soon */
+            <ThemedView style={styles.section}>
+              <View style={[styles.comingSoonContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <IconSymbol
+                  name="chart.line.uptrend.xyaxis"
+                  size={48}
+                  color={colors.tint}
+                  style={styles.comingSoonIcon}
+                />
+                <ThemedText type="title" style={[styles.comingSoonTitle, { color: colors.text }]}>
+                  Analytics Coming Soon!
+                </ThemedText>
+                <ThemedText style={[styles.comingSoonText, { color: colors.textSecondary }]}>
+                  We're working on making your analytics experience amazing.
+                </ThemedText>
+                <ThemedText style={[styles.comingSoonSubtext, { color: colors.textSecondary }]}>
+                  Track patterns, predict needs, and optimize your diaper planning - all coming in the next update.
+                </ThemedText>
+                <View style={[styles.comingSoonBadge, { backgroundColor: colors.tint }]}>
+                  <ThemedText style={[styles.comingSoonBadgeText, { color: '#FFFFFF' }]}>
+                    Under Development
+                  </ThemedText>
+                </View>
+              </View>
+            </ThemedView>
+          ) : currentView === 'planner' ? (
             /* Planner View - Predictive Cards for Future Needs */
             <ThemedView style={styles.section}>
               {/* Planner Header */}
@@ -573,13 +667,6 @@ export default function PlannerScreen() {
             </ThemedView>
           )}
 
-          {/* Canadian Trust Indicator */}
-          <ThemedView style={[styles.trustIndicator, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <IconSymbol name="checkmark.shield.fill" size={20} color={colors.info} />
-            <ThemedText style={[styles.trustText, { color: colors.textSecondary }]}>
-              Data stored securely in Canada
-            </ThemedText>
-          </ThemedView>
 
           {/* Bottom spacing for tab bar */}
           <View style={{ height: 100 }} />
@@ -604,18 +691,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 12,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 6,
+    letterSpacing: -0.5,
+    lineHeight: 36,
   },
   subtitle: {
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: 17,
+    marginBottom: 24,
+    lineHeight: 24,
+    fontWeight: '400',
+    opacity: 0.85,
   },
   filterSection: {
     marginHorizontal: 20,
@@ -668,12 +760,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 20,
+    letterSpacing: -0.3,
+    lineHeight: 28,
   },
   plannerItem: {
     flexDirection: 'row',
@@ -812,19 +906,56 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     marginHorizontal: 12,
   },
-  trustIndicator: {
+  predictionCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  predictionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  predictionContent: {
+    flex: 1,
+  },
+  predictionTitle: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  predictionSubtitle: {
+    fontSize: 12,
+  },
+  predictionDetails: {
+    fontSize: 14,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  predictionConfidence: {
+    fontSize: 12,
+    marginBottom: 16,
+  },
+  predictionActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  predictionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 20,
-    gap: 8,
+    gap: 6,
   },
-  trustText: {
+  predictionButtonSecondary: {
+    borderWidth: 1,
+  },
+  predictionButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   // Planner-specific styles
   plannerHeader: {
@@ -888,5 +1019,535 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'capitalize',
+  },
+  // Analytics-specific styles
+  statsGrid: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  insightCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  insightTitle: {
+    flex: 1,
+    fontSize: 16,
+  },
+  actionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  actionText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  insightMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  chartSpacing: {
+    height: 20,
+  },
+  trendInsights: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  trendItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  trendLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  trendValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  costCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 16,
+  },
+  costTitle: {
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  costStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  costItem: {
+    alignItems: 'center',
+  },
+  costLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  costValue: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Design-specified chart visualization styles
+  peakHoursCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  peakHoursTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  peakHoursInsight: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  peakHoursDescription: {
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  consistencyCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  consistencyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  consistencyInsight: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  trendsCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  trendAnalysisContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+  },
+  trendAnalysisText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  trendContextText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  costAnalysisCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  costAnalysisTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  costMetricsContainer: {
+    marginBottom: 16,
+  },
+  costMetricMain: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  costMetricSecondary: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  costEfficiency: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  savingsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  savingsText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  savingsPlanButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  savingsPlanButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Enhanced Canadian Trust Indicator Styles
+  enhancedTrustIndicator: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#DC2626',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  trustBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  enhancedCanadianFlag: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  trustTextContainer: {
+    flex: 1,
+  },
+  trustMainText: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  trustSubText: {
+    fontSize: 12,
+    fontWeight: '500',
+    opacity: 0.9,
+  },
+  trustShield: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  shieldText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  // Enhanced Card Design System
+  enhancedPeakHoursCard: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  enhancedConsistencyCard: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  enhancedTrendsCard: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  enhancedCostAnalysisCard: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  cleanIcon: {
+    marginRight: 4,
+  },
+  cardIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  cardIcon: {
+    fontSize: 24,
+  },
+  cardTitleContainer: {
+    flex: 1,
+  },
+  enhancedCardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    opacity: 0.7,
+  },
+  chartContainer: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 12,
+  },
+  insightContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  enhancedInsightText: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  confidenceBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  confidenceText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  successBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  successText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  infoBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  infoText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  costMetricsGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  efficiencyBadge: {
+    marginHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  efficiencyText: {
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  enhancedSavingsContainer: {
+    marginHorizontal: 20,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  savingsIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  savingsContent: {
+    flex: 1,
+  },
+  savingsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  savingsDescription: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  enhancedSavingsPlanButton: {
+    marginHorizontal: 24,
+    marginBottom: 24,
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#0891B2',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  enhancedButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  // Coming Soon styles
+  comingSoonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginTop: 40,
+    marginBottom: 40,
+  },
+  comingSoonIcon: {
+    marginBottom: 24,
+  },
+  comingSoonTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  comingSoonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 12,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  comingSoonSubtext: {
+    fontSize: 14,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 280,
+  },
+  comingSoonBadge: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  comingSoonBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

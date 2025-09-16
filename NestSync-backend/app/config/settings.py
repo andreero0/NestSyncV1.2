@@ -77,8 +77,9 @@ class Settings(BaseSettings):
     cors_origins: List[str] = Field(
         default=[
             "http://localhost:3000",
+            "http://localhost:8081",
             "http://localhost:8082",
-            "http://localhost:8083", 
+            "http://localhost:8083",
             "http://localhost:8084",
             "http://localhost:8088",
             "http://localhost:19006", 

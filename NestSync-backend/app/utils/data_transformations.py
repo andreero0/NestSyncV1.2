@@ -93,3 +93,41 @@ def is_valid_canadian_province(province: str) -> bool:
 def get_provinces_in_timezone(timezone: str) -> List[str]:
     """Get list of provinces in a given timezone"""
     return TIMEZONE_CANADA.get(timezone, [])
+
+
+def get_timezone_aware_today_boundaries(user_timezone: str = DEFAULT_CANADIAN_TIMEZONE) -> tuple:
+    """
+    Get timezone-aware start and end datetime boundaries for "today"
+    Returns UTC datetimes for database queries
+
+    Args:
+        user_timezone: User's timezone (defaults to Toronto)
+
+    Returns:
+        tuple: (today_start_utc, today_end_utc)
+    """
+    import pytz
+    from datetime import datetime, time, timedelta, timezone
+
+    try:
+        user_tz = pytz.timezone(user_timezone)
+    except pytz.UnknownTimeZoneError:
+        user_tz = pytz.timezone(DEFAULT_CANADIAN_TIMEZONE)
+
+    # Get today's date in user's timezone
+    now_user_tz = datetime.now(user_tz)
+    today_date = now_user_tz.date()
+
+    # Create start of day (00:00) in user's timezone
+    today_start = datetime.combine(today_date, time.min)
+    today_start = user_tz.localize(today_start)
+
+    # Create end of day (start of tomorrow) in user's timezone
+    today_end = datetime.combine(today_date + timedelta(days=1), time.min)
+    today_end = user_tz.localize(today_end)
+
+    # Convert to UTC for database queries
+    today_start_utc = today_start.astimezone(pytz.UTC)
+    today_end_utc = today_end.astimezone(pytz.UTC)
+
+    return today_start_utc, today_end_utc

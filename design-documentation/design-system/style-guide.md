@@ -1,24 +1,21 @@
-# NestSync Complete Style Guide
-
-Comprehensive design system specifications for Canadian diaper planning mobile application with psychological methodology for stressed parent user base.
-
 ---
-title: NestSync Complete Style Guide
-description: Comprehensive design system with psychological methodology for stressed parents
-feature: Core Design System
-last-updated: 2025-01-21
+title: NestSync Parent-Focused Design System
+description: Complete style guide for stress-reducing UI components targeting sleep-deprived caregivers
+last-updated: 2025-01-15
 version: 1.0.0
-related-files: 
-  - tokens/colors.md
-  - tokens/typography.md
-  - tokens/spacing.md
-  - components/README.md
+related-files:
+  - ./tokens/colors.md
+  - ./tokens/typography.md
+  - ./tokens/spacing.md
+  - ./components/progress-indicators.md
 dependencies:
-  - NativeBase component library
-  - NativeWind utility-first styling
-  - React Native Reanimated animations
+  - Parent psychology research
+  - Cognitive load theory
+  - WCAG AA accessibility standards
 status: approved
 ---
+
+# NestSync Parent-Focused Design System
 
 ## Design Philosophy & Psychology
 

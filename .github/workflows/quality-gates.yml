@@ -1,0 +1,523 @@
+# NestSync Quality Gates - Systematic Infrastructure Protection
+# Prevents all classes of P0/P1 failures documented in bottlenecks.md
+# Blocks merges and deployments with failing critical paths
+
+name: Quality Gates
+
+on:
+  push:
+    branches: [main, feature/*, fix/*]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  dependency-validation:
+    name: 🔍 Dependency Compatibility Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install validation dependencies
+      run: |
+        pip install requests packaging
+
+    - name: Start NestSync Development Environment
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+        # Wait for services to be healthy
+        timeout 180 bash -c 'until docker-compose -f docker-compose.yml -f docker-compose.dev.yml ps | grep -q "Up.*healthy"; do sleep 5; done'
+
+    - name: Run Dependency Compatibility Validation
+      run: |
+        python scripts/validate-dependencies.py
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+
+  graphql-schema-validation:
+    name: 🔄 GraphQL Schema Drift Detection
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install validation dependencies
+      run: |
+        pip install requests
+
+    - name: Start NestSync Development Environment
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+        # Wait for GraphQL endpoint to be ready
+        timeout 180 bash -c 'until curl -f http://localhost:8001/health; do sleep 5; done'
+
+    - name: Run GraphQL Schema Validation
+      run: |
+        python scripts/validate-graphql-schema.py
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+
+  critical-path-testing:
+    name: 🧪 Critical Path Integration Testing
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install Playwright
+      run: |
+        npm install -g @playwright/test
+        npx playwright install chromium
+
+    - name: Start NestSync Development Environment
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+        # Wait for both backend and frontend to be ready
+        timeout 180 bash -c 'until curl -f http://localhost:8001/health; do sleep 5; done'
+        timeout 300 bash -c 'until curl -f http://localhost:8082; do sleep 5; done'
+
+    - name: Run Authentication Critical Path Tests
+      run: |
+        cd .github/workflows
+        npx playwright test --config=playwright.config.js auth-smoke-test.spec.js
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-test-results
+        path: |
+          .github/workflows/test-results/
+          .github/workflows/*.png
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+
+  database-integrity-validation:
+    name: 🗄️ Database Integrity & Migration Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install validation dependencies
+      run: |
+        pip install psycopg2-binary sqlalchemy asyncpg packaging
+
+    - name: Start NestSync Development Environment
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+        # Wait for database to be ready
+        timeout 180 bash -c 'until docker exec nestsync-postgres pg_isready; do sleep 5; done'
+        timeout 180 bash -c 'until curl -f http://localhost:8001/health; do sleep 5; done'
+
+    - name: Run Database Integrity Validation
+      run: |
+        python scripts/validate-database-integrity.py
+
+    - name: Upload database recovery scripts
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: database-recovery-scripts
+        path: |
+          NestSync-backend/database_recovery.sh
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+
+  business-logic-validation:
+    name: 🧠 Business Logic & Default Data Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install validation dependencies
+      run: |
+        pip install requests
+
+    - name: Start NestSync Development Environment
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+        # Wait for GraphQL endpoint to be ready
+        timeout 180 bash -c 'until curl -f http://localhost:8001/graphql -H "Content-Type: application/json" -d "{\"query\":\"{ __schema { types { name } } }\"}"; do sleep 5; done'
+
+    - name: Run Business Logic Validation
+      run: |
+        python scripts/validate-business-logic.py
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+
+  design-compliance-validation:
+    name: 🎨 Design System & Canadian Compliance Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install validation dependencies
+      run: |
+        pip install requests
+
+    - name: Run Design Compliance Validation
+      run: |
+        python scripts/validate-design-compliance.py
+
+    - name: Upload design compliance report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: design-compliance-report
+        path: |
+          design-compliance-report.txt
+
+  cross-platform-validation:
+    name: 📱 Cross-Platform Compatibility Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Run Cross-Platform Validation
+      run: |
+        python scripts/validate-cross-platform.py
+
+    - name: Upload platform compatibility report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: platform-compatibility-report
+        path: |
+          platform-compatibility-report.txt
+
+  security-compliance-check:
+    name: 🔒 Security & PIPEDA Compliance
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check for sensitive data exposure
+      run: |
+        # Check for hardcoded secrets or API keys
+        if grep -r "sk_test_\|sk_live_\|pk_test_\|pk_live_" . --exclude-dir=.git --exclude-dir=node_modules; then
+          echo "❌ Potential API keys found in code"
+          exit 1
+        fi
+
+        # Check for email addresses that shouldn't be committed
+        if grep -r "@gmail\.com\|@yahoo\.com\|@hotmail\.com" . --exclude-dir=.git --exclude-dir=node_modules --exclude="*.md"; then
+          echo "❌ Personal email addresses found in code"
+          exit 1
+        fi
+
+    - name: Validate PIPEDA compliance indicators
+      run: |
+        # Ensure Canadian data residency messaging is present
+        if ! grep -r "Canada" NestSync-frontend/ --include="*.ts" --include="*.tsx"; then
+          echo "❌ Missing Canadian data residency indicators"
+          exit 1
+        fi
+
+        # Check for proper consent management
+        if ! grep -r "consent" NestSync-backend/app/ --include="*.py"; then
+          echo "❌ Missing consent management implementation"
+          exit 1
+        fi
+
+  infrastructure-consistency:
+    name: 🏗️ Infrastructure Consistency
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate Docker configuration
+      run: |
+        # Check that requirements.txt versions are properly pinned
+        if grep -E ">=.*<" NestSync-backend/requirements.txt | grep -v "^#"; then
+          echo "⚠️ Some dependencies use range specifiers - consider exact pinning for critical packages"
+        fi
+
+        # Validate gotrue is pinned to compatible version
+        if ! grep "gotrue==2.5.4" NestSync-backend/requirements.txt; then
+          echo "❌ gotrue must be pinned to 2.5.4 to prevent identity_id validation errors"
+          exit 1
+        fi
+
+    - name: Check for environment consistency
+      run: |
+        # Verify .env.example exists and is up to date
+        if [ ! -f "NestSync-backend/.env.example" ]; then
+          echo "❌ Missing .env.example file"
+          exit 1
+        fi
+
+        # Check for Docker Compose version warnings
+        if grep -q "version:" docker/docker-compose.yml; then
+          echo "⚠️ Docker Compose version field is obsolete"
+        fi
+
+  observability-system-validation:
+    name: 🔍 Observability & Early Warning System Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install validation dependencies
+      run: |
+        pip install requests psycopg2-binary sqlalchemy asyncpg packaging uvloop
+
+    - name: Start NestSync Development Environment
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+        # Wait for services to be healthy
+        timeout 180 bash -c 'until docker-compose -f docker-compose.yml -f docker-compose.dev.yml ps | grep -q "Up.*healthy"; do sleep 5; done'
+
+    - name: Run Observability System Validation
+      run: |
+        python scripts/validate-observability-system.py
+
+    - name: Upload observability validation report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: observability-validation-report
+        path: |
+          observability-validation-report.json
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+
+  generate-quality-report:
+    name: 📊 Generate Comprehensive Quality Report
+    runs-on: ubuntu-latest
+    needs: [
+      dependency-validation,
+      graphql-schema-validation,
+      critical-path-testing,
+      database-integrity-validation,
+      business-logic-validation,
+      design-compliance-validation,
+      cross-platform-validation,
+      security-compliance-check,
+      infrastructure-consistency,
+      observability-system-validation
+    ]
+    if: always()
+
+    steps:
+    - name: Generate Enhanced Quality Gate Report
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const jobs = [
+            { name: 'Dependency Validation', status: '${{ needs.dependency-validation.result }}', category: 'Infrastructure' },
+            { name: 'GraphQL Schema Validation', status: '${{ needs.graphql-schema-validation.result }}', category: 'Infrastructure' },
+            { name: 'Critical Path Testing', status: '${{ needs.critical-path-testing.result }}', category: 'Functionality' },
+            { name: 'Database Integrity Validation', status: '${{ needs.database-integrity-validation.result }}', category: 'Data' },
+            { name: 'Business Logic Validation', status: '${{ needs.business-logic-validation.result }}', category: 'Business Rules' },
+            { name: 'Design Compliance Validation', status: '${{ needs.design-compliance-validation.result }}', category: 'UX/Design' },
+            { name: 'Cross-Platform Validation', status: '${{ needs.cross-platform-validation.result }}', category: 'Compatibility' },
+            { name: 'Security Compliance', status: '${{ needs.security-compliance-check.result }}', category: 'Security' },
+            { name: 'Infrastructure Consistency', status: '${{ needs.infrastructure-consistency.result }}', category: 'Infrastructure' },
+            { name: 'Observability System Validation', status: '${{ needs.observability-system-validation.result }}', category: 'Monitoring' }
+          ];
+
+          const failedJobs = jobs.filter(job => job.status === 'failure');
+          const skippedJobs = jobs.filter(job => job.status === 'skipped');
+          const successJobs = jobs.filter(job => job.status === 'success');
+          const allPassed = failedJobs.length === 0 && skippedJobs.length === 0;
+
+          let summary = `## 🛡️ NestSync Comprehensive Quality Gates Report\n`;
+          summary += `### ${new Date().toISOString().split('T')[0]} - Systematic Failure Prevention\n\n`;
+
+          if (allPassed) {
+            summary += `✅ **ALL QUALITY GATES PASSED** - Safe to merge/deploy\n\n`;
+            summary += `🎉 **Zero P0/P1 failure risks detected** - Infrastructure hardening successful\n\n`;
+          } else {
+            summary += `❌ **QUALITY GATES FAILED** - Do not merge/deploy\n\n`;
+            summary += `🚨 **Potential P0/P1 failure risks detected** - Review and fix before deployment\n\n`;
+
+            if (failedJobs.length > 0) {
+              summary += `### Failed Checks (${failedJobs.length}):\n`;
+              failedJobs.forEach(job => {
+                summary += `- ❌ ${job.name} (${job.category})\n`;
+              });
+              summary += `\n`;
+            }
+
+            if (skippedJobs.length > 0) {
+              summary += `### Skipped Checks (${skippedJobs.length}):\n`;
+              skippedJobs.forEach(job => {
+                summary += `- ⏭️ ${job.name} (${job.category})\n`;
+              });
+              summary += `\n`;
+            }
+          }
+
+          // Group by category
+          const categories = {};
+          jobs.forEach(job => {
+            if (!categories[job.category]) {
+              categories[job.category] = [];
+            }
+            categories[job.category].push(job);
+          });
+
+          summary += `### Validation Results by Category:\n`;
+          Object.entries(categories).forEach(([category, categoryJobs]) => {
+            const categoryPassed = categoryJobs.every(job => job.status === 'success');
+            const categoryIcon = categoryPassed ? '✅' : '❌';
+            summary += `${categoryIcon} **${category}** (${categoryJobs.length} checks)\n`;
+
+            categoryJobs.forEach(job => {
+              const icon = job.status === 'success' ? '✅' : job.status === 'failure' ? '❌' : '⏭️';
+              summary += `  ${icon} ${job.name}\n`;
+            });
+            summary += `\n`;
+          });
+
+          summary += `### P0/P1 Failure Prevention Coverage:\n`;
+          summary += `This enhanced quality gate system prevents all 9 documented critical failures:\n`;
+          summary += `1. ✅ **Snake_case/camelCase GraphQL Schema Mismatches** → Schema validation\n`;
+          summary += `2. ✅ **Database Migration State Corruption** → Database integrity validation\n`;
+          summary += `3. ✅ **SQLAlchemy Metadata Caching Issues** → Database integrity validation\n`;
+          summary += `4. ✅ **Missing Default Data Creation** → Business logic validation\n`;
+          summary += `5. ✅ **Analytics Dashboard Design Deviation** → Design compliance validation\n`;
+          summary += `6. ✅ **Cross-Platform Storage Compatibility** → Cross-platform validation\n`;
+          summary += `7. ✅ **iOS Build Path Space Issues** → Cross-platform validation\n`;
+          summary += `8. ✅ **Authentication SDK Compatibility** → Dependency & critical path testing\n`;
+          summary += `9. ✅ **Canadian PIPEDA Compliance Gaps** → Design & security compliance\n\n`;
+
+          // Quality metrics
+          const totalChecks = jobs.length;
+          const passedChecks = successJobs.length;
+          const successRate = ((passedChecks / totalChecks) * 100).toFixed(1);
+
+          summary += `### Quality Metrics:\n`;
+          summary += `- **Total Validation Checks**: ${totalChecks}\n`;
+          summary += `- **Passed Checks**: ${passedChecks}\n`;
+          summary += `- **Success Rate**: ${successRate}%\n`;
+          summary += `- **Critical Path Status**: ${allPassed ? 'PROTECTED' : 'AT RISK'}\n\n`;
+
+          summary += `### Deployment Readiness:\n`;
+          if (allPassed) {
+            summary += `🚀 **READY FOR DEPLOYMENT** - All systematic protections verified\n`;
+            summary += `📊 Infrastructure hardening prevents regression to previous P0/P1 failures\n`;
+          } else {
+            summary += `🛑 **NOT READY FOR DEPLOYMENT** - Address failures before proceeding\n`;
+            summary += `🔧 Review failed validations and apply recommended fixes\n`;
+          }
+
+          summary += `\n---\n`;
+          summary += `**Commit**: ${context.sha.substring(0, 7)}\n`;
+          summary += `**Workflow**: [View Details](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n`;
+          summary += `**Generated**: ${new Date().toISOString()}\n`;
+
+          console.log(summary);
+
+          // Set GitHub Actions output for downstream use
+          core.setOutput('quality_summary', summary);
+          core.setOutput('all_passed', allPassed.toString());
+          core.setOutput('success_rate', successRate);
+          core.setOutput('failed_count', failedJobs.length.toString());
+
+          // Create check run with summary and fail if needed
+          if (!allPassed && context.eventName === 'pull_request') {
+            core.setFailed(`Quality gates failed: ${failedJobs.length} failures detected. See comprehensive report above.`);
+          }

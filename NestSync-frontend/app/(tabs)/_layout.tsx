@@ -74,10 +74,10 @@ export default function TabLayout() {
           options={{
             title: 'Settings',
             tabBarIcon: ({ color, focused }) => (
-              <IconSymbol 
-                size={focused ? 30 : 28} 
-                name={focused ? "gear.circle.fill" : "gear.circle"} 
-                color={color} 
+              <IconSymbol
+                size={focused ? 30 : 28}
+                name={focused ? "gear.circle.fill" : "gear.circle"}
+                color={color}
               />
             ),
             tabBarAccessibilityLabel: 'Settings tab. Manage account and privacy settings.',

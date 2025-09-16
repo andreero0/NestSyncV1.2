@@ -7,6 +7,109 @@ Document development obstacles, debugging discoveries, and solutions to prevent 
 
 ---
 
+## Critical Schema Naming Convention Issues
+
+### 1. snake_case vs camelCase GraphQL Schema Mismatch (P0 - Critical)
+
+**Date Encountered**: 2025-09-15
+**Feature**: Analytics Dashboard
+**Impact**: Multiple GraphQL query failures, missing analytics data
+
+**Problem Description**:
+- Backend GraphQL resolvers use snake_case field names (`child_id`, `weekly_data`)
+- Frontend queries use camelCase field names (`childId`, `weeklyData`)
+- Response wrapper objects contain nested data objects but frontend queries access fields directly
+- This causes recurring "Cannot query field" errors across analytics system
+
+**Examples of Failing Queries**:
+```
+"Cannot query field 'childId' on type 'WeeklyTrendsResponse'"
+"Cannot query field 'averageWeeklyChanges' on type 'WeeklyTrendsResponse'"
+"Cannot query field 'currentItems' on type 'InventoryInsightsResponse'"
+```
+
+**Root Cause Analysis**:
+- Backend Strawberry GraphQL auto-generates camelCase from snake_case Python fields
+- Frontend queries written assuming flat response structure
+- Actual response has wrapper objects containing nested data (`trends`, `insights`, `summary`)
+- This creates compound naming convention + structural issues
+
+**Immediate Solution**:
+1. Fix GraphQL queries to match actual response structure
+2. Update TypeScript types to reflect nested response objects
+3. Update frontend hooks to access nested data correctly
+
+**Systemic Solution Required**:
+- **Phase 1**: Document all snake_case/camelCase inconsistencies across codebase
+- **Phase 2**: Implement consistent naming convention (prefer camelCase for consistency)
+- **Phase 3**: Create schema validation tools to prevent future mismatches
+- **Phase 4**: Add automated tests that verify GraphQL query-response compatibility
+
+**Prevention Strategies**:
+1. GraphQL schema introspection validation in CI/CD
+2. Automated frontend type generation from backend schema
+
+---
+
+## Analytics Dashboard Design Deviation & Restoration (P1 - High)
+
+**Date Encountered**: 2025-09-15
+**Feature**: Analytics Dashboard
+**Impact**: Complete deviation from original psychology-driven UX design
+
+**Problem Description**:
+Analytics dashboard was implemented as generic technical data visualization instead of the psychology-driven, confidence-building experience specified in the original design documentation.
+
+**Missing Core Elements**:
+1. **Canadian Trust Indicators**: "🇨🇦 Data stored in Canada" privacy reassurance
+2. **Psychology-Driven Language**: "Your baby's feeding schedule" vs "Average Daily Changes"
+3. **Core Sections**: Missing "📈 Your Baby's Patterns", "🔮 Smart Predictions", "💡 Smart Insights"
+4. **Confidence Building**: Phrases like "✅ Excellent consistency" and "normal for baby's age"
+5. **Stress Reduction**: Positive framing vs technical metrics
+
+**Original Design Vision**:
+Per `/design-documentation/features/analytics-dashboard/`, the analytics system should "transform raw diaper change data into **confidence-building insights** for overwhelmed Canadian parents through stress reduction, actionable intelligence, and privacy-first architecture."
+
+**Technical Restoration Completed**:
+1. ✅ Added Canadian trust indicator with flag and privacy messaging
+2. ✅ Transformed card titles to psychology-driven language:
+   - "Today's Changes" → "Baby's Schedule Today"
+   - "Current Streak" → "Feeding Pattern Streak"
+   - "Efficiency" → "Diaper Efficiency" with "🌟 Excellent!" target
+3. ✅ Implemented missing core sections:
+   - "📈 Your Baby's Patterns" (main section)
+   - "🔮 Smart Predictions" with confidence indicators and actions
+   - "💡 Smart Insights" with lightbulb icon
+4. ✅ Added confidence-building language and age-appropriate context
+
+**Root Cause Analysis**:
+Implementation focused on technical functionality (charts working, data loading) but missed the **core UX philosophy** documented in design specifications. The original design is specifically a **psychology-driven support system** for stressed parents, not a generic analytics dashboard.
+
+**Files Modified**:
+- `NestSync-frontend/app/(tabs)/planner.tsx`: Restored psychology-driven UI elements
+- Added Canadian trust indicators, prediction cards, and confidence-building language
+
+**Next Steps**:
+1. Replace generic charts with design-specified visualizations (simple dot charts)
+2. Add peak hours analysis with specific times (7-9am, 2-4pm, 8-10pm)
+3. Implement healthcare provider integration features
+3. Consistent naming convention documentation in CLAUDE.md
+4. Code review checklist for schema changes
+
+**Files Affected**:
+- `NestSync-frontend/lib/graphql/analytics-queries.ts` (queries)
+- `NestSync-frontend/hooks/useAnalytics.ts` (data access)
+- `NestSync-backend/app/graphql/analytics_types.py` (backend types)
+- `NestSync-backend/app/graphql/analytics_resolvers.py` (resolvers)
+
+**Recommended Next Steps**:
+1. Create dedicated branch: `fix/graphql-naming-conventions`
+2. Audit entire codebase for naming inconsistencies
+3. Implement systematic fix across all GraphQL operations
+4. Add schema validation tools and tests
+
+---
+
 ## Critical Database & Migration Issues
 
 ### 1. Database Migration State Corruption (P0 - Critical)
@@ -392,6 +495,88 @@ class NotificationPreferencesType:
 
 ---
 
+### 8. Analytics Dashboard GraphQL Query Schema Mismatch (P0 - Critical)
+
+**Date Encountered**: 2025-09-15
+**Feature**: Analytics Dashboard Implementation
+**Impact**: Complete analytics dashboard failure - "Unable to load analytics" error on iOS/Android
+
+**Problem Description**:
+- Analytics dashboard showed "Unable to load analytics. Check your connection." error
+- Backend GraphQL logs showing `Cannot query field 'getAnalyticsOverview' on type 'Query'. Did you mean 'getAnalyticsDashboard'?`
+- Frontend sending persistent `GetAnalyticsOverview` query every few minutes
+- Query mismatch prevented any analytics data from loading despite authentication working
+- Charts showed controlled error states instead of crashing (null safety working)
+
+**Root Cause Analysis**:
+- Frontend Apollo Client cache or Metro bundler cache contained stale `getAnalyticsOverview` query reference
+- Backend GraphQL schema only exposes `getAnalyticsDashboard` resolver
+- Hidden or cached GraphQL query operation not visible in codebase search
+- Query registration mismatch between frontend expectations and backend schema
+- Apollo Client automatic persisted queries may have cached invalid query
+
+**Immediate Solution Process**:
+```bash
+# 1. Clear all caches to remove stale query references
+npx expo start --clear
+rm -rf node_modules/.cache
+npm start -- --reset-cache
+
+# 2. Search for hidden query references
+grep -r "getAnalyticsOverview" . --exclude-dir=node_modules
+rg "GetAnalyticsOverview" --type-add 'cache:*.cache' --type cache
+
+# 3. Verify GraphQL schema alignment
+curl -X POST http://localhost:8001/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ __schema { queryType { fields { name } } } }"}' | jq .
+```
+
+**Technical Details**:
+- **Frontend Query Expected**: `getAnalyticsOverview(childId: String)`
+- **Backend Schema Available**: `getAnalyticsDashboard(childId: String)`
+- **Error Pattern**: Query sent every 3-5 minutes due to Apollo Client polling
+- **User Impact**: Analytics dashboard completely non-functional on native platforms
+- **Web Behavior**: May work differently due to different Apollo Client configuration
+
+**Implementation History**:
+1. **Phase 1**: Fixed render errors with comprehensive null safety in `useAnalytics.ts`
+2. **Phase 2**: Resolved Victory Native XL web compatibility with platform-conditional rendering
+3. **Phase 3**: Fixed backend SQLAlchemy imports and eager loading issues
+4. **Phase 4**: Identified persistent GraphQL query mismatch as root cause
+
+**Files Involved**:
+- `hooks/useAnalytics.ts` - Analytics hooks with null safety fixes
+- `lib/graphql/analytics-queries.ts` - Query definitions and types
+- `NestSync-backend/app/graphql/analytics_resolvers.py` - Backend resolver fixes
+- Apollo Client cache and Metro bundler cache (hidden references)
+
+**Prevention Strategies**:
+1. Implement GraphQL schema validation in CI/CD pipeline
+2. Add frontend/backend query compatibility tests
+3. Use GraphQL code generation to prevent schema drift
+4. Regular cache clearing during development
+5. Monitor GraphQL query logs for schema mismatches
+
+**Quality Assurance Results**:
+- ✅ Null safety implemented - no more crashes on missing data
+- ✅ Cross-platform chart rendering working (Victory Native XL + Recharts)
+- ✅ Backend resolvers fixed and importing correctly
+- ✅ Authentication and user session management working
+- ❌ Analytics data still not loading due to query mismatch
+- ❌ iOS/Android showing "Unable to load analytics" error
+
+**Final Resolution Plan**:
+1. Clear all Apollo Client and Metro caches completely
+2. Search entire codebase for hidden `getAnalyticsOverview` references
+3. Update all query references to use `getAnalyticsDashboard`
+4. Validate GraphQL schema alignment with introspection
+5. Test end-to-end analytics loading on all platforms
+
+**Status**: Critical - blocking analytics functionality on native platforms
+
+---
+
 ## Development Workflow Learnings
 
 ### Key Patterns for Future Development
@@ -451,6 +636,88 @@ npx playwright test --browser=chromium
 - [ ] Collect evidence (screenshots, logs)
 - [ ] Verify end-to-end functionality
 - [ ] Document testing results
+
+---
+
+## Critical Authentication Infrastructure Failures
+
+### 9. Gotrue SDK Compatibility Authentication Crisis (P0 - Critical)
+
+**Date Encountered**: 2025-09-15
+**Feature**: User Authentication System
+**Impact**: Complete authentication system failure - no users can sign in
+
+**Problem Description**:
+- Authentication fails with Pydantic validation error: `1 validation error for Session user.identities.0.identity_id Field required`
+- Error occurs when gotrue SDK v2.9.1 expects `identity_id` field but Supabase API returns `id` field
+- All sign-in attempts fail with test credentials (parents@nestsync.com / Shazam11#)
+- Frontend displays full error message to users instead of graceful error handling
+- Backend logs show: `Error verifying JWT token: Signature has expired` and `Supabase auth error during sign in`
+
+**Root Cause Analysis**:
+- **Version Incompatibility**: gotrue SDK v2.9.1 introduced breaking change in Pydantic validation model
+- **Field Mapping Mismatch**: gotrue expects `identity_id` in user.identities array, Supabase returns `id`
+- **Docker Container Drift**: requirements.txt already pinned gotrue==2.5.4 but Docker container running 2.9.1
+- **Dependency Management Gap**: No validation preventing incompatible SDK versions from being deployed
+- **Systemic Issue**: 9th documented P0/P1 critical infrastructure failure indicating systemic architectural problems
+
+**Immediate Solution Implemented**:
+```python
+# 1. Response transformation function in app/auth/supabase.py
+def _transform_identity_response(response_data: Any) -> Any:
+    """Transform Supabase response for gotrue compatibility"""
+    if hasattr(user, 'identities') and user.identities:
+        for identity in user.identities:
+            if hasattr(identity, 'id') and not hasattr(identity, 'identity_id'):
+                if hasattr(identity, '__setitem__'):
+                    identity['identity_id'] = identity.get('id')
+
+# 2. Applied to all auth methods: sign_up, sign_in, refresh_token
+response = _transform_identity_response(response)
+```
+
+```bash
+# 3. Docker container rebuild to enforce gotrue==2.5.4
+./docker/docker-dev.sh down
+./docker/docker-dev.sh up  # Forces rebuild with pinned version
+```
+
+**Systemic Prevention Required**:
+1. **Dependency Compatibility Validation**: Automated testing of SDK version compatibility
+2. **Docker Build Verification**: Ensure Docker containers match requirements.txt versions
+3. **Authentication Smoke Tests**: Continuous validation of critical authentication paths
+4. **Breaking Change Detection**: Alert system for dependency updates with breaking changes
+5. **Quality Gates**: Block deployments with failing authentication tests
+
+**Pattern Recognition - Critical Infrastructure Failures**:
+This represents the 9th documented P0/P1 failure, indicating a systemic pattern:
+1. Schema mismatches (multiple GraphQL issues)
+2. Database migration corruption
+3. SQLAlchemy metadata caching
+4. UUID type conversion bugs (8 resolver methods)
+5. Missing default data creation
+6. Analytics dashboard design deviation
+7. iOS build path space issues
+8. GraphQL query operation mismatches
+9. **Authentication SDK compatibility (this issue)**
+
+**Files Modified**:
+- `NestSync-backend/app/auth/supabase.py` - Added field transformation
+- `NestSync-backend/requirements.txt` - Already pinned gotrue==2.5.4
+- Docker container rebuild required to apply version pinning
+
+**Prevention Strategies**:
+1. Implement dependency compatibility matrix testing
+2. Add authentication flow smoke tests (every 15 minutes)
+3. Create Docker build verification that matches requirements.txt
+4. Establish quality gates for critical path testing
+5. **Architectural Review**: Address systemic fragility causing recurring P0 failures
+
+**Testing Validation**:
+- [ ] Authentication with parents@nestsync.com succeeds
+- [ ] No Pydantic validation errors in backend logs
+- [ ] Analytics dashboard loads after successful authentication
+- [ ] Docker container gotrue version matches requirements.txt
 
 ---
 

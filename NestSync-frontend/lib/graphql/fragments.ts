@@ -202,3 +202,123 @@ export const NOTIFICATION_DELIVERY_LOG_FRAGMENT = gql`
     createdAt
   }
 `;
+
+// =============================================================================
+// ANALYTICS FRAGMENTS
+// =============================================================================
+
+export const USAGE_ANALYTICS_FRAGMENT = gql`
+  fragment UsageAnalyticsFragment on UsageAnalyticsType {
+    totalChanges
+    weeklyAverage
+    dailyAverage
+    peakHour
+    averageTimeBetweenChanges
+    currentStreak
+    longestStreak
+    weekdayVsWeekend {
+      weekday
+      weekend
+    }
+    hourlyDistribution {
+      hour
+      count
+    }
+    qualityMetrics {
+      averageRating
+      improvementTrend
+    }
+  }
+`;
+
+export const WEEKLY_TRENDS_FRAGMENT = gql`
+  fragment WeeklyTrendsFragment on WeeklyTrendsType {
+    weeklyData {
+      week
+      totalChanges
+      averageRating
+      leakageCount
+      nightChanges
+    }
+    trendAnalysis {
+      changesTrend
+      qualityTrend
+      efficiencyTrend
+    }
+    predictions {
+      nextWeekChanges
+      confidence
+    }
+  }
+`;
+
+export const DAILY_SUMMARY_FRAGMENT = gql`
+  fragment DailySummaryFragment on DailySummaryType {
+    date
+    totalChanges
+    hourlyBreakdown {
+      hour
+      changes
+      efficiency
+    }
+    caregiverStats {
+      caregiver
+      changes
+      averageTime
+    }
+    insights {
+      message
+      type
+      priority
+    }
+  }
+`;
+
+export const USAGE_PATTERN_FRAGMENT = gql`
+  fragment UsagePatternFragment on UsagePatternType {
+    patternType
+    frequency
+    timeRange {
+      start
+      end
+    }
+    confidence
+    recommendations {
+      message
+      actionType
+      estimatedImpact
+    }
+  }
+`;
+
+export const INVENTORY_INSIGHT_FRAGMENT = gql`
+  fragment InventoryInsightFragment on InventoryInsightType {
+    currentStock {
+      size
+      quantity
+      daysRemaining
+    }
+    consumptionRate {
+      size
+      dailyAverage
+      weeklyAverage
+      trend
+    }
+    predictions {
+      size
+      predictedRunOut
+      reorderRecommendation
+      confidence
+    }
+    costAnalysis {
+      monthlySpend
+      costPerChange
+      savingOpportunities {
+        type
+        estimatedSavings
+        description
+      }
+    }
+  }
+`;
+

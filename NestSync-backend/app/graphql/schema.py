@@ -11,6 +11,8 @@ from .auth_resolvers import AuthMutations, AuthQueries
 from .child_resolvers import ChildMutations, ChildQueries
 from .inventory_resolvers import InventoryMutations, InventoryQueries
 from .notification_resolvers import NotificationMutations, NotificationQueries
+from .analytics_resolvers import AnalyticsQueries
+# from .observability_resolvers import ObservabilityQuery, ObservabilityMutation  # Temporarily disabled for testing
 from .types import (
     UserProfile,
     ChildProfile,
@@ -22,6 +24,15 @@ from .types import (
     NotificationPreferences,
     NotificationQueueConnection,
     NotificationDeliveryLogConnection
+)
+from .analytics_types import (
+    UsageAnalyticsResponse,
+    WeeklyTrendsResponse,
+    DailySummaryResponse,
+    UsagePatternsResponse,
+    InventoryInsightsResponse,
+    AnalyticsDashboardResponse,
+    EnhancedAnalyticsDashboardResponse
 )
 
 
@@ -47,7 +58,24 @@ class Query:
     get_notification_preferences: Optional[NotificationPreferences] = strawberry.field(resolver=NotificationQueries.get_notification_preferences)
     get_notification_history: NotificationDeliveryLogConnection = strawberry.field(resolver=NotificationQueries.get_notification_history)
     get_pending_notifications: NotificationQueueConnection = strawberry.field(resolver=NotificationQueries.get_pending_notifications)
-    
+
+    # Analytics queries
+    get_usage_analytics: UsageAnalyticsResponse = strawberry.field(resolver=AnalyticsQueries.get_usage_analytics)
+    get_weekly_trends: WeeklyTrendsResponse = strawberry.field(resolver=AnalyticsQueries.get_weekly_trends)
+    get_daily_summary: DailySummaryResponse = strawberry.field(resolver=AnalyticsQueries.get_daily_summary)
+    get_usage_patterns: UsagePatternsResponse = strawberry.field(resolver=AnalyticsQueries.get_usage_patterns)
+    get_inventory_insights: InventoryInsightsResponse = strawberry.field(resolver=AnalyticsQueries.get_inventory_insights)
+    get_analytics_dashboard: AnalyticsDashboardResponse = strawberry.field(resolver=AnalyticsQueries.get_analytics_dashboard)
+    get_enhanced_analytics_dashboard: EnhancedAnalyticsDashboardResponse = strawberry.field(resolver=AnalyticsQueries.get_enhanced_analytics_dashboard)
+
+    # Observability queries - Real-time system monitoring
+    # Temporarily disabled for testing
+    # monitoring_dashboard = strawberry.field(resolver=ObservabilityQuery.monitoring_dashboard)
+    # system_health_summary = strawberry.field(resolver=ObservabilityQuery.system_health_summary)
+    # active_alerts = strawberry.field(resolver=ObservabilityQuery.active_alerts)
+    # health_checks_by_category = strawberry.field(resolver=ObservabilityQuery.health_checks_by_category)
+    # performance_metrics = strawberry.field(resolver=ObservabilityQuery.performance_metrics)
+
     @strawberry.field
     async def health_check(self) -> str:
         """Health check endpoint for GraphQL"""
@@ -94,6 +122,12 @@ class Mutation:
     create_notification = strawberry.field(resolver=NotificationMutations.create_notification)
     mark_notification_read = strawberry.field(resolver=NotificationMutations.mark_notification_read)
     test_notification = strawberry.field(resolver=NotificationMutations.test_notification)
+
+    # Observability mutations - System monitoring control
+    # Temporarily disabled for testing
+    # run_health_check = strawberry.field(resolver=ObservabilityMutation.run_health_check)
+    # resolve_alert = strawberry.field(resolver=ObservabilityMutation.resolve_alert)
+    # enable_monitoring = strawberry.field(resolver=ObservabilityMutation.enable_monitoring)
 
 
 @strawberry.type

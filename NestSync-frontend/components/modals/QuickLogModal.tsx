@@ -29,6 +29,13 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { LOG_DIAPER_CHANGE_MUTATION } from '@/lib/graphql/mutations';
 import { MY_CHILDREN_QUERY, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
+import {
+  GET_USAGE_ANALYTICS_QUERY,
+  GET_WEEKLY_TRENDS_QUERY,
+  GET_ANALYTICS_DASHBOARD_QUERY,
+  GET_INVENTORY_INSIGHTS_QUERY,
+  GET_DAILY_SUMMARY_QUERY,
+} from '@/lib/graphql/analytics-queries';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -102,6 +109,33 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
       {
         query: GET_DASHBOARD_STATS_QUERY,
         variables: { childId: selectedChildId },
+      },
+      {
+        query: GET_ANALYTICS_DASHBOARD_QUERY,
+        variables: { childId: selectedChildId },
+      },
+      {
+        query: GET_USAGE_ANALYTICS_QUERY,
+        variables: {
+          filters: {
+            childId: selectedChildId,
+            dateRange: null,
+            period: "DAILY",
+            includePredictions: false
+          }
+        },
+      },
+      {
+        query: GET_WEEKLY_TRENDS_QUERY,
+        variables: { childId: selectedChildId, weeksBack: 8 },
+      },
+      {
+        query: GET_INVENTORY_INSIGHTS_QUERY,
+        variables: { childId: selectedChildId, includePredictions: true },
+      },
+      {
+        query: GET_DAILY_SUMMARY_QUERY,
+        variables: { childId: selectedChildId, targetDate: new Date().toISOString().split('T')[0] },
       },
     ],
   });
