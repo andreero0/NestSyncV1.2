@@ -137,23 +137,26 @@ export function useTimelineData({
     };
   }, []);
 
-  // Generate user-friendly event titles
+  // Generate user-friendly event titles with caregiver attribution
   const generateEventTitle = (type: TimelineEventType, usageLog: any): string => {
+    const caregiverName = usageLog.caregiverName;
+    const baseName = caregiverName || 'Someone';
+
     switch (type) {
       case 'DIAPER_CHANGE':
-        return 'Diaper Changed';
+        return `${baseName} changed diaper`;
       case 'WIPE_USE':
-        return 'Wipes Used';
+        return `${baseName} used wipes`;
       case 'CREAM_APPLICATION':
-        return 'Cream Applied';
+        return `${baseName} applied cream`;
       case 'ACCIDENT_CLEANUP':
-        return 'Accident Cleanup';
+        return `${baseName} cleaned up accident`;
       case 'PREVENTIVE_CHANGE':
-        return 'Preventive Change';
+        return `${baseName} did preventive change`;
       case 'OVERNIGHT_CHANGE':
-        return 'Overnight Change';
+        return `${baseName} did overnight change`;
       default:
-        return 'Activity';
+        return `${baseName} logged activity`;
     }
   };
 

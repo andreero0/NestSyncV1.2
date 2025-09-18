@@ -1,0 +1,9 @@
+{
+  "query": "mutation SignIn($input: SignInInput!) { signIn(input: $input) { success message session { accessToken refreshToken expiresIn tokenType } } }",
+  "variables": {
+    "input": {
+      "email": "parents@nestsync.com",
+      "password": "Shazam11#"
+    }
+  }
+}

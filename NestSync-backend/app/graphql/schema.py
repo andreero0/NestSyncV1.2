@@ -12,10 +12,12 @@ from .child_resolvers import ChildMutations, ChildQueries
 from .inventory_resolvers import InventoryMutations, InventoryQueries
 from .notification_resolvers import NotificationMutations, NotificationQueries
 from .analytics_resolvers import AnalyticsQueries
+from .collaboration_resolvers import CollaborationMutations, CollaborationQueries
 # from .observability_resolvers import ObservabilityQuery, ObservabilityMutation  # Temporarily disabled for testing
 from .types import (
     UserProfile,
     ChildProfile,
+    ChildConnection,
     OnboardingStatusResponse,
     MutationResponse,
     DashboardStats,
@@ -34,6 +36,13 @@ from .analytics_types import (
     AnalyticsDashboardResponse,
     EnhancedAnalyticsDashboardResponse
 )
+from .collaboration_types import (
+    FamilyConnection,
+    FamilyMemberConnection,
+    CaregiverInvitationConnection,
+    Family as FamilyType,
+    CaregiverPresence
+)
 
 
 @strawberry.type
@@ -44,8 +53,8 @@ class Query:
     me: Optional[UserProfile] = strawberry.field(resolver=AuthQueries.me)
     my_consents = strawberry.field(resolver=AuthQueries.my_consents)
     
-    # Child and onboarding queries  
-    my_children = strawberry.field(resolver=ChildQueries.my_children)
+    # Child and onboarding queries
+    my_children: ChildConnection = strawberry.field(resolver=ChildQueries.my_children)
     child: Optional[ChildProfile] = strawberry.field(resolver=ChildQueries.child)
     onboarding_status: OnboardingStatusResponse = strawberry.field(resolver=ChildQueries.onboarding_status)
     
@@ -67,6 +76,13 @@ class Query:
     get_inventory_insights: InventoryInsightsResponse = strawberry.field(resolver=AnalyticsQueries.get_inventory_insights)
     get_analytics_dashboard: AnalyticsDashboardResponse = strawberry.field(resolver=AnalyticsQueries.get_analytics_dashboard)
     get_enhanced_analytics_dashboard: EnhancedAnalyticsDashboardResponse = strawberry.field(resolver=AnalyticsQueries.get_enhanced_analytics_dashboard)
+
+    # Collaboration queries
+    my_families: FamilyConnection = strawberry.field(resolver=CollaborationQueries.my_families)
+    family_details: Optional[FamilyType] = strawberry.field(resolver=CollaborationQueries.family_details)
+    family_members: FamilyMemberConnection = strawberry.field(resolver=CollaborationQueries.family_members)
+    pending_invitations: CaregiverInvitationConnection = strawberry.field(resolver=CollaborationQueries.pending_invitations)
+    family_presence: List[CaregiverPresence] = strawberry.field(resolver=CollaborationQueries.family_presence)
 
     # Observability queries - Real-time system monitoring
     # Temporarily disabled for testing
@@ -122,6 +138,14 @@ class Mutation:
     create_notification = strawberry.field(resolver=NotificationMutations.create_notification)
     mark_notification_read = strawberry.field(resolver=NotificationMutations.mark_notification_read)
     test_notification = strawberry.field(resolver=NotificationMutations.test_notification)
+
+    # Collaboration mutations
+    create_family = strawberry.field(resolver=CollaborationMutations.create_family)
+    invite_caregiver = strawberry.field(resolver=CollaborationMutations.invite_caregiver)
+    accept_invitation = strawberry.field(resolver=CollaborationMutations.accept_invitation)
+    add_child_to_family = strawberry.field(resolver=CollaborationMutations.add_child_to_family)
+    update_presence = strawberry.field(resolver=CollaborationMutations.update_presence)
+    log_family_activity = strawberry.field(resolver=CollaborationMutations.log_family_activity)
 
     # Observability mutations - System monitoring control
     # Temporarily disabled for testing

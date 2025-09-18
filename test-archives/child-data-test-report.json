@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-09-17T21:38:54.139Z",
+  "summary": {
+    "emmaRecordsCount": 0,
+    "reactKeyWarnings": 1,
+    "graphqlMessages": 0,
+    "networkErrors": 0,
+    "childSelectorFound": false
+  },
+  "emmaElements": [],
+  "consoleMessages": [
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "timestamp": "2025-09-17T21:38:51.244Z"
+    },
+    {
+      "type": "log",
+      "text": "Running application \"main\" with appParams:\n {rootTag: #root, hydrate: undefined} \nDevelopment-level warnings: ON.\nPerformance optimizations: OFF.",
+      "timestamp": "2025-09-17T21:38:51.334Z"
+    },
+    {
+      "type": "warning",
+      "text": "\"shadow*\" style props are deprecated. Use \"boxShadow\".",
+      "timestamp": "2025-09-17T21:38:51.357Z"
+    },
+    {
+      "type": "warning",
+      "text": "\"textShadow*\" style props are deprecated. Use \"textShadow\".",
+      "timestamp": "2025-09-17T21:38:51.426Z"
+    },
+    {
+      "type": "warning",
+      "text": "[expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect.",
+      "timestamp": "2025-09-17T21:38:51.584Z"
+    },
+    {
+      "type": "log",
+      "text": "AuthGuard: Starting authentication initialization...",
+      "timestamp": "2025-09-17T21:38:51.653Z"
+    },
+    {
+      "type": "log",
+      "text": "Starting auth initialization...",
+      "timestamp": "2025-09-17T21:38:51.655Z"
+    },
+    {
+      "type": "log",
+      "text": "Auth service initialized successfully, isAuthenticated: false",
+      "timestamp": "2025-09-17T21:38:51.769Z"
+    },
+    {
+      "type": "log",
+      "text": "Initializing in fallback mode (offline/unauthenticated)",
+      "timestamp": "2025-09-17T21:38:51.770Z"
+    },
+    {
+      "type": "log",
+      "text": "Auth initialization completed",
+      "timestamp": "2025-09-17T21:38:51.770Z"
+    },
+    {
+      "type": "log",
+      "text": "AuthGuard: Authentication initialization completed",
+      "timestamp": "2025-09-17T21:38:51.770Z"
+    },
+    {
+      "type": "log",
+      "text": "📝 Writing test report...",
+      "timestamp": "2025-09-17T21:38:54.145Z"
+    }
+  ],
+  "networkErrors": [],
+  "conclusion": "FAIL: No Emma records found"
+}

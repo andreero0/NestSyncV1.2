@@ -9,7 +9,8 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { GET_INVENTORY_ITEMS_QUERY, MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
+import { GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/queries';
+import { useChildren } from '@/hooks/useChildren';
 import { NestSyncColors } from '@/constants/Colors';
 import { formatDiaperSize } from '@/utils/formatters';
 import { EditInventoryModal } from '@/components/modals/EditInventoryModal';
@@ -88,13 +89,11 @@ export default function PlannerScreen() {
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
   
-  // Fetch children data
-  const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
-    variables: { first: 10 },
-  });
+  // Fetch children data using centralized hook
+  const { children, loading: childrenLoading } = useChildren({ first: 10 });
   
   // Use the childId from params, stored value, or first available child
-  const childId = params.childId || storedChildId || childrenData?.myChildren?.edges?.[0]?.node?.id || '';
+  const childId = params.childId || storedChildId || children?.[0]?.id || '';
 
   // Analytics hooks temporarily disabled - preserved for future enhancement
   // const {

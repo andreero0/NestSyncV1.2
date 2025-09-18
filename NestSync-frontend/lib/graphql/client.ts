@@ -552,18 +552,61 @@ export const apolloClient = new ApolloClient({
       Query: {
         fields: {
           myChildren: {
-            // Proper cache merge for pagination
+            // Use cache-and-network for real-time updates, prevent pagination conflicts
             keyArgs: false,
-            merge(existing = { edges: [] }, incoming, { args }) {
-              return {
-                ...incoming,
-                edges: [...existing.edges, ...incoming.edges],
-              };
+            merge(existing, incoming, { args, readField }) {
+              // CRITICAL FIX: Always return incoming data to prevent cache normalization issues
+              console.log('Apollo Cache: myChildren merge called', {
+                existing,
+                incoming,
+                args,
+                incomingEdgesLength: incoming?.edges?.length || 0,
+                existingEdgesLength: existing?.edges?.length || 0
+              });
+
+              // Always use incoming data for fresh queries (no pagination cursor)
+              if (!args?.after) {
+                console.log('Apollo Cache: Fresh query, returning incoming data:', incoming);
+                // Ensure we're not returning null/undefined
+                return incoming || { edges: [], pageInfo: { hasNextPage: false, hasPreviousPage: false } };
+              }
+
+              // For pagination, append new edges to existing ones
+              if (existing && incoming) {
+                const mergedResult = {
+                  ...incoming,
+                  edges: [...(existing.edges || []), ...(incoming.edges || [])],
+                };
+                console.log('Apollo Cache: Pagination merge result:', mergedResult);
+                return mergedResult;
+              }
+
+              // Fallback to incoming data
+              console.log('Apollo Cache: Fallback to incoming data:', incoming);
+              return incoming || { edges: [], pageInfo: { hasNextPage: false, hasPreviousPage: false } };
+            },
+          },
+        },
+      },
+      // Add Child type policy for proper cache normalization
+      Child: {
+        keyFields: ["id"],
+        fields: {
+          // Ensure child fields merge properly
+          name: {
+            merge(existing, incoming) {
+              return incoming; // Always use latest name
+            },
+          },
+          currentDiaperSize: {
+            merge(existing, incoming) {
+              return incoming; // Always use latest size
             },
           },
         },
       },
       User: {
+        keyFields: ["id"],
         fields: {
           me: {
             merge(existing, incoming) {
@@ -573,13 +616,37 @@ export const apolloClient = new ApolloClient({
         },
       },
       ChildConnection: {
+        keyFields: false, // ChildConnection doesn't need its own identity
         fields: {
           edges: {
-            merge(existing = [], incoming) {
-              // Merge children edges without duplicates
-              const existingIds = new Set(existing.map((edge: any) => edge.node.id));
-              const newEdges = incoming.filter((edge: any) => !existingIds.has(edge.node.id));
-              return [...existing, ...newEdges];
+            merge(existing = [], incoming = [], { readField }) {
+              // CRITICAL FIX: For fresh queries (no pagination), always use incoming data
+              // This prevents cache normalization from causing empty edges arrays
+              if (existing.length === 0 || !incoming.length) {
+                console.log('ChildConnection edges: Using incoming data for fresh query:', incoming);
+                return incoming;
+              }
+
+              // For pagination, ensure proper deduplication
+              const existingIds = new Set(
+                existing.map((edge: any) => readField('id', edge.node)).filter(Boolean)
+              );
+
+              const uniqueIncoming = incoming.filter(
+                (edge: any) => {
+                  const nodeId = readField('id', edge.node);
+                  return nodeId && !existingIds.has(nodeId);
+                }
+              );
+
+              const result = [...existing, ...uniqueIncoming];
+              console.log('ChildConnection edges: Merged result:', result);
+              return result;
+            },
+          },
+          pageInfo: {
+            merge(existing, incoming) {
+              return incoming; // Always use latest pageInfo
             },
           },
         },
@@ -588,23 +655,25 @@ export const apolloClient = new ApolloClient({
         fields: {
           edges: {
             merge(existing, incoming) {
-              return incoming; // Replace existing edges
+              return incoming; // Replace existing edges for consents
             },
           },
         },
       },
     },
     resultCaching: true,
+    // Enable detailed cache inspection in development
+    addTypename: true,
   }),
   defaultOptions: {
     watchQuery: {
       errorPolicy: 'none', // Fail fast on errors for better error detection
       notifyOnNetworkStatusChange: true,
-      fetchPolicy: 'cache-first',
+      fetchPolicy: 'cache-and-network', // Fetch fresh data while using cache
     },
     query: {
       errorPolicy: 'none', // Clean error handling
-      fetchPolicy: 'cache-first', // Use cache when available
+      fetchPolicy: 'cache-and-network', // Always get fresh data for MY_CHILDREN_QUERY
     },
     mutate: {
       errorPolicy: 'none', // Clean error handling for mutations - critical for onboarding

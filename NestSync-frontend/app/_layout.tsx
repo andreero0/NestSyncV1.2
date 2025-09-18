@@ -109,15 +109,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         router.replace('/(auth)/onboarding');
       }
     }
+  }, [isAuthenticated, isInitialized, user?.onboardingCompleted, segments, splashCompleted]);
 
-    // Mark app as ready once navigation is determined
-    if (!appIsReady) {
+  // Separate effect to set app ready state (prevents infinite render loop)
+  useEffect(() => {
+    if (isInitialized && splashCompleted && !appIsReady) {
       if (__DEV__) {
         console.log('AuthGuard: App is ready for navigation');
       }
       setAppIsReady(true);
     }
-  }, [isAuthenticated, isInitialized, user?.onboardingCompleted, segments, appIsReady, splashCompleted]);
+  }, [isInitialized, splashCompleted, appIsReady]);
 
   // Show splash screen first, then loading screen while initializing
   if (showSplash) {

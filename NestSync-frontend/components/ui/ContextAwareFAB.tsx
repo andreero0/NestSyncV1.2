@@ -18,7 +18,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { QuickLogModal } from '../modals/QuickLogModal';
 import { AddInventoryModal } from '../modals/AddInventoryModal';
 import { LegalModal } from '../consent/LegalModals';
-import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
+import { useChildren } from '@/hooks/useChildren';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 
 interface FABConfig {
@@ -47,13 +47,11 @@ export function ContextAwareFAB() {
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
   
-  // GraphQL queries
-  const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
-    variables: { first: 10 },
-  });
+  // GraphQL queries - using centralized hook
+  const { children, loading: childrenLoading } = useChildren({ first: 10 });
 
   // Enhanced state management for better UX
-  const hasChildren = childrenData?.myChildren?.edges?.length > 0;
+  const hasChildren = children.length > 0;
   const isLoading = childrenLoading;
   const showAddFirstChild = !hasChildren && !isLoading;
   

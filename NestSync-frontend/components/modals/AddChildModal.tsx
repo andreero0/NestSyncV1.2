@@ -31,7 +31,7 @@ import { WeightInput } from '../ui/WeightInput';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { CREATE_CHILD_MUTATION } from '@/lib/graphql/mutations';
-import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
+import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries'; // Required for cache refetch
 import { ChildInfo, GENDER_OPTIONS } from '@/lib/types/onboarding';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');

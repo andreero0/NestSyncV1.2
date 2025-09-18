@@ -12,12 +12,15 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 import { useInventoryTrafficLight } from '@/hooks/useInventoryTrafficLight';
+import { useCurrentFamily, useFamilyPresence } from '@/lib/graphql/collaboration-hooks';
 import DevOnboardingReset from '@/components/dev/DevOnboardingReset';
-import { MY_CHILDREN_QUERY, GET_USAGE_LOGS_QUERY, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
+import { GET_USAGE_LOGS_QUERY, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
+import { useChildren } from '@/hooks/useChildren';
 import { formatTimeAgo, safeFormatTimeAgo, formatDiaperSize, formatFieldName, getTimeBasedGreeting } from '@/utils/formatters';
 import { QuickLogModal } from '@/components/modals/QuickLogModal';
 import { AddInventoryModal } from '@/components/modals/AddInventoryModal';
 import { AddChildModal } from '@/components/modals/AddChildModal';
+import PresenceIndicators from '@/components/collaboration/PresenceIndicators';
 
 const { width } = Dimensions.get('window');
 
@@ -58,9 +61,10 @@ export default function HomeScreen() {
   const [addChildModalVisible, setAddChildModalVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   
-  // GraphQL queries
-  const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
-    variables: { first: 10 },
+  // GraphQL queries - using centralized useChildren hook
+  const { children, loading: childrenLoading } = useChildren({
+    first: 10,
+    pollInterval: 30000 // Poll every 30 seconds for real-time updates
   });
 
   const { 
@@ -88,31 +92,33 @@ export default function HomeScreen() {
   });
 
   // Traffic Light Dashboard Data
-  const { 
-    cardData: trafficLightCards, 
+  const {
+    cardData: trafficLightCards,
     trafficLightData,
     loading: trafficLightLoading,
-    error: trafficLightError 
+    error: trafficLightError
   } = useInventoryTrafficLight(selectedChildId);
+
+  // Collaboration data
+  const { currentFamily, currentFamilyId } = useCurrentFamily();
+  const familyPresence = useFamilyPresence(currentFamilyId);
 
   // Initialize selected child from storage or default to first child
   useEffect(() => {
-    if (childrenData?.myChildren?.edges?.length > 0) {
-      const children = childrenData.myChildren.edges;
-      
+    if (children.length > 0) {
       // Try to use stored child ID first
-      if (storedChildId && children.find(edge => edge.node.id === storedChildId)) {
+      if (storedChildId && children.find(child => child.id === storedChildId)) {
         if (selectedChildId !== storedChildId) {
           setSelectedChildId(storedChildId);
         }
       } else if (!selectedChildId && children.length > 0) {
         // Default to first child if no stored selection
-        const firstChildId = children[0].node.id;
+        const firstChildId = children[0].id;
         setSelectedChildId(firstChildId);
         setStoredChildId(firstChildId);
       }
     }
-  }, [childrenData, selectedChildId, storedChildId, setStoredChildId]);
+  }, [children, selectedChildId, storedChildId, setStoredChildId]);
 
   // Handle child selection with persistence
   const handleChildSelect = async (childId: string) => {
@@ -142,15 +148,15 @@ export default function HomeScreen() {
       const log = edge.node;
       // Generate safe ID with better fallback
       const safeId = log.id || `activity-${Date.now()}-${index}`;
-      
+
       return {
         id: safeId,
         time: safeFormatTimeAgo(log.loggedAt, 'recent-activity'),
         type: 'diaper-change' as const,
-        description: getChangeDescription(log.wasWet, log.wasSoiled, log.notes)
+        description: getChangeDescription(log.wasWet, log.wasSoiled, log.notes, log.caregiverName)
       };
     }) || [];
-    
+
     // Limit to first 5 activities for performance
     return activities.slice(0, 5);
   }, [usageLogsData]);
@@ -159,16 +165,17 @@ export default function HomeScreen() {
   // Enhanced state management
   const showEmptyState = !usageLogsLoading && recentActivity.length === 0;
   const showLoadingState = usageLogsLoading && selectedChildId;
-  const noChildrenState = !childrenLoading && (!childrenData?.myChildren?.edges || childrenData.myChildren.edges.length === 0);
-  const hasMultipleChildren = childrenData?.myChildren?.edges && childrenData.myChildren.edges.length > 1;
+  const noChildrenState = !childrenLoading && children.length === 0;
+  const hasMultipleChildren = children.length > 1;
 
   // Check if there are more activities to show
   const hasMoreActivities = usageLogsData?.getUsageLogs?.edges?.length > 5;
 
-  // Helper function to get change description
-  function getChangeDescription(wasWet?: boolean, wasSoiled?: boolean, notes?: string): string {
-    let description = 'Diaper changed';
-    
+  // Helper function to get change description with caregiver attribution
+  function getChangeDescription(wasWet?: boolean, wasSoiled?: boolean, notes?: string, caregiverName?: string): string {
+    const caregiver = caregiverName || 'Someone';
+    let description = `${caregiver} changed diaper`;
+
     if (wasWet && wasSoiled) {
       description += ' - wet + soiled';
     } else if (wasWet) {
@@ -176,11 +183,11 @@ export default function HomeScreen() {
     } else if (wasSoiled) {
       description += ' - soiled';
     }
-    
+
     if (notes) {
       description += ` (${notes})`;
     }
-    
+
     return description;
   }
 
@@ -337,11 +344,11 @@ export default function HomeScreen() {
                   {getTimeBasedGreeting()}
                 </ThemedText>
                 <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
-                  {childrenLoading ? 'Loading child information...' : 
-                   selectedChildId && childrenData?.myChildren?.edges?.length > 0 ? 
+                  {childrenLoading ? 'Loading child information...' :
+                   selectedChildId && children.length > 0 ?
                    (() => {
-                     const selectedChild = childrenData.myChildren.edges.find(edge => edge.node.id === selectedChildId);
-                     return selectedChild ? `Here's how ${selectedChild.node.name} is doing` : "Here's how your little one is doing";
+                     const selectedChild = children.find(child => child.id === selectedChildId);
+                     return selectedChild ? `Here's how ${selectedChild.name} is doing` : "Here's how your little one is doing";
                    })() :
                    "Here's how your little one is doing"}
                 </ThemedText>
@@ -351,7 +358,7 @@ export default function HomeScreen() {
               {hasMultipleChildren && (
                 <View style={styles.childSelectorContainer}>
                   <ChildSelector
-                    children={childrenData.myChildren.edges.map(edge => edge.node)}
+                    children={children}
                     selectedChildId={selectedChildId}
                     onChildSelect={handleChildSelect}
                     loading={childrenLoading}
@@ -382,6 +389,15 @@ export default function HomeScreen() {
                 </ThemedText>
               </TouchableOpacity>
             </ThemedView>
+          )}
+
+          {/* Presence Indicators - show active caregivers when collaboration is enabled */}
+          {!noChildrenState && currentFamily && (
+            <PresenceIndicators
+              childId={selectedChildId}
+              compact={false}
+              showDetails={true}
+            />
           )}
 
           {/* Traffic Light Dashboard - only show when children exist */}

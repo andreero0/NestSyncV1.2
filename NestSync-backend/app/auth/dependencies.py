@@ -81,7 +81,8 @@ async def get_current_user(
     Get current authenticated user from database
     """
     try:
-        user_id = token_payload.get("user_id")
+        # Get user ID from JWT 'sub' field (standard JWT claim)
+        user_id = token_payload.get("sub") or token_payload.get("user_id")
         if not user_id:
             raise AuthenticationError("Invalid token: missing user ID")
         
@@ -130,7 +131,8 @@ async def get_current_user_optional(
         return None
     
     try:
-        user_id = token_payload.get("user_id")
+        # Get user ID from JWT 'sub' field (standard JWT claim)
+        user_id = token_payload.get("sub") or token_payload.get("user_id")
         if not user_id:
             return None
         
@@ -282,12 +284,28 @@ async def require_admin_user(
 
 
 # =============================================================================
+# GraphQL Context Utilities
+# =============================================================================
+
+async def get_user_id_from_context(info) -> Optional[str]:
+    """
+    Extract user ID from GraphQL context
+    Used by collaboration resolvers for user identification
+    """
+    try:
+        return await info.context.get_user_id()
+    except Exception as e:
+        logger.warning(f"Could not get user ID from context: {e}")
+        return None
+
+
+# =============================================================================
 # Export Dependencies
 # =============================================================================
 
 __all__ = [
     "get_current_user_token",
-    "get_current_user_token_required", 
+    "get_current_user_token_required",
     "get_current_user",
     "get_current_user_optional",
     "require_verified_user",
@@ -297,6 +315,7 @@ __all__ = [
     "RequestContext",
     "check_rate_limit",
     "require_admin_user",
+    "get_user_id_from_context",
     "AuthenticationError",
     "AuthorizationError"
 ]

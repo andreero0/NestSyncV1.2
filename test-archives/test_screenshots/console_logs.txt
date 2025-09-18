@@ -1,0 +1,21 @@
+=== CONSOLE MESSAGES ===
+info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+log: Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF.
+warning: "shadow*" style props are deprecated. Use "boxShadow".
+warning: "textShadow*" style props are deprecated. Use "textShadow".
+warning: [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect.
+log: AuthGuard: Starting authentication initialization...
+log: Starting auth initialization...
+log: Auth service initialized successfully, isAuthenticated: false
+log: Initializing in fallback mode (offline/unauthenticated)
+log: Auth initialization completed
+log: AuthGuard: Authentication initialization completed
+
+=== NETWORK REQUESTS ===
+GET http://localhost:8083/
+GET http://localhost:8083/assets/?unstable_path=.%2Fassets%2Ffonts/SpaceMono-Regular.ttf
+GET http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app
+GET https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web@0.44.0/dist/dotlottie-player.wasm

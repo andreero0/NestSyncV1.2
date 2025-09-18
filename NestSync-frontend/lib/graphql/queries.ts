@@ -97,7 +97,6 @@ export const MY_CHILDREN_QUERY = gql`
         hasPreviousPage
         startCursor
         endCursor
-        totalCount
       }
     }
   }
@@ -788,4 +787,467 @@ export interface GetNotificationHistoryQueryVariables {
   daysBack?: number;
   limit?: number;
   offset?: number;
+}
+
+// =============================================================================
+// COLLABORATION QUERIES AND MUTATIONS
+// =============================================================================
+
+export const MY_FAMILIES_QUERY = gql`
+  query MyFamilies {
+    myFamilies {
+      nodes {
+        id
+        name
+        familyType
+        description
+        createdBy
+        createdAt
+        memberCount
+        childrenCount
+        settings {
+          timeZone
+          language
+          privacyLevel
+          allowGuestAccess
+          dataRetentionDays
+          notificationSettings
+        }
+      }
+      totalCount
+    }
+  }
+`;
+
+export const FAMILY_DETAILS_QUERY = gql`
+  query FamilyDetails($familyId: ID!) {
+    familyDetails(familyId: $familyId) {
+      id
+      name
+      familyType
+      description
+      createdBy
+      createdAt
+      memberCount
+      childrenCount
+      settings {
+        timeZone
+        language
+        privacyLevel
+        allowGuestAccess
+        dataRetentionDays
+        notificationSettings
+      }
+    }
+  }
+`;
+
+export const FAMILY_MEMBERS_QUERY = gql`
+  query FamilyMembers($familyId: ID!) {
+    familyMembers(familyId: $familyId) {
+      nodes {
+        id
+        userId
+        familyId
+        role
+        status
+        joinedAt
+        accessExpiresAt
+        userDisplayName
+        userEmail
+        permissions {
+          canViewAllData
+          canEditChildProfiles
+          canInviteMembers
+          canManageSettings
+          canExportData
+          canAccessHistoricalData
+          allowedActivityTypes
+          canEditOwnActivities
+          canEditOthersActivities
+          canBulkLog
+        }
+      }
+      totalCount
+    }
+  }
+`;
+
+export const PENDING_INVITATIONS_QUERY = gql`
+  query PendingInvitations {
+    pendingInvitations {
+      nodes {
+        id
+        familyId
+        email
+        role
+        invitedBy
+        createdAt
+        expiresAt
+        status
+        familyName
+        inviterName
+      }
+      totalCount
+    }
+  }
+`;
+
+export const FAMILY_PRESENCE_QUERY = gql`
+  query FamilyPresence($familyId: ID!) {
+    familyPresence(familyId: $familyId) {
+      userId
+      familyId
+      childId
+      status
+      currentActivity
+      lastSeen
+      userDisplayName
+      deviceInfo {
+        platform
+        version
+        model
+      }
+    }
+  }
+`;
+
+export const CREATE_FAMILY_MUTATION = gql`
+  mutation CreateFamily($input: CreateFamilyInput!) {
+    createFamily(input: $input) {
+      success
+      message
+      error
+      family {
+        id
+        name
+        familyType
+        description
+        createdBy
+        createdAt
+        settings {
+          timeZone
+          language
+          privacyLevel
+          allowGuestAccess
+          dataRetentionDays
+          notificationSettings
+        }
+      }
+    }
+  }
+`;
+
+export const INVITE_CAREGIVER_MUTATION = gql`
+  mutation InviteCaregiver($input: InviteCaregiverInput!) {
+    inviteCaregiver(input: $input) {
+      success
+      message
+      error
+      invitation {
+        id
+        familyId
+        email
+        role
+        invitedBy
+        createdAt
+        expiresAt
+        status
+        familyName
+        inviterName
+      }
+    }
+  }
+`;
+
+export const ACCEPT_INVITATION_MUTATION = gql`
+  mutation AcceptInvitation($token: String!) {
+    acceptInvitation(token: $token) {
+      success
+      message
+      error
+      familyMember {
+        id
+        userId
+        familyId
+        role
+        status
+        joinedAt
+        userDisplayName
+        userEmail
+        permissions {
+          canViewAllData
+          canEditChildProfiles
+          canInviteMembers
+          canManageSettings
+          canExportData
+          canAccessHistoricalData
+          allowedActivityTypes
+          canEditOwnActivities
+          canEditOthersActivities
+          canBulkLog
+        }
+      }
+      family {
+        id
+        name
+        familyType
+        description
+        createdBy
+        createdAt
+        settings {
+          timeZone
+          language
+          privacyLevel
+          allowGuestAccess
+          dataRetentionDays
+          notificationSettings
+        }
+      }
+    }
+  }
+`;
+
+export const UPDATE_PRESENCE_MUTATION = gql`
+  mutation UpdatePresence($input: UpdatePresenceInput!) {
+    updatePresence(input: $input) {
+      success
+      message
+      error
+      presence {
+        userId
+        familyId
+        childId
+        status
+        currentActivity
+        lastSeen
+        userDisplayName
+        deviceInfo {
+          platform
+          version
+          model
+        }
+      }
+    }
+  }
+`;
+
+export const ADD_CHILD_TO_FAMILY_MUTATION = gql`
+  mutation AddChildToFamily($input: AddChildToFamilyInput!) {
+    addChildToFamily(input: $input) {
+      success
+      message
+      error
+      childId
+      familyId
+    }
+  }
+`;
+
+// =============================================================================
+// COLLABORATION TYPE DEFINITIONS
+// =============================================================================
+
+export interface Family {
+  id: string;
+  name: string;
+  familyType: 'PERSONAL' | 'STANDARD' | 'INSTITUTIONAL';
+  description?: string;
+  createdBy: string;
+  createdAt: string;
+  memberCount?: number;
+  childrenCount?: number;
+  settings: FamilySettings;
+}
+
+export interface FamilySettings {
+  timeZone: string;
+  language: string;
+  privacyLevel: string;
+  allowGuestAccess: boolean;
+  dataRetentionDays: number;
+  notificationSettings: any;
+}
+
+export interface FamilyMember {
+  id: string;
+  userId: string;
+  familyId: string;
+  role: 'FAMILY_CORE' | 'EXTENDED_FAMILY' | 'PROFESSIONAL' | 'INSTITUTIONAL';
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'EXPIRED';
+  joinedAt: string;
+  accessExpiresAt?: string;
+  userDisplayName?: string;
+  userEmail?: string;
+  permissions: MemberPermissions;
+}
+
+export interface MemberPermissions {
+  canViewAllData: boolean;
+  canEditChildProfiles: boolean;
+  canInviteMembers: boolean;
+  canManageSettings: boolean;
+  canExportData: boolean;
+  canAccessHistoricalData: boolean;
+  allowedActivityTypes: string[];
+  canEditOwnActivities: boolean;
+  canEditOthersActivities: boolean;
+  canBulkLog: boolean;
+}
+
+export interface CaregiverInvitation {
+  id: string;
+  familyId: string;
+  email: string;
+  role: 'FAMILY_CORE' | 'EXTENDED_FAMILY' | 'PROFESSIONAL' | 'INSTITUTIONAL';
+  invitedBy: string;
+  createdAt: string;
+  expiresAt: string;
+  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+  familyName?: string;
+  inviterName?: string;
+}
+
+export interface CaregiverPresence {
+  userId: string;
+  familyId: string;
+  childId?: string;
+  status: 'ONLINE' | 'AWAY' | 'CARING' | 'OFFLINE';
+  currentActivity?: string;
+  lastSeen: string;
+  userDisplayName?: string;
+  deviceInfo?: {
+    platform?: string;
+    version?: string;
+    model?: string;
+  };
+}
+
+// Query Data Types
+export interface MyFamiliesQueryData {
+  myFamilies: {
+    nodes: Family[];
+    totalCount: number;
+  };
+}
+
+export interface FamilyDetailsQueryData {
+  familyDetails: Family | null;
+}
+
+export interface FamilyDetailsQueryVariables {
+  familyId: string;
+}
+
+export interface FamilyMembersQueryData {
+  familyMembers: {
+    nodes: FamilyMember[];
+    totalCount: number;
+  };
+}
+
+export interface FamilyMembersQueryVariables {
+  familyId: string;
+}
+
+export interface PendingInvitationsQueryData {
+  pendingInvitations: {
+    nodes: CaregiverInvitation[];
+    totalCount: number;
+  };
+}
+
+export interface FamilyPresenceQueryData {
+  familyPresence: CaregiverPresence[];
+}
+
+export interface FamilyPresenceQueryVariables {
+  familyId: string;
+}
+
+// Mutation Data Types
+export interface CreateFamilyMutationData {
+  createFamily: {
+    success: boolean;
+    message?: string;
+    error?: string;
+    family?: Family;
+  };
+}
+
+export interface CreateFamilyMutationVariables {
+  input: {
+    name: string;
+    familyType?: 'PERSONAL' | 'STANDARD' | 'INSTITUTIONAL';
+    description?: string;
+  };
+}
+
+export interface InviteCaregiverMutationData {
+  inviteCaregiver: {
+    success: boolean;
+    message?: string;
+    error?: string;
+    invitation?: CaregiverInvitation;
+  };
+}
+
+export interface InviteCaregiverMutationVariables {
+  input: {
+    familyId: string;
+    email: string;
+    role: 'FAMILY_CORE' | 'EXTENDED_FAMILY' | 'PROFESSIONAL' | 'INSTITUTIONAL';
+    accessRestrictions?: any;
+  };
+}
+
+export interface AcceptInvitationMutationData {
+  acceptInvitation: {
+    success: boolean;
+    message?: string;
+    error?: string;
+    familyMember?: FamilyMember;
+    family?: Family;
+  };
+}
+
+export interface AcceptInvitationMutationVariables {
+  token: string;
+}
+
+export interface UpdatePresenceMutationData {
+  updatePresence: {
+    success: boolean;
+    message?: string;
+    error?: string;
+    presence?: CaregiverPresence;
+  };
+}
+
+export interface UpdatePresenceMutationVariables {
+  input: {
+    familyId: string;
+    status: 'ONLINE' | 'AWAY' | 'CARING' | 'OFFLINE';
+    currentActivity?: string;
+    childId?: string;
+    deviceInfo?: any;
+  };
+}
+
+export interface AddChildToFamilyMutationData {
+  addChildToFamily: {
+    success: boolean;
+    message?: string;
+    error?: string;
+    childId?: string;
+    familyId?: string;
+  };
+}
+
+export interface AddChildToFamilyMutationVariables {
+  input: {
+    familyId: string;
+    childId: string;
+    accessLevel?: 'FULL' | 'LIMITED' | 'READ_ONLY' | 'EMERGENCY_ONLY';
+  };
 }

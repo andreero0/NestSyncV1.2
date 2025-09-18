@@ -28,7 +28,8 @@ import { IconSymbol } from '../ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { LOG_DIAPER_CHANGE_MUTATION } from '@/lib/graphql/mutations';
-import { MY_CHILDREN_QUERY, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
+import { GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
+import { useChildren } from '@/hooks/useChildren';
 import {
   GET_USAGE_ANALYTICS_QUERY,
   GET_WEEKLY_TRENDS_QUERY,
@@ -98,10 +99,10 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
   const [showCustomTime, setShowCustomTime] = useState(false);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
 
-  // GraphQL queries and mutations
-  const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
-    variables: { first: 10 },
-    skip: !visible,
+  // GraphQL queries and mutations - using centralized hook
+  const { children, loading: childrenLoading } = useChildren({
+    first: 10,
+    skip: !visible
   });
 
   const [logDiaperChange, { loading: submitLoading }] = useMutation(LOG_DIAPER_CHANGE_MUTATION, {
@@ -170,10 +171,10 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
 
   // Get the first child as default (in a real app, this would be user-selected or stored)
   React.useEffect(() => {
-    if (childrenData?.myChildren?.edges?.length > 0 && !selectedChildId) {
-      setSelectedChildId(childrenData.myChildren.edges[0].node.id);
+    if (children.length > 0 && !selectedChildId) {
+      setSelectedChildId(children[0].id);
     }
-  }, [childrenData, selectedChildId]);
+  }, [children, selectedChildId]);
 
   // Animation effects
   React.useEffect(() => {

@@ -1,0 +1,598 @@
+{
+  "timestamp": "2025-09-17T21:11:09.566Z",
+  "testResults": {
+    "success": [
+      "Application loaded successfully",
+      "React application is running",
+      "Authentication UI elements found"
+    ],
+    "failures": [
+      "Login attempt failed: page.evaluate: SyntaxError: Failed to execute 'querySelectorAll' on 'Document': '*:contains(\"Emma\"), [class*=\"Emma\"], [data-testid*=\"Emma\"]' is not a valid selector.\n    at eval (eval at evaluate (:291:30), <anonymous>:18:41)\n    at Array.forEach (<anonymous>)\n    at eval (eval at evaluate (:291:30), <anonymous>:17:24)\n    at UtilityScript.evaluate (<anonymous>:293:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    ],
+    "errors": [
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:00.241Z"
+      },
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:00.241Z"
+      },
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:00.242Z"
+      },
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:05.098Z"
+      },
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:05.099Z"
+      },
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:05.100Z"
+      },
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:05.103Z"
+      },
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:05.104Z"
+      },
+      {
+        "type": "Network Error",
+        "url": "http://localhost:8001/graphql",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        },
+        "timestamp": "2025-09-17T21:11:05.105Z"
+      }
+    ],
+    "consoleMessages": [
+      {
+        "type": "info",
+        "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+        "timestamp": "2025-09-17T21:10:55.851Z"
+      },
+      {
+        "type": "log",
+        "text": "Running application \"main\" with appParams:\n {rootTag: #root, hydrate: undefined} \nDevelopment-level warnings: ON.\nPerformance optimizations: OFF.",
+        "timestamp": "2025-09-17T21:10:55.985Z"
+      },
+      {
+        "type": "warning",
+        "text": "\"shadow*\" style props are deprecated. Use \"boxShadow\".",
+        "timestamp": "2025-09-17T21:10:55.988Z"
+      },
+      {
+        "type": "warning",
+        "text": "\"textShadow*\" style props are deprecated. Use \"textShadow\".",
+        "timestamp": "2025-09-17T21:10:56.014Z"
+      },
+      {
+        "type": "warning",
+        "text": "[expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect.",
+        "timestamp": "2025-09-17T21:10:56.201Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Starting authentication initialization...",
+        "timestamp": "2025-09-17T21:10:56.237Z"
+      },
+      {
+        "type": "log",
+        "text": "Starting auth initialization...",
+        "timestamp": "2025-09-17T21:10:56.240Z"
+      },
+      {
+        "type": "log",
+        "text": "Auth service initialized successfully, isAuthenticated: false",
+        "timestamp": "2025-09-17T21:10:56.362Z"
+      },
+      {
+        "type": "log",
+        "text": "Initializing in fallback mode (offline/unauthenticated)",
+        "timestamp": "2025-09-17T21:10:56.362Z"
+      },
+      {
+        "type": "log",
+        "text": "Auth initialization completed",
+        "timestamp": "2025-09-17T21:10:56.363Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Authentication initialization completed",
+        "timestamp": "2025-09-17T21:10:56.363Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Splash screen completed, hiding native splash",
+        "timestamp": "2025-09-17T21:10:59.767Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:10:59.796Z"
+      },
+      {
+        "type": "warning",
+        "text": "props.pointerEvents is deprecated. Use style.pointerEvents",
+        "timestamp": "2025-09-17T21:10:59.804Z"
+      },
+      {
+        "type": "log",
+        "text": "🔍 useMyFamilies: GraphQL query state change: {loading: true, hasError: false, errorMessage: undefined, dataReceived: false, familiesCount: 0}",
+        "timestamp": "2025-09-17T21:10:59.858Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: true, childrenLoading: true, createFamilyLoading: false, familiesCount: 0, childrenCount: 0}",
+        "timestamp": "2025-09-17T21:10:59.859Z"
+      },
+      {
+        "type": "log",
+        "text": "[useInventoryTrafficLight] Debug info: {childId: , loading: false, hasError: false, errorMessage: undefined, hasData: false}",
+        "timestamp": "2025-09-17T21:10:59.865Z"
+      },
+      {
+        "type": "log",
+        "text": "🔍 useMyFamilies: GraphQL query state change: {loading: true, hasError: false, errorMessage: undefined, dataReceived: false, familiesCount: 0}",
+        "timestamp": "2025-09-17T21:10:59.866Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Auth initialized and splash completed, handling navigation... {isAuthenticated: false, segments: Array(1), userOnboardingCompleted: undefined}",
+        "timestamp": "2025-09-17T21:10:59.888Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Redirecting to login - user not authenticated",
+        "timestamp": "2025-09-17T21:10:59.888Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: App is ready for navigation",
+        "timestamp": "2025-09-17T21:10:59.888Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:10:59.888Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: true, childrenLoading: true, createFamilyLoading: false, familiesCount: 0, childrenCount: 0}",
+        "timestamp": "2025-09-17T21:10:59.905Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Auth initialized and splash completed, handling navigation... {isAuthenticated: false, segments: Array(1), userOnboardingCompleted: undefined}",
+        "timestamp": "2025-09-17T21:10:59.907Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Redirecting to login - user not authenticated",
+        "timestamp": "2025-09-17T21:10:59.908Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Auth initialized and splash completed, handling navigation... {isAuthenticated: false, segments: Array(2), userOnboardingCompleted: undefined}",
+        "timestamp": "2025-09-17T21:10:59.937Z"
+      },
+      {
+        "type": "verbose",
+        "text": "[DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o",
+        "timestamp": "2025-09-17T21:11:00.245Z"
+      },
+      {
+        "type": "log",
+        "text": "🔒 PRIVACY: Ensuring cache isolation for user sign-in",
+        "timestamp": "2025-09-17T21:11:03.832Z"
+      },
+      {
+        "type": "log",
+        "text": "🔒 PRIVACY: Different user detected, clearing Apollo cache",
+        "timestamp": "2025-09-17T21:11:03.833Z"
+      },
+      {
+        "type": "log",
+        "text": "New user: parents@nestsync.com (7e99068d-8d2b-4c6e-b259-a95503ae2e79)",
+        "timestamp": "2025-09-17T21:11:03.833Z"
+      },
+      {
+        "type": "log",
+        "text": "Apollo cache reset successfully",
+        "timestamp": "2025-09-17T21:11:03.834Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ PRIVACY: Apollo cache reset completed",
+        "timestamp": "2025-09-17T21:11:03.834Z"
+      },
+      {
+        "type": "log",
+        "text": "🔒 PRIVACY: Cache isolation ensured for parents@nestsync.com",
+        "timestamp": "2025-09-17T21:11:03.834Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Auth initialized and splash completed, handling navigation... {isAuthenticated: true, segments: Array(2), userOnboardingCompleted: true}",
+        "timestamp": "2025-09-17T21:11:03.835Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Redirecting to main app - onboarding completed",
+        "timestamp": "2025-09-17T21:11:03.835Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:03.851Z"
+      },
+      {
+        "type": "log",
+        "text": "🔍 useMyFamilies: GraphQL query state change: {loading: true, hasError: false, errorMessage: undefined, dataReceived: false, familiesCount: 0}",
+        "timestamp": "2025-09-17T21:11:03.874Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: true, childrenLoading: true, createFamilyLoading: false, familiesCount: 0, childrenCount: 0}",
+        "timestamp": "2025-09-17T21:11:03.875Z"
+      },
+      {
+        "type": "log",
+        "text": "[useInventoryTrafficLight] Debug info: {childId: , loading: false, hasError: false, errorMessage: undefined, hasData: false}",
+        "timestamp": "2025-09-17T21:11:03.888Z"
+      },
+      {
+        "type": "log",
+        "text": "🔍 useMyFamilies: GraphQL query state change: {loading: true, hasError: false, errorMessage: undefined, dataReceived: false, familiesCount: 0}",
+        "timestamp": "2025-09-17T21:11:03.891Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:03.908Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: true, childrenLoading: true, createFamilyLoading: false, familiesCount: 0, childrenCount: 0}",
+        "timestamp": "2025-09-17T21:11:03.922Z"
+      },
+      {
+        "type": "log",
+        "text": "AuthGuard: Auth initialized and splash completed, handling navigation... {isAuthenticated: true, segments: Array(1), userOnboardingCompleted: true}",
+        "timestamp": "2025-09-17T21:11:04.015Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:04.037Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: true, childrenLoading: true, createFamilyLoading: false, familiesCount: 0, childrenCount: 0}",
+        "timestamp": "2025-09-17T21:11:04.037Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:04.676Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:04.677Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: true, childrenLoading: true, createFamilyLoading: false, familiesCount: 0, childrenCount: 0}",
+        "timestamp": "2025-09-17T21:11:04.691Z"
+      },
+      {
+        "type": "log",
+        "text": "ChildConnection edges: Using incoming data for fresh query: [Object]",
+        "timestamp": "2025-09-17T21:11:04.831Z"
+      },
+      {
+        "type": "log",
+        "text": "Apollo Cache: myChildren merge called {existing: undefined, incoming: Object, args: Object, incomingEdgesLength: 1, existingEdgesLength: 0}",
+        "timestamp": "2025-09-17T21:11:04.831Z"
+      },
+      {
+        "type": "log",
+        "text": "Apollo Cache: Fresh query, returning incoming data: {__typename: ChildConnection, edges: Array(1), pageInfo: Object}",
+        "timestamp": "2025-09-17T21:11:04.831Z"
+      },
+      {
+        "type": "log",
+        "text": "ChildConnection edges: Merged result: [Object]",
+        "timestamp": "2025-09-17T21:11:04.832Z"
+      },
+      {
+        "type": "log",
+        "text": "Apollo Cache: myChildren merge called {existing: Object, incoming: Object, args: Object, incomingEdgesLength: 1, existingEdgesLength: 1}",
+        "timestamp": "2025-09-17T21:11:04.832Z"
+      },
+      {
+        "type": "log",
+        "text": "Apollo Cache: Fresh query, returning incoming data: {__typename: ChildConnection, edges: Array(1), pageInfo: Object}",
+        "timestamp": "2025-09-17T21:11:04.833Z"
+      },
+      {
+        "type": "log",
+        "text": "ChildConnection edges: Merged result: [Object]",
+        "timestamp": "2025-09-17T21:11:04.835Z"
+      },
+      {
+        "type": "log",
+        "text": "Apollo Cache: myChildren merge called {existing: Object, incoming: Object, args: Object, incomingEdgesLength: 1, existingEdgesLength: 1}",
+        "timestamp": "2025-09-17T21:11:04.836Z"
+      },
+      {
+        "type": "log",
+        "text": "Apollo Cache: Fresh query, returning incoming data: {__typename: ChildConnection, edges: Array(1), pageInfo: Object}",
+        "timestamp": "2025-09-17T21:11:04.836Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:04.836Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:04.836Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:04.837Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:04.842Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: true, childrenLoading: false, createFamilyLoading: false, familiesCount: 0, childrenCount: 1}",
+        "timestamp": "2025-09-17T21:11:04.864Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:04.866Z"
+      },
+      {
+        "type": "warning",
+        "text": "[formatTimeAgo] Invalid date provided: Loading...",
+        "timestamp": "2025-09-17T21:11:04.866Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:04.866Z"
+      },
+      {
+        "type": "log",
+        "text": "[useInventoryTrafficLight] Debug info: {childId: e84df972-b1f5-4842-8e83-800a8b234e8c, loading: true, hasError: false, errorMessage: undefined, hasData: false}",
+        "timestamp": "2025-09-17T21:11:04.868Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:04.999Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:05.000Z"
+      },
+      {
+        "type": "warning",
+        "text": "[formatTimeAgo] Invalid date provided: Loading...",
+        "timestamp": "2025-09-17T21:11:05.010Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:05.010Z"
+      },
+      {
+        "type": "log",
+        "text": "🔍 useMyFamilies: GraphQL query state change: {loading: false, hasError: false, errorMessage: undefined, dataReceived: true, familiesCount: 1}",
+        "timestamp": "2025-09-17T21:11:05.010Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ useMyFamilies: Successfully received family data: {families: Array(1), syncingToStore: true}",
+        "timestamp": "2025-09-17T21:11:05.010Z"
+      },
+      {
+        "type": "log",
+        "text": "📝 useMyFamilies: Calling setMyFamilies with 1 families",
+        "timestamp": "2025-09-17T21:11:05.010Z"
+      },
+      {
+        "type": "log",
+        "text": "🏪 CollaborationStore: setMyFamilies called with: {familiesCount: 1, families: Array(1), timestamp: 1758143464982}",
+        "timestamp": "2025-09-17T21:11:05.011Z"
+      },
+      {
+        "type": "log",
+        "text": "🏪 CollaborationStore: setMyFamilies state update: {previousState: Object, newState: Object}",
+        "timestamp": "2025-09-17T21:11:05.013Z"
+      },
+      {
+        "type": "log",
+        "text": "FamilyDataInitializer: Auto-selecting first family: {__typename: Family, id: f84e6b31-543b-42e9-9285-61c614d7a319, name: Sarah Chen's Family, familyType: PERSONAL, description: Personal family for Sarah Chen}",
+        "timestamp": "2025-09-17T21:11:05.013Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: false, childrenLoading: false, createFamilyLoading: false, familiesCount: 1, childrenCount: 1}",
+        "timestamp": "2025-09-17T21:11:05.013Z"
+      },
+      {
+        "type": "warning",
+        "text": "⚠️ FamilyDataInitializer: GraphQL returned families but store is empty - sync issue",
+        "timestamp": "2025-09-17T21:11:05.013Z"
+      },
+      {
+        "type": "log",
+        "text": "🔍 useMyFamilies: GraphQL query state change: {loading: false, hasError: false, errorMessage: undefined, dataReceived: true, familiesCount: 1}",
+        "timestamp": "2025-09-17T21:11:05.013Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ useMyFamilies: Successfully received family data: {families: Array(1), syncingToStore: true}",
+        "timestamp": "2025-09-17T21:11:05.013Z"
+      },
+      {
+        "type": "log",
+        "text": "📝 useMyFamilies: Calling setMyFamilies with 1 families",
+        "timestamp": "2025-09-17T21:11:05.013Z"
+      },
+      {
+        "type": "log",
+        "text": "🏪 CollaborationStore: setMyFamilies called with: {familiesCount: 1, families: Array(1), timestamp: 1758143464989}",
+        "timestamp": "2025-09-17T21:11:05.013Z"
+      },
+      {
+        "type": "log",
+        "text": "🏪 CollaborationStore: setMyFamilies state update: {previousState: Object, newState: Object}",
+        "timestamp": "2025-09-17T21:11:05.014Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:05.016Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:05.016Z"
+      },
+      {
+        "type": "warning",
+        "text": "[formatTimeAgo] Invalid date provided: Loading...",
+        "timestamp": "2025-09-17T21:11:05.016Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:05.016Z"
+      },
+      {
+        "type": "error",
+        "text": "The result of getSnapshot should be cached to avoid an infinite loop",
+        "timestamp": "2025-09-17T21:11:05.016Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: false, childrenLoading: false, createFamilyLoading: false, familiesCount: 1, childrenCount: 1}",
+        "timestamp": "2025-09-17T21:11:05.017Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:05.017Z"
+      },
+      {
+        "type": "log",
+        "text": "✅ Children data loaded successfully: {count: 1, children: Array(1)}",
+        "timestamp": "2025-09-17T21:11:05.017Z"
+      },
+      {
+        "type": "warning",
+        "text": "[formatTimeAgo] Invalid date provided: Loading...",
+        "timestamp": "2025-09-17T21:11:05.017Z"
+      },
+      {
+        "type": "error",
+        "text": "Unexpected text node: . A text node cannot be a child of a <View>.",
+        "timestamp": "2025-09-17T21:11:05.017Z"
+      },
+      {
+        "type": "log",
+        "text": "🏠 FamilyDataInitializer: Complete family data state: {familiesLoading: false, childrenLoading: false, createFamilyLoading: false, familiesCount: 1, childrenCount: 1}",
+        "timestamp": "2025-09-17T21:11:05.017Z"
+      },
+      {
+        "type": "error",
+        "text": "%o\n\n%s\n\n%s\n Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.\n    at getRootForUpdatedFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:219631:169)\n    at enqueueConcurrentRenderForLane (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:219621:14)\n    at forceStoreRerender (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:220949:18)\n    at updateStoreInstance (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:220931:39)\n    at react-stack-bottom-frame (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:229325:20)\n    at runWithFiberInDEV (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:217808:16)\n    at commitHookEffectListMount (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:222922:620)\n    at commitHookPassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:222959:58)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223866:27)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223899:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223865:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223899:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223865:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223865:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223899:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223865:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223899:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223865:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223865:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223899:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223899:11)\n    at recursivelyTraversePassiveMountEffects (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223857:106)\n    at commitPassiveMountOnFiber (http://localhost:8083/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:223899:11) The above error occurred in the <PresenceIndicators> component. React will try to recreate this component tree from scratch using the error boundary you provided, LogBoxStateSubscription.",
+        "timestamp": "2025-09-17T21:11:05.086Z"
+      },
+      {
+        "type": "log",
+        "text": "Download the Apollo DevTools for a better development experience: %s https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm",
+        "timestamp": "2025-09-17T21:11:05.999Z"
+      }
+    ],
+    "screenshots": [
+      {
+        "step": "Initial Load",
+        "path": "./test-screenshots/01-initial-load.png"
+      },
+      {
+        "step": "Auth Elements Check",
+        "path": "./test-screenshots/02-auth-elements.png"
+      },
+      {
+        "step": "Before Login",
+        "path": "./test-screenshots/03-before-login.png"
+      },
+      {
+        "step": "After Login",
+        "path": "./test-screenshots/04-after-login.png"
+      },
+      {
+        "step": "Final State",
+        "path": "./test-screenshots/05-final-state.png"
+      }
+    ]
+  },
+  "summary": {
+    "totalTests": 4,
+    "passed": 3,
+    "failed": 1,
+    "errors": 9,
+    "screenshots": 5
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "consolidation_status": "SUCCESS",
+  "remaining_children": 1,
+  "canonical_child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+  "child_name": "Emma",
+  "onboarding_completed": true,
+  "current_diaper_size": "size_2",
+  "inventory_count": 8030,
+  "usage_log_count": 8030,
+  "family_access_count": 1
+}

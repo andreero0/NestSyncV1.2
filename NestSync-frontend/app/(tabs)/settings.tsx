@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Switch, Alert, Te
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import NotificationPreferencesModal from '@/components/settings/NotificationPreferences';
+import FamilyManagement from '@/components/collaboration/FamilyManagement';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -10,6 +11,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
+import { useCurrentFamily, useCollaborationAvailable } from '@/lib/graphql/collaboration-hooks';
+import { usePendingInvitationsCount } from '@/stores/collaborationStore';
 
 interface SettingItem {
   id: string;
@@ -33,6 +36,11 @@ export default function SettingsScreen() {
 
   // Notification preferences modal state
   const [showNotificationPreferences, setShowNotificationPreferences] = useState(false);
+
+  // Collaboration state
+  const { currentFamily, isCollaborationEnabled } = useCollaborationAvailable();
+  const pendingInvitationsCount = usePendingInvitationsCount();
+  const [showFamilyManagement, setShowFamilyManagement] = useState(false);
 
   // Inventory preferences state
   const [inventoryPreferences, setInventoryPreferences] = useAsyncStorage('nestsync_inventory_preferences');
@@ -189,6 +197,32 @@ export default function SettingsScreen() {
       onPress: () => setShowNotificationPreferences(true)
     }
   ];
+
+  // Collaboration settings - only show if collaboration is enabled or if there are pending invitations
+  const collaborationSettings: SettingItem[] = [];
+
+  if (isCollaborationEnabled || pendingInvitationsCount > 0) {
+    collaborationSettings.push({
+      id: 'family-caregivers',
+      title: 'Family & Caregivers',
+      description: currentFamily
+        ? `${currentFamily.name} • ${pendingInvitationsCount > 0 ? `${pendingInvitationsCount} pending` : 'Manage family'}`
+        : 'Manage family collaboration',
+      icon: 'person.3.fill',
+      type: 'navigation',
+      onPress: () => setShowFamilyManagement(true)
+    });
+  } else {
+    // Show option to create family for collaboration
+    collaborationSettings.push({
+      id: 'create-family',
+      title: 'Enable Family Sharing',
+      description: 'Share care tracking with family and caregivers',
+      icon: 'person.badge.plus',
+      type: 'navigation',
+      onPress: () => setShowFamilyManagement(true)
+    });
+  }
 
   const privacySettings: SettingItem[] = [
     {
@@ -349,6 +383,22 @@ export default function SettingsScreen() {
             {accountSettings.map(renderSettingItem)}
           </ThemedView>
 
+          {/* Collaboration Section */}
+          {collaborationSettings.length > 0 && (
+            <ThemedView style={styles.section}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Family Collaboration
+              </ThemedText>
+              <ThemedView style={[styles.collaborationNotice, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <IconSymbol name="checkmark.shield.fill" size={20} color={colors.info} />
+                <ThemedText style={[styles.collaborationNoticeText, { color: colors.textSecondary }]}>
+                  Securely share your child's care data with trusted family members and caregivers. All data remains in Canada.
+                </ThemedText>
+              </ThemedView>
+              {collaborationSettings.map(renderSettingItem)}
+            </ThemedView>
+          )}
+
           {/* Inventory Section */}
           <ThemedView style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -456,6 +506,16 @@ export default function SettingsScreen() {
           onRequestClose={() => setShowNotificationPreferences(false)}
         >
           <NotificationPreferencesModal onClose={() => setShowNotificationPreferences(false)} />
+        </Modal>
+
+        {/* Family Management Modal */}
+        <Modal
+          visible={showFamilyManagement}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          onRequestClose={() => setShowFamilyManagement(false)}
+        >
+          <FamilyManagement onClose={() => setShowFamilyManagement(false)} />
         </Modal>
 
         {/* Threshold Editing Modal */}
@@ -669,6 +729,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   inventoryNoticeText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  // Collaboration section styles
+  collaborationNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 12,
+  },
+  collaborationNoticeText: {
     flex: 1,
     fontSize: 14,
     lineHeight: 20,

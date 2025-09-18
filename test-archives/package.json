@@ -1,0 +1,26 @@
+{
+  "name": "nestsyncv1.2",
+  "version": "1.0.0",
+  "description": "**A comprehensive diaper planning and inventory management application designed for Canadian families with PIPEDA compliance and psychology-driven UX.**",
+  "main": "comprehensive_family_testing.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andreero0/NestSyncV1.2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/andreero0/NestSyncV1.2/issues"
+  },
+  "homepage": "https://github.com/andreero0/NestSyncV1.2#readme",
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}

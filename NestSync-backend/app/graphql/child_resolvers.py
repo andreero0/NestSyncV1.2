@@ -864,103 +864,224 @@ class ChildQueries:
         after: Optional[str] = None
     ) -> ChildConnection:
         """
-        Get current user's children with proper GraphQL Connection pattern
+        Get current user's children with hybrid GraphQL Connection pattern
+        Supports both family-based AND legacy direct parent-child patterns for backward compatibility
         """
         from graphql import GraphQLError
         from base64 import b64encode, b64decode
-        
+
         # DEBUG: Log that the resolver is being called
         logger.info(f"MY_CHILDREN_QUERY resolver called with first={first}, after={after}")
-        
+
         try:
+            # CRITICAL FIX: Add detailed authentication debugging
+            logger.info(f"MY_CHILDREN_QUERY: Starting authentication check...")
+            logger.info(f"MY_CHILDREN_QUERY: GraphQL context type: {type(info.context)}")
+            logger.info(f"MY_CHILDREN_QUERY: Request available: {hasattr(info.context, 'request')}")
+
+            if hasattr(info.context, 'request') and info.context.request:
+                auth_header = info.context.request.headers.get("Authorization", "")
+                logger.info(f"MY_CHILDREN_QUERY: Authorization header present: {bool(auth_header)}")
+                logger.info(f"MY_CHILDREN_QUERY: Authorization header starts with Bearer: {auth_header.startswith('Bearer ')}")
+                if auth_header.startswith('Bearer '):
+                    token_length = len(auth_header[7:])
+                    logger.info(f"MY_CHILDREN_QUERY: Token length: {token_length}")
+
             # Get authenticated user from context
             from app.graphql.context import require_context_user
+            logger.info(f"MY_CHILDREN_QUERY: Calling require_context_user...")
             current_user = await require_context_user(info)
             logger.info(f"MY_CHILDREN_QUERY - authenticated user: {current_user.id} ({current_user.email})")
-            
+
         except GraphQLError as auth_error:
-            logger.error(f"Authentication error in my_children: {auth_error}")
-            # For queries, we return empty data but don't raise errors to allow partial responses
-            return ChildConnection(
-                page_info=PageInfo(
-                    has_next_page=False,
-                    has_previous_page=False,
-                    start_cursor=None,
-                    end_cursor=None,
-                    total_count=0
-                ),
-                edges=[]
+            logger.error(f"MY_CHILDREN_QUERY: GraphQL authentication error: {auth_error}")
+            # CRITICAL FIX: Properly propagate authentication errors instead of masking them
+            # This allows proper debugging of authentication issues
+            from graphql import GraphQLError as GQLError
+            raise GQLError(
+                message="Authentication required to access children",
+                extensions={
+                    "code": "UNAUTHENTICATED",
+                    "category": "AUTHENTICATION_ERROR",
+                    "original_error": str(auth_error)
+                }
             )
-        
+        except Exception as unexpected_error:
+            logger.error(f"MY_CHILDREN_QUERY: Unexpected authentication error: {unexpected_error}")
+            logger.error(f"MY_CHILDREN_QUERY: Error type: {type(unexpected_error)}")
+            # For unexpected errors, also raise them to enable proper debugging
+            from graphql import GraphQLError as GQLError
+            raise GQLError(
+                message="Authentication system error",
+                extensions={
+                    "code": "AUTHENTICATION_SYSTEM_ERROR",
+                    "category": "AUTHENTICATION_ERROR",
+                    "original_error": str(unexpected_error),
+                    "error_type": str(type(unexpected_error))
+                }
+            )
+
         try:
             async for session in get_async_session():
-                # Query user's children
                 from sqlalchemy import func
-                
-                # Get total count
-                count_result = await session.execute(
+                from app.models import Family, FamilyMember, FamilyChildAccess
+
+                # HYBRID PATTERN: Try both patterns and use the one with MORE children
+                logger.info(f"HYBRID_RESOLVER: Attempting both patterns for user {current_user.id}")
+
+                # STEP 1: Check family-based query pattern
+                family_count_result = await session.execute(
+                    select(func.count(Child.id.distinct())).select_from(Child)
+                    .join(FamilyChildAccess, Child.id == FamilyChildAccess.child_id)
+                    .join(Family, FamilyChildAccess.family_id == Family.id)
+                    .join(FamilyMember, Family.id == FamilyMember.family_id)
+                    .where(
+                        FamilyMember.user_id == current_user.id,
+                        FamilyMember.status == 'ACTIVE',
+                        Child.is_deleted == False,
+                        FamilyChildAccess.is_deleted == False
+                    )
+                )
+                family_total_count = family_count_result.scalar() or 0
+                logger.info(f"HYBRID_RESOLVER: Family-based query found {family_total_count} children")
+
+                # STEP 2: Check legacy direct parent-child pattern
+                legacy_count_result = await session.execute(
                     select(func.count(Child.id)).where(
                         Child.parent_id == current_user.id,
                         Child.is_deleted == False
                     )
                 )
-                total_count = count_result.scalar() or 0
-                
-                # Handle cursor-based pagination
-                offset = 0
-                if after:
-                    try:
-                        # Decode cursor (base64 encoded "child:{id}")
-                        cursor_data = b64decode(after.encode('ascii')).decode('ascii')
-                        if cursor_data.startswith('child:'):
-                            after_id = cursor_data.split(':')[1]
-                            # Find offset of this child
-                            offset_result = await session.execute(
-                                select(func.count(Child.id)).where(
-                                    Child.parent_id == current_user.id,
-                                    Child.is_deleted == False,
-                                    Child.id > uuid.UUID(after_id)
-                                ).order_by(Child.created_at.desc())
-                            )
-                            offset = offset_result.scalar() or 0
-                    except (ValueError, TypeError, AttributeError) as cursor_error:
-                        logger.warning(f"Invalid cursor in my_children: {after}, error: {cursor_error}")
-                        offset = 0
-                
-                # Get children with pagination - fetch one extra to detect if there's a next page
-                query = select(Child).where(
-                    Child.parent_id == current_user.id,
-                    Child.is_deleted == False
-                ).order_by(Child.created_at.desc()).limit(first + 1).offset(offset)
-                
-                result = await session.execute(query)
-                children = result.scalars().all()
-                
-                # Check if there are more items
+                legacy_total_count = legacy_count_result.scalar() or 0
+                logger.info(f"HYBRID_RESOLVER: Legacy direct query found {legacy_total_count} children")
+
+                # STEP 3: Use the pattern that returns MORE children (prioritize data completeness)
+                if legacy_total_count > family_total_count:
+                    logger.info(f"HYBRID_RESOLVER: Using legacy direct pattern ({legacy_total_count} > {family_total_count})")
+                    # Use legacy pattern
+                    children = []
+                    total_count = legacy_total_count
+
+                    # Handle cursor-based pagination for legacy pattern
+                    offset = 0
+                    if after:
+                        try:
+                            cursor_data = b64decode(after.encode('ascii')).decode('ascii')
+                            if cursor_data.startswith('child:'):
+                                after_id = cursor_data.split(':')[1]
+                                # Calculate offset for legacy pagination
+                                offset_result = await session.execute(
+                                    select(func.count(Child.id)).where(
+                                        Child.parent_id == current_user.id,
+                                        Child.is_deleted == False,
+                                        Child.id > uuid.UUID(after_id)
+                                    ).order_by(Child.created_at.desc())
+                                )
+                                offset = offset_result.scalar() or 0
+                        except (ValueError, TypeError, AttributeError) as cursor_error:
+                            logger.warning(f"Invalid cursor in legacy pattern: {after}, error: {cursor_error}")
+                            offset = 0
+
+                    # Get children using direct parent-child relationship
+                    legacy_query = select(Child).where(
+                        Child.parent_id == current_user.id,
+                        Child.is_deleted == False
+                    ).order_by(Child.created_at.desc()).limit(first + 1).offset(offset)
+
+                    result = await session.execute(legacy_query)
+                    children = result.scalars().all()
+
+                elif family_total_count > 0:
+                    # Family-based pattern has some children - use it
+                    logger.info(f"HYBRID_RESOLVER: Using family-based pattern for user {current_user.id}")
+
+                    # Handle cursor-based pagination for family pattern
+                    offset = 0
+                    if after:
+                        try:
+                            cursor_data = b64decode(after.encode('ascii')).decode('ascii')
+                            if cursor_data.startswith('child:'):
+                                after_id = cursor_data.split(':')[1]
+                                # Calculate offset for family-based pagination
+                                offset_result = await session.execute(
+                                    select(func.count(Child.id.distinct())).select_from(Child)
+                                    .join(FamilyChildAccess, Child.id == FamilyChildAccess.child_id)
+                                    .join(Family, FamilyChildAccess.family_id == Family.id)
+                                    .join(FamilyMember, Family.id == FamilyMember.family_id)
+                                    .where(
+                                        FamilyMember.user_id == current_user.id,
+                                        FamilyMember.status == 'ACTIVE',
+                                        Child.is_deleted == False,
+                                        FamilyChildAccess.is_deleted == False,
+                                        Child.id > uuid.UUID(after_id)
+                                    ).order_by(Child.created_at.desc())
+                                )
+                                offset = offset_result.scalar() or 0
+                        except (ValueError, TypeError, AttributeError) as cursor_error:
+                            logger.warning(f"Invalid cursor in family pattern: {after}, error: {cursor_error}")
+                            offset = 0
+
+                    # Get children using family-based query
+                    family_query = select(Child).select_from(Child)\
+                        .join(FamilyChildAccess, Child.id == FamilyChildAccess.child_id)\
+                        .join(Family, FamilyChildAccess.family_id == Family.id)\
+                        .join(FamilyMember, Family.id == FamilyMember.family_id)\
+                        .where(
+                            FamilyMember.user_id == current_user.id,
+                            FamilyMember.status == 'ACTIVE',
+                            Child.is_deleted == False,
+                            FamilyChildAccess.is_deleted == False
+                        ).order_by(Child.created_at.desc()).limit(first + 1).offset(offset)
+
+                    result = await session.execute(family_query)
+                    children = result.scalars().all()
+                    total_count = family_total_count
+
+                else:
+                    # Both patterns found no children
+                    logger.info(f"HYBRID_RESOLVER: Both family and legacy patterns found no children for user {current_user.id}")
+                    children = []
+                    total_count = 0
+
+                # Process results (same for both patterns)
                 has_next_page = len(children) > first
                 if has_next_page:
-                    # Remove the extra item we fetched
                     children = children[:-1]
-                
-                # Build edges with proper cursor encoding
+
+                # Build edges with proper cursor encoding and detailed logging
                 edges = []
-                for child in children:
+                for i, child in enumerate(children):
+                    logger.info(f"HYBRID_RESOLVER: Processing child {i+1}: id={child.id}, name={child.name}")
+                    logger.info(f"HYBRID_RESOLVER: Child data - gender={child.gender}, diaper_size={child.current_diaper_size}")
+
                     cursor = b64encode(f"child:{child.id}".encode('ascii')).decode('ascii')
-                    edges.append(ChildEdge(
-                        node=child_to_graphql(child),
-                        cursor=cursor
-                    ))
-                
+
+                    # Convert child to GraphQL with error catching
+                    try:
+                        child_profile = child_to_graphql(child)
+                        logger.info(f"HYBRID_RESOLVER: Converted child to GraphQL - id={child_profile.id}")
+
+                        edges.append(ChildEdge(
+                            node=child_profile,
+                            cursor=cursor
+                        ))
+                        logger.info(f"HYBRID_RESOLVER: Added edge for child {child.id}")
+                    except Exception as conversion_error:
+                        logger.error(f"HYBRID_RESOLVER: Error converting child {child.id} to GraphQL: {conversion_error}")
+                        # Continue processing other children even if one fails
+
                 # Calculate start and end cursors
                 start_cursor = edges[0].cursor if edges else None
                 end_cursor = edges[-1].cursor if edges else None
-                
+
                 # Determine if there's a previous page
                 has_previous_page = offset > 0
-                
-                logger.info(f"Retrieved {len(edges)} children for user {current_user.id} (total: {total_count})")
-                
-                return ChildConnection(
+
+                logger.info(f"HYBRID_RESOLVER: Retrieved {len(edges)} children for user {current_user.id} (total: {total_count})")
+                logger.info(f"HYBRID_RESOLVER: Final edges count: {len(edges)}")
+                logger.info(f"HYBRID_RESOLVER: Page info - has_next: {has_next_page}, has_prev: {has_previous_page}, total: {total_count}")
+
+                connection_result = ChildConnection(
                     page_info=PageInfo(
                         has_next_page=has_next_page,
                         has_previous_page=has_previous_page,
@@ -970,9 +1091,12 @@ class ChildQueries:
                     ),
                     edges=edges
                 )
-                
+
+                logger.info(f"HYBRID_RESOLVER: Returning ChildConnection with {len(connection_result.edges)} edges")
+                return connection_result
+
         except Exception as e:
-            logger.error(f"Error getting children: {e}")
+            logger.error(f"HYBRID_RESOLVER: Error getting children: {e}")
             return ChildConnection(
                 page_info=PageInfo(
                     has_next_page=False,
@@ -1039,16 +1163,38 @@ class ChildQueries:
         
         try:
             async for session in get_async_session():
-                # Get user's children count
+                # Get user's children count using hybrid pattern (same as my_children resolver)
                 from sqlalchemy import func
-                
-                children_count_result = await session.execute(
-                    select(func.count(Child.id)).where(
-                        Child.parent_id == current_user.id,
-                        Child.is_deleted == False
+                from app.models import Family, FamilyMember, FamilyChildAccess
+
+                # Try family-based count first
+                family_children_count_result = await session.execute(
+                    select(func.count(Child.id.distinct())).select_from(Child)
+                    .join(FamilyChildAccess, Child.id == FamilyChildAccess.child_id)
+                    .join(Family, FamilyChildAccess.family_id == Family.id)
+                    .join(FamilyMember, Family.id == FamilyMember.family_id)
+                    .where(
+                        FamilyMember.user_id == current_user.id,
+                        FamilyMember.status == 'ACTIVE',
+                        Child.is_deleted == False,
+                        FamilyChildAccess.is_deleted == False
                     )
                 )
-                children_count = children_count_result.scalar() or 0
+                family_children_count = family_children_count_result.scalar() or 0
+
+                if family_children_count > 0:
+                    children_count = family_children_count
+                    logger.info(f"ONBOARDING_STATUS: Using family-based count: {children_count} for user {current_user.id}")
+                else:
+                    # Fallback to legacy direct parent-child count
+                    legacy_children_count_result = await session.execute(
+                        select(func.count(Child.id)).where(
+                            Child.parent_id == current_user.id,
+                            Child.is_deleted == False
+                        )
+                    )
+                    children_count = legacy_children_count_result.scalar() or 0
+                    logger.info(f"ONBOARDING_STATUS: Using legacy direct count: {children_count} for user {current_user.id}")
                 
                 # Get user's onboarding status from their profile
                 user_onboarding_completed = current_user.onboarding_completed

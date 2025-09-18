@@ -27,7 +27,8 @@ import { IconSymbol } from '../ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { CREATE_INVENTORY_ITEM_MUTATION } from '@/lib/graphql/mutations';
-import { MY_CHILDREN_QUERY, GET_INVENTORY_ITEMS_QUERY, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
+import { GET_INVENTORY_ITEMS_QUERY, GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
+import { useChildren } from '@/hooks/useChildren';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -131,10 +132,10 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [expiryValidation, setExpiryValidation] = useState<{type: 'warning' | 'error' | 'success' | null, message: string}>({type: null, message: ''});
 
-  // GraphQL queries and mutations
-  const { data: childrenData, loading: childrenLoading } = useQuery(MY_CHILDREN_QUERY, {
-    variables: { first: 10 },
-    skip: !visible,
+  // GraphQL queries and mutations - using centralized hook
+  const { children, loading: childrenLoading } = useChildren({
+    first: 10,
+    skip: !visible
   });
 
   const [createInventoryItem, { loading: submitLoading }] = useMutation(CREATE_INVENTORY_ITEM_MUTATION, {
@@ -264,11 +265,11 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
     if (childId) {
       // Use the childId prop passed from the dashboard
       setSelectedChildId(childId);
-    } else if (childrenData?.myChildren?.edges?.length > 0 && !selectedChildId) {
+    } else if (children.length > 0 && !selectedChildId) {
       // Fallback to first child only if no childId prop is provided
-      setSelectedChildId(childrenData.myChildren.edges[0].node.id);
+      setSelectedChildId(children[0].id);
     }
-  }, [childId, childrenData, selectedChildId]);
+  }, [childId, children, selectedChildId]);
 
   // Animation effects
   React.useEffect(() => {
@@ -492,11 +493,11 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
               )}
 
               {/* Child Indicator */}
-              {selectedChildId && childrenData?.myChildren?.edges && (
+              {selectedChildId && children.length > 0 && (
                 <View style={[styles.childIndicator, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <IconSymbol name="person.circle.fill" size={20} color={colors.tint} />
                   <ThemedText type="defaultSemiBold" style={[styles.childIndicatorText, { color: colors.text }]}>
-                    Adding stock for: {childrenData.myChildren.edges.find(edge => edge.node.id === selectedChildId)?.node.firstName || 'Selected Child'}
+                    Adding stock for: {children.find(child => child.id === selectedChildId)?.name || 'Selected Child'}
                   </ThemedText>
                 </View>
               )}

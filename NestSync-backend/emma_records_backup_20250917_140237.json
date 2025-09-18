@@ -1,0 +1,280 @@
+{
+  "backup_timestamp": "2025-09-17T14:02:37.142016",
+  "description": "Backup before Emma records consolidation for parents@nestsync.com",
+  "children_records": [
+    {
+      "id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "parent_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+      "name": "Emma",
+      "created_at": "2025-09-12T04:43:58.694129+00:00",
+      "updated_at": "2025-09-12T04:43:58.694132+00:00",
+      "current_diaper_size": "size_2",
+      "daily_usage_count": 8,
+      "date_of_birth": "2025-03-16",
+      "onboarding_completed": true,
+      "wizard_data": {
+        "basic_info": {
+          "completed_at": "2025-08-13T04:43:58.692737+00:00",
+          "data": {
+            "name": "Emma",
+            "birth_date": "2025-03-16"
+          }
+        },
+        "size_selection": {
+          "completed_at": "2025-08-14T04:43:58.692749+00:00",
+          "data": {
+            "size": "size_2"
+          }
+        },
+        "usage_pattern": {
+          "completed_at": "2025-08-15T04:43:58.692752+00:00",
+          "data": {
+            "daily_changes": 8
+          }
+        },
+        "initial_inventory": {
+          "completed_at": "2025-08-16T04:43:58.692755+00:00",
+          "data": {
+            "setup_complete": true
+          }
+        }
+      },
+      "is_deleted": false,
+      "gender": "girl",
+      "special_needs": null,
+      "has_sensitive_skin": false,
+      "has_allergies": false,
+      "parent_email": "parents@nestsync.com"
+    },
+    {
+      "id": "2eff8a50-426b-4cad-8859-f99561fe75ac",
+      "parent_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+      "name": "Emma",
+      "created_at": "2025-09-17T10:35:55.030894+00:00",
+      "updated_at": "2025-09-17T10:35:55.030900+00:00",
+      "current_diaper_size": "size_1",
+      "daily_usage_count": 8,
+      "date_of_birth": "2025-09-17",
+      "onboarding_completed": false,
+      "wizard_data": {
+        "basic_info": {
+          "completed_at": "2025-09-17T10:35:54.937382+00:00",
+          "data": {
+            "name": "Emma",
+            "date_of_birth": "2025-09-17",
+            "gender": null,
+            "current_diaper_size": "size_1",
+            "weight_kg": null,
+            "height_cm": null
+          }
+        }
+      },
+      "is_deleted": false,
+      "gender": null,
+      "special_needs": null,
+      "has_sensitive_skin": false,
+      "has_allergies": false,
+      "parent_email": "parents@nestsync.com"
+    },
+    {
+      "id": "aa5bf7ed-ec10-4a85-a45c-601c35ed1722",
+      "parent_id": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+      "name": "Emma",
+      "created_at": "2025-09-17T10:49:56.757202+00:00",
+      "updated_at": "2025-09-17T10:49:56.757207+00:00",
+      "current_diaper_size": "size_1",
+      "daily_usage_count": 8,
+      "date_of_birth": "2025-09-17",
+      "onboarding_completed": false,
+      "wizard_data": {
+        "basic_info": {
+          "completed_at": "2025-09-17T10:49:56.666115+00:00",
+          "data": {
+            "name": "Emma",
+            "date_of_birth": "2025-09-17",
+            "gender": null,
+            "current_diaper_size": "size_1",
+            "weight_kg": null,
+            "height_cm": null
+          }
+        }
+      },
+      "is_deleted": false,
+      "gender": null,
+      "special_needs": null,
+      "has_sensitive_skin": false,
+      "has_allergies": false,
+      "parent_email": "parents@nestsync.com"
+    }
+  ],
+  "family_child_access_records": [
+    {
+      "id": "d30f55d7-bf62-4fc1-a63a-ed09b9403961",
+      "family_id": "f84e6b31-543b-42e9-9285-61c614d7a319",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "access_level": "FULL",
+      "granted_by": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+      "granted_at": "2025-09-17T04:13:18.062283+00:00",
+      "is_deleted": false,
+      "child_name": "Emma",
+      "family_name": "Sarah Chen's Family"
+    },
+    {
+      "id": "8e8d7ac1-cb10-4094-979c-50c5fcd8db9b",
+      "family_id": "f84e6b31-543b-42e9-9285-61c614d7a319",
+      "child_id": "2eff8a50-426b-4cad-8859-f99561fe75ac",
+      "access_level": "FULL",
+      "granted_by": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+      "granted_at": "2025-09-17T15:55:55.303039+00:00",
+      "is_deleted": false,
+      "child_name": "Emma",
+      "family_name": "Sarah Chen's Family"
+    },
+    {
+      "id": "6445a032-fb7b-48da-bd28-76a34b8f16a7",
+      "family_id": "f84e6b31-543b-42e9-9285-61c614d7a319",
+      "child_id": "aa5bf7ed-ec10-4a85-a45c-601c35ed1722",
+      "access_level": "FULL",
+      "granted_by": "7e99068d-8d2b-4c6e-b259-a95503ae2e79",
+      "granted_at": "2025-09-17T15:55:55.303039+00:00",
+      "is_deleted": false,
+      "child_name": "Emma",
+      "family_name": "Sarah Chen's Family"
+    }
+  ],
+  "inventory_items": [
+    {
+      "id": "236df1ff-e66c-470f-8589-9e60a5ab3f4e",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Pampers",
+      "size": "size_2",
+      "quantity_total": 45,
+      "quantity_remaining": 28,
+      "created_at": "2025-09-12T04:43:58.845512+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "5f4bc42e-9bdf-46bb-9de1-6870bff7de15",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Huggies",
+      "size": "3",
+      "quantity_total": 84,
+      "quantity_remaining": 84,
+      "created_at": "2025-09-15T14:26:58.245075+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "f816e34b-84c4-4144-8992-41ddccc39443",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Pampers",
+      "size": "3",
+      "quantity_total": 92,
+      "quantity_remaining": 92,
+      "created_at": "2025-09-15T14:26:58.522395+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "01254f70-6771-4851-afd5-34ccfc300744",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Kirkland",
+      "size": "3",
+      "quantity_total": 100,
+      "quantity_remaining": 100,
+      "created_at": "2025-09-15T14:26:58.801459+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "b3dbd3c9-b09c-4f12-b2f6-201884821c91",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Huggies",
+      "size": "3",
+      "quantity_total": 84,
+      "quantity_remaining": 84,
+      "created_at": "2025-09-15T14:31:02.595375+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "e4a570fd-2f4a-4a89-91e0-600c6d57e421",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Pampers",
+      "size": "3",
+      "quantity_total": 92,
+      "quantity_remaining": 92,
+      "created_at": "2025-09-15T14:31:02.865574+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "b32403ec-1752-4881-af39-9c2e72c9a484",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Kirkland",
+      "size": "3",
+      "quantity_total": 100,
+      "quantity_remaining": 100,
+      "created_at": "2025-09-15T14:31:03.115917+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "53d5ee37-9e53-473c-ac18-c0596341658b",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Huggies",
+      "size": "3",
+      "quantity_total": 84,
+      "quantity_remaining": 84,
+      "created_at": "2025-09-15T14:33:01.733194+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "817c7bc3-eb0f-48dd-a16c-5dd7fd2d664d",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Pampers",
+      "size": "3",
+      "quantity_total": 92,
+      "quantity_remaining": 92,
+      "created_at": "2025-09-15T14:33:01.952383+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    },
+    {
+      "id": "bc2805d7-d1f7-4f88-a448-d7ad40d3ece2",
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "brand": "Kirkland",
+      "size": "3",
+      "quantity_total": 100,
+      "quantity_remaining": 100,
+      "created_at": "2025-09-15T14:33:02.192941+00:00",
+      "is_deleted": false,
+      "child_name": "Emma"
+    }
+  ],
+  "usage_logs_summary": [
+    {
+      "child_id": "e84df972-b1f5-4842-8e83-800a8b234e8c",
+      "child_name": "Emma",
+      "usage_log_count": 803,
+      "first_log": "2025-09-12T04:43:58.915926+00:00",
+      "last_log": "2025-09-15T14:46:16.309529+00:00"
+    },
+    {
+      "child_id": "2eff8a50-426b-4cad-8859-f99561fe75ac",
+      "child_name": "Emma",
+      "usage_log_count": 0,
+      "first_log": null,
+      "last_log": null
+    },
+    {
+      "child_id": "aa5bf7ed-ec10-4a85-a45c-601c35ed1722",
+      "child_name": "Emma",
+      "usage_log_count": 0,
+      "first_log": null,
+      "last_log": null
+    }
+  ]
+}

@@ -44,6 +44,9 @@ This documentation provides comprehensive design specifications for NestSync, a 
 ### [Design System](./design-system/README.md)
 Complete visual specification including colors, typography, spacing, and component library
 
+### [Caregiver Collaboration](./features/caregiver-collaboration/README.md)
+Comprehensive family sharing system with real-time coordination, professional caregiver integration, and PIPEDA-compliant privacy controls
+
 ### [Analytics Transformation](./features/analytics-dashboard/README.md)
 Comprehensive redesign of analytics page from B2B patterns to parent-friendly interface
 
@@ -64,6 +67,16 @@ Developer handoff specifications with React Native Progress and Reusables patter
 | Victory Native XL complex charts | Simple Progress.Circle with reassuring colors |
 | Multiple data visualizations | Single-focus cards with gentle insights |
 | Performance metrics | Confidence-building affirmations |
+
+### From Complex Collaboration to Supportive Coordination
+
+| **Traditional Collaboration** | **Parent-Supportive Collaboration** |
+|-------------------------------|-------------------------------------|
+| "User permissions matrix" | "Who can help with Emma's care" |
+| "Conflict resolution required" | "Let's make sure everyone's on the same page" |
+| "Access control violations" | "Privacy settings for your family" |
+| Complex role management | Simple "Family" / "Professional" / "Emergency" categories |
+| Real-time alerts and notifications | Gentle coordination updates with calming colors |
 
 ### Information Architecture Priority
 
