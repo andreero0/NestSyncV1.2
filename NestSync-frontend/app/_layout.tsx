@@ -17,6 +17,7 @@ import apolloClient from '../lib/graphql/client';
 import { useAuthStore } from '../stores/authStore';
 import { JITConsentModal } from '../components/consent/JITConsentModal';
 import NestSyncSplashScreen from '../components/splash/SplashScreen';
+import { EmergencyModeButton } from '../components/emergency';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -176,10 +177,19 @@ function ThemedNavigationWrapper() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="emergency-dashboard"
+            options={{
+              headerShown: false,
+              presentation: 'fullScreenModal',
+              gestureEnabled: false, // Prevent accidental dismissal in emergency
+            }}
+          />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style={actualTheme === 'dark' ? 'light' : 'dark'} />
         <JITConsentModal />
+        <EmergencyModeButton />
       </AuthGuard>
     </ThemeProvider>
   );

@@ -1,0 +1,114 @@
+# Development Testing Requirements for Emergency Flows
+# These dependencies are for testing only and should not be included in production
+
+# Core Testing Framework
+pytest>=7.4.3,<8.0.0
+pytest-asyncio>=0.21.1,<1.0.0
+pytest-cov>=4.1.0,<5.0.0
+
+# Database Testing
+pytest-postgresql>=5.0.0,<6.0.0
+sqlalchemy[postgresql_testing]>=2.0.23,<2.1.0
+
+# HTTP and API Testing
+httpx>=0.25.2,<0.26.0
+httpx-ws>=0.4.0,<1.0.0  # WebSocket testing
+pytest-httpx>=0.26.0,<1.0.0
+
+# Mock and Fixture Generation
+factory-boy>=3.3.0,<4.0.0  # Test data factories
+faker>=20.1.0,<21.0.0  # Realistic test data generation
+pytest-mock>=3.12.0,<4.0.0
+responses>=0.24.1,<1.0.0  # HTTP response mocking
+
+# Performance Testing
+pytest-benchmark>=4.0.0,<5.0.0
+locust>=2.17.0,<3.0.0  # Load testing for emergency scenarios
+
+# Async Testing Support
+anyio>=4.0.0,<5.0.0
+trio>=0.23.1,<1.0.0
+
+# Testing Utilities
+pytest-xdist>=3.5.0,<4.0.0  # Parallel test execution
+pytest-timeout>=2.2.0,<3.0.0  # Test timeout management
+pytest-rerunfailures>=12.0,<13.0  # Flaky test management
+
+# Code Quality and Coverage
+coverage>=7.3.2,<8.0.0
+pytest-clarity>=1.0.1,<2.0.0  # Better assertion error messages
+pytest-sugar>=0.9.7,<1.0.0  # Better test output formatting
+
+# Emergency Flow Specific Testing
+freezegun>=1.2.2,<2.0.0  # Time manipulation for expiry testing
+requests-mock>=1.11.0,<2.0.0  # External API mocking
+
+# PIPEDA Compliance Testing
+cryptography>=41.0.7,<42.0.0  # For testing encryption and security
+python-jose[cryptography]>=3.3.0,<4.0.0  # JWT testing
+
+# Supabase Testing Mocks
+supabase-mock>=0.1.0  # Custom mock for Supabase (if available)
+
+# Canadian Specific Testing
+phonenumbers>=8.13.26,<9.0.0  # Phone number validation testing
+babel>=2.14.0,<3.0.0  # Localization testing
+
+# Performance Monitoring
+memory-profiler>=0.61.0,<1.0.0
+py-spy>=0.3.14,<1.0.0  # Performance profiling
+
+# Test Data and Fixtures
+mimesis>=11.1.0,<12.0.0  # Advanced fake data generation
+polyfactory>=2.11.0,<3.0.0  # Pydantic model factories
+
+# Environment and Configuration Testing
+python-dotenv>=1.0.0,<2.0.0
+dynaconf[testing]>=3.2.4,<4.0.0
+
+# Security Testing
+bandit[toml]>=1.7.5,<2.0.0  # Security linting
+safety>=2.3.4,<3.0.0  # Dependency vulnerability checking
+
+# Emergency Scenario Simulation
+numpy>=1.25.2,<2.0.0  # For statistical test data generation
+scipy>=1.11.4,<2.0.0  # Scientific computing for test scenarios
+
+# Documentation Testing
+doctest>=2.0.0  # Docstring testing
+pydocstyle>=6.3.0,<7.0.0  # Docstring style checking
+
+# Type Checking for Tests
+mypy>=1.7.1,<2.0.0
+types-requests>=2.31.0.0,<3.0.0
+types-redis>=4.6.0.0,<5.0.0
+
+# Emergency Flow Load Testing
+aiohttp>=3.9.1,<4.0.0  # For async load testing
+websockets>=12.0,<13.0  # WebSocket testing if needed
+
+# Test Reporting
+pytest-html>=4.1.1,<5.0.0  # HTML test reports
+pytest-json-report>=1.5.0,<2.0.0  # JSON test reports
+allure-pytest>=2.13.2,<3.0.0  # Advanced test reporting
+
+# Database Migration Testing
+alembic[testing]>=1.12.1,<1.13.0
+
+# GraphQL Testing
+graphql-core[testing]>=3.2.0,<4.0.0
+strawberry-graphql[testing]>=0.214.0,<0.215.0
+
+# Redis Testing
+fakeredis>=2.20.1,<3.0.0  # In-memory Redis for testing
+
+# File and Image Testing (for QR codes)
+Pillow>=10.1.0,<11.0.0
+qrcode>=7.4.2,<8.0.0  # QR code generation testing
+
+# Timezone and Date Testing
+pytz>=2023.3,<2024.0
+python-dateutil>=2.8.2,<3.0.0
+
+# Canadian Compliance Testing
+# Add any specific Canadian compliance testing libraries as needed

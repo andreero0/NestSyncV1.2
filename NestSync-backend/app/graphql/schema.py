@@ -13,6 +13,7 @@ from .inventory_resolvers import InventoryMutations, InventoryQueries
 from .notification_resolvers import NotificationMutations, NotificationQueries
 from .analytics_resolvers import AnalyticsQueries
 from .collaboration_resolvers import CollaborationMutations, CollaborationQueries
+from .emergency_resolvers import EmergencyMutations, EmergencyQueries
 # from .observability_resolvers import ObservabilityQuery, ObservabilityMutation  # Temporarily disabled for testing
 from .types import (
     UserProfile,
@@ -42,6 +43,14 @@ from .collaboration_types import (
     CaregiverInvitationConnection,
     Family as FamilyType,
     CaregiverPresence
+)
+from .emergency_types import (
+    EmergencyContactConnection,
+    EmergencyInformationResponse,
+    HealthcareProviderConnection,
+    EmergencyAccessConnection,
+    MedicalInformation,
+    HealthCardValidationResult
 )
 
 
@@ -83,6 +92,13 @@ class Query:
     family_members: FamilyMemberConnection = strawberry.field(resolver=CollaborationQueries.family_members)
     pending_invitations: CaregiverInvitationConnection = strawberry.field(resolver=CollaborationQueries.pending_invitations)
     family_presence: List[CaregiverPresence] = strawberry.field(resolver=CollaborationQueries.family_presence)
+
+    # Emergency queries
+    get_emergency_contacts: EmergencyContactConnection = strawberry.field(resolver=EmergencyQueries.get_emergency_contacts)
+    get_medical_information: Optional[MedicalInformation] = strawberry.field(resolver=EmergencyQueries.get_medical_information)
+    get_healthcare_providers: HealthcareProviderConnection = strawberry.field(resolver=EmergencyQueries.get_healthcare_providers)
+    get_emergency_information: EmergencyInformationResponse = strawberry.field(resolver=EmergencyQueries.get_emergency_information)
+    get_emergency_access_tokens: EmergencyAccessConnection = strawberry.field(resolver=EmergencyQueries.get_emergency_access_tokens)
 
     # Observability queries - Real-time system monitoring
     # Temporarily disabled for testing
@@ -146,6 +162,18 @@ class Mutation:
     add_child_to_family = strawberry.field(resolver=CollaborationMutations.add_child_to_family)
     update_presence = strawberry.field(resolver=CollaborationMutations.update_presence)
     log_family_activity = strawberry.field(resolver=CollaborationMutations.log_family_activity)
+
+    # Emergency mutations
+    create_emergency_contact = strawberry.field(resolver=EmergencyMutations.create_emergency_contact)
+    update_emergency_contact = strawberry.field(resolver=EmergencyMutations.update_emergency_contact)
+    delete_emergency_contact = strawberry.field(resolver=EmergencyMutations.delete_emergency_contact)
+    update_medical_information = strawberry.field(resolver=EmergencyMutations.update_medical_information)
+    create_healthcare_provider = strawberry.field(resolver=EmergencyMutations.create_healthcare_provider)
+    update_healthcare_provider = strawberry.field(resolver=EmergencyMutations.update_healthcare_provider)
+    delete_healthcare_provider = strawberry.field(resolver=EmergencyMutations.delete_healthcare_provider)
+    generate_emergency_access_token = strawberry.field(resolver=EmergencyMutations.generate_emergency_access_token)
+    revoke_emergency_access_token = strawberry.field(resolver=EmergencyMutations.revoke_emergency_access_token)
+    validate_health_card = strawberry.field(resolver=EmergencyMutations.validate_health_card)
 
     # Observability mutations - System monitoring control
     # Temporarily disabled for testing
