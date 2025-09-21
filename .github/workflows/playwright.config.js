@@ -94,21 +94,9 @@ module.exports = defineConfig({
   globalSetup: require.resolve('./test-setup.js'),
   globalTeardown: require.resolve('./test-teardown.js'),
 
-  // Web server configuration for local testing
-  webServer: [
-    {
-      command: 'cd ../../NestSync-backend && source venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8001',
-      port: 8001,
-      timeout: 120000,
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command: 'cd ../../NestSync-frontend && npx expo start --port 8082 --web',
-      port: 8082,
-      timeout: 180000,
-      reuseExistingServer: !process.env.CI,
-    }
-  ],
+  // Note: Web servers are started by Docker in CI environment
+  // For local testing, ensure Docker containers are running:
+  // cd docker && docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
   // Output directories
   outputDir: 'test-results/artifacts',

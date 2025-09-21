@@ -1,1821 +1,734 @@
-# NestSync Development Bottlenecks Log
+# NestSync Development Bottlenecks
+
+This document captures critical bottlenecks encountered during NestSync development, providing solutions and prevention strategies for future reference.
 
 ## Purpose
-This document tracks recurring development bottlenecks, their solutions, and prevention strategies to avoid repeating the same troubleshooting efforts.
-
-## Bottleneck Categories
-- **RESOLVED**: Issues that have been fixed with documented solutions
-- **ACTIVE**: Currently blocking issues requiring attention
-- **MONITORING**: Known issues being tracked for patterns
+Document development obstacles, debugging discoveries, and solutions to prevent recurring issues and accelerate future development workflows.
 
 ---
 
-## RESOLVED BOTTLENECKS
-
-### 1. Province Dropdown iOS Compatibility Issue
-**Status**: ✅ RESOLVED  
-**Date Resolved**: [Previous development cycle]  
-**Category**: Cross-platform compatibility  
-
-**Problem**: 
-- `@react-native-picker/picker` had rendering issues on iOS
-- Inconsistent styling and behavior across platforms
-- User experience degradation for Canadian address input
-
-**Solution**: 
-- Switched to `react-native-element-dropdown` library
-- Provides consistent cross-platform behavior
-- Better styling control and iOS compatibility
-
-**Prevention**: 
-- Always test picker components on both iOS and Android during implementation
-- Prefer libraries with proven cross-platform compatibility
-- Document component library choices in design system
-
-**Related Files**:
-- Province dropdown implementation in onboarding flow
-- Canadian address input components
-
----
-
-### 2. Network Connectivity Issues (Frontend-Backend)
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-05  
-**Category**: Development environment setup  
-
-**Problem**: 
-- Frontend showing "ApolloError: Network request failed"
-- iOS simulator unable to connect to GraphQL backend
-- Authentication and all API requests failing
-
-**Root Cause**: 
-- Backend FastAPI server not running
-- GraphQL endpoint at `localhost:8001` unavailable
-- Frontend configured to connect to backend but service not started
-
-**Solution**: 
-- Start FastAPI backend server: `uvicorn main:app --host 0.0.0.0 --port 8001 --reload`
-- Ensure both frontend (port 8082) and backend (port 8001) servers running simultaneously
-- Verify GraphQL endpoint responds with test query
-
-**Prevention**: 
-- Create development setup checklist requiring both servers
-- Implement health checks for all services
-- Add server status indicators to development workflow
-- Document complete development environment startup procedure
-
-**Related Files**:
-- `NestSync-backend/main.py` - FastAPI application entry point
-- `NestSync-frontend/lib/graphql/client.ts` - GraphQL client configuration
-
----
-
-### 3. GraphQL Async Session Manager Bug  
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-05  
-**Category**: Backend code error  
-
-**Problem**: 
-- Authentication succeeding in Supabase but failing in backend
-- Error in logs: `Error during sign in: __aenter__`
-- Users unable to complete sign-in despite valid credentials
-
-**Root Cause**: 
-- Incorrect async context manager usage in GraphQL resolvers
-- Using `async with get_async_session() as session:` when function returns `AsyncGenerator`
-- Database session management pattern incompatible with resolver implementation
-
-**Solution**: 
-- Changed from `async with get_async_session() as session:` to `async for session in get_async_session():`
-- Fixed in both `auth_resolvers.py` and `child_resolvers.py`
-- Server auto-reloaded and errors resolved immediately
-
-**Prevention**: 
-- Ensure proper async/await patterns with database session generators
-- Add TypeScript/Python linting rules for async context manager usage
-- Create templates for common GraphQL resolver patterns
-- Code review checklist for async database operations
-
-**Related Files**:
-- `app/graphql/auth_resolvers.py` - Authentication GraphQL resolvers
-- `app/graphql/child_resolvers.py` - Child profile GraphQL resolvers  
-- `app/config/database.py` - Database session management
-
----
-
-### 4. Email Verification and User Account Management
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-05  
-**Category**: Authentication flow  
-
-**Problem**: 
-- Users appearing to register successfully but unable to sign in
-- Confusion between multiple test accounts (`tobe.chukwu.ubah@gmail.com`, `andre_ero@yahoo.ca`)
-- Email verification requirements blocking development testing
-
-**Root Cause**: 
-- Email verification required but not completed by test users
-- Dual storage system (Supabase Auth + PostgreSQL users table) creating sync issues
-- Frontend UI showing different email than backend was receiving
-
-**Solution**: 
-- Completed email verification for test accounts via confirmation links
-- Created automated diagnostic script (`auto_fix_supabase.py`) to check user status
-- Applied RLS security policies automatically
-- Identified and resolved user account discrepancies
-
-**Prevention**: 
-- Clear onboarding flow documentation for development testing
-- Implement better user creation/sync flows between Supabase and backend
-- Create user account management dashboard for development
-- Automated health checks for authentication system components
-
-**Related Files**:
-- `auto_fix_supabase.py` - Automated Supabase diagnostic and fix tool
-- `supabase/migrations/` - RLS security policy migrations
-- `email_config_guide.txt` - SMTP configuration for production
-
----
-
-### 5. Supabase Free Plan Email Rate Limiting
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-05  
-**Category**: Development constraints  
-
-**Problem**: 
-- Supabase free plan limited to 2 emails per hour
-- Development testing constrained by email verification requirements
-- Unable to create multiple test accounts for feature development
-
-**Root Cause**: 
-- Free tier email limits not accounted for in development workflow
-- Email confirmation requirement blocking rapid testing iteration
-- No alternative authentication testing strategy for development
-
-**Solution**: 
-- Use existing verified accounts for continued development
-- Email confirmation disabled for development environment
-- Created email configuration guide for custom SMTP in production
-- Established development testing procedures using known working accounts
-
-**Prevention**: 
-- Plan email usage during development phase
-- Implement custom SMTP early for unlimited email testing
-- Create test account management strategy
-- Document development vs production email flow differences
-
-**Related Files**:
-- `.env` files - Environment configuration for email settings
-- `email_config_guide.txt` - Production SMTP setup guide
-
-### 6. Cross-Platform Authentication Storage Compatibility
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-05  
-**Category**: Cross-platform compatibility  
-
-**Problem**: 
-- Web authentication failing with `TypeError: _ExpoSecureStore.default.getValueWithKeyAsync is not a function`
-- Mobile/simulator authentication working perfectly with same credentials
-- SecureStore API not available in web browsers due to platform security limitations
-- CORS policy blocking web requests from localhost:8082 to backend localhost:8001
-
-**Root Cause**: 
-- **Platform Architecture Differences**: Web browsers implement different security models than native platforms
-  - **Native platforms** (iOS/Android): Direct access to system keychains and secure storage APIs
-  - **Web browsers**: Sandboxed environment with localStorage/sessionStorage only
-- **expo-secure-store** designed for native platforms, doesn't provide web fallbacks
-- Backend CORS configuration missing web frontend port (localhost:8082)
-
-**Technical Analysis (25 Sequential Thoughts Applied)**:
-1. Browser security models fundamentally differ from native platform security
-2. Web browsers cannot access native secure storage APIs for security reasons
-3. This is not a bug but an architectural difference between platforms
-4. Cross-platform apps require different storage strategies per platform
-5. The solution requires platform detection and adaptive storage patterns
-
-**Solution**: 
-- **Universal Storage Implementation**: Created `useUniversalStorage` hook using Expo's `useStorageState` pattern
-- **Platform Detection**: Native platforms use SecureStore, web uses localStorage
-- **GraphQL Client Update**: Updated Apollo Client to use platform-aware token retrieval
-- **CORS Configuration**: Added localhost:8082 to backend CORS origins in `.env` file
-- **Authentication Context**: Created new React Context using universal storage hooks
-
-**Files Created/Modified**:
-- `hooks/useUniversalStorage.ts` - Universal storage hook implementation
-- `contexts/AuthContext.tsx` - Hook-based authentication context
-- `lib/graphql/client.ts` - Updated for cross-platform token management
-- `app/config/settings.py` - Backend CORS configuration
-- `.env` - Added web frontend origin to CORS_ORIGINS
-
-**Prevention**: 
-- Always design for platform differences from the start of cross-platform development
-- Use Expo's recommended patterns (useStorageState) for cross-platform storage
-- Test authentication on both web and native platforms during development
-- Document platform-specific behaviors and their solutions
-
-**Impact Resolution**: 
-- Web authentication now works identically to mobile/simulator
-- Universal storage pattern eliminates platform-specific authentication code
-- Improved development workflow with consistent cross-platform behavior
-
-### 7. GraphQL Client Storage Architecture Inconsistency
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-05  
-**Category**: Authentication architecture  
-
-**Problem**: 
-- GraphQL Apollo Client using inconsistent token storage patterns
-- Direct platform checks (`Platform.OS === 'web'`) and storage calls (`localStorage.getItem`, `SecureStore.getItemAsync`) 
-- Different storage access pattern than rest of authentication system using `StorageHelpers`
-- Session persistence issues after browser refresh due to token access inconsistency
-
-**Root Cause**: 
-- GraphQL client implemented before universal storage system was created
-- Token access functions in `lib/graphql/client.ts` not updated to use `StorageHelpers.getAccessToken()`
-- Missing fallback logic that extracts tokens from user session when individual token keys not found
-- Architecture fragmentation across authentication components
-
-**Technical Analysis (Context7 Apollo Client Best Practices)**:
-- Apollo Client docs recommend centralized token management with `setContext` link
-- Token caching and invalidation patterns should be consistent across application
-- Cross-platform storage requires platform-aware abstractions
-- Authentication links should use single source of truth for token access
-
-**Solution**: 
-- Updated GraphQL client to use `StorageHelpers.getAccessToken()` instead of direct storage calls
-- Replaced `clearTokens()` function to use `StorageHelpers.clearUserSession()`  
-- Eliminated duplicate platform detection logic in favor of centralized approach
-- Ensured consistent token access patterns across all authentication components
-
-**Files Modified**:
-- `lib/graphql/client.ts` - Updated token access functions to use StorageHelpers
-- `hooks/useUniversalStorage.ts` - Contains centralized StorageHelpers with fallback logic
-
-**Prevention**: 
-- Always use established storage abstractions instead of direct platform APIs
-- Code review checklist for authentication-related changes
-- Ensure Apollo Client follows application's established storage patterns
-- Document authentication architecture decisions for consistency
-
-**Impact Resolution**: 
-- Session persistence now works consistently across web and native platforms
-- Single token access pattern eliminates maintenance overhead
-- Authentication architecture is now unified and maintainable
-
----
-
-### 8. User Data Synchronization Issues (Orphaned Backend Users)
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-05  
-**Category**: Authentication data synchronization  
-
-**Problem**: 
-- Specific user `andre_ero@yahoo.ca` unable to authenticate despite existing in Supabase dashboard
-- "User not found" error with correct password, "Internal server error" with wrong password
-- Different error messages indicating user exists in Supabase Auth but missing from backend database
-- Data synchronization gap between Supabase Auth and backend PostgreSQL users table
-
-**Root Cause**: 
-- **Orphaned Backend Users**: Users created in backend database but corresponding Supabase Auth records deleted/missing
-- Diagnostic revealed 0 users in Supabase Auth but 3 users in backend database including andre_ero@yahoo.ca  
-- Authentication flow expects both Supabase Auth record AND backend database record to exist
-- No recovery mechanism for users who exist in backend but are missing from Supabase Auth
-
-**Technical Analysis**: 
-1. **Dual Storage System**: Supabase Auth handles authentication, backend database stores user profile data
-2. **Sync Dependencies**: Backend auth middleware validates Supabase JWT then fetches user from local database  
-3. **Failure Scenario**: If Supabase record missing, user cannot generate valid JWT to access backend
-4. **Data Integrity**: Backend users become inaccessible without corresponding Supabase Auth records
-
-**Solution**: 
-- **Enhanced Sign-Up Resolver**: Modified to detect existing backend users during new registration attempts
-- **Automatic User Sync**: Updates existing backend users with new Supabase Auth IDs instead of failing
-- **User Recovery Mechanism**: Allows users to re-register with same email to recover orphaned accounts
-- **Diagnostic Tool**: Created `diagnose_user_sync.py` to identify and categorize sync issues
-- **Data Preservation**: Existing user data, children, and consent records maintained during sync
-
-**Files Created/Modified**:
-- `app/graphql/auth_resolvers.py` - Enhanced sign_up resolver with orphaned user detection
-- `diagnose_user_sync.py` - Comprehensive user sync diagnostic and monitoring tool
-- Backend database - Updated user records with proper Supabase Auth ID mapping
-
-**Prevention**: 
-- Implement monitoring for user sync status between Supabase Auth and backend
-- Create automated health checks for authentication system integrity  
-- Add logging for user creation/deletion operations in both systems
-- Design authentication flows to handle edge cases and data recovery scenarios
-
-**Recovery Process for Affected Users**:
-1. User attempts to register again with same email address
-2. System detects existing backend record and preserves all user data
-3. Backend user updated with new Supabase Auth ID for future authentication
-4. User can now authenticate normally with preserved data and settings
-
----
-
-### 9. Authentication Architecture Fragmentation
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-05  
-**Category**: System architecture  
-
-**Problem**: 
-- Multiple different authentication patterns scattered across codebase
-- AuthStore using StorageHelpers while GraphQL client using direct storage calls  
-- AuthService, AuthContext, and GraphQL client all implementing different token management approaches
-- Inconsistent error handling and session persistence behavior
-
-**Root Cause**: 
-- Authentication system evolved incrementally without architectural oversight
-- Cross-platform compatibility fixes applied piecemeal to individual components
-- No centralized authentication architecture documentation or patterns
-- Different developers implementing authentication features with different approaches
-
-**Holistic Analysis (Using Context7 Apollo Client Documentation)**:
-- Apollo Client best practices emphasize centralized authentication link configuration
-- Token management should use consistent caching and invalidation patterns
-- Cross-platform authentication requires unified storage abstraction layer
-- Authentication state should be managed through single source of truth
-
-**Solution**: 
-- **Unified Storage Pattern**: All authentication components now use StorageHelpers
-- **Centralized Token Management**: GraphQL client uses same token access patterns as AuthStore
-- **Consistent Error Handling**: Authentication errors handled uniformly across components
-- **Architectural Documentation**: Created comprehensive authentication flow documentation
-
-**Components Unified**:
-- `stores/authStore.ts` - Uses StorageHelpers for cross-platform storage
-- `lib/graphql/client.ts` - Updated to use StorageHelpers token access
-- `lib/auth/AuthService.ts` - Integrated with StorageHelpers pattern
-- `hooks/useUniversalStorage.ts` - Central storage abstraction for all components
-
-**Prevention**: 
-- Establish authentication architecture guidelines for all developers
-- Code review process to ensure consistent authentication patterns
-- Create authentication component templates and examples
-- Regular architecture reviews to prevent fragmentation
-
-**Long-term Impact**: 
-- Maintainable authentication system with single source of truth
-- Consistent user experience across all platforms and components
-- Easier debugging and troubleshooting of authentication issues
-- Foundation for future authentication feature development
-
-### 11. GraphQL Field Naming Convention Mismatch and Missing Required Fields
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-07  
-**Category**: GraphQL API development  
-
-**Problem**: 
-- GraphQL validation errors during onboarding: "Field 'dateOfBirth' of required type 'Date!' was not provided"
-- Field naming mismatch between frontend (snake_case) and backend (camelCase expected by GraphQL)
-- Missing required fields in createChild mutation input causing validation failures
-- Backend authentication context error: `'dict' object has no attribute 'require_authentication'`
-- Generic error handling masking actual GraphQL errors with "Failed to create child profile" messages
-- Error messages like "Field 'date_of_birth' is not defined by type 'CreateChildInput'. Did you mean 'dateOfBirth'?"
-
-**Root Cause Analysis**: 
-1. **Field Naming Mismatch**: Strawberry GraphQL automatically converts Python snake_case field names to GraphQL camelCase using `auto_camel_case` feature
-2. **Missing Required Fields**: Backend GraphQL schema expects `dailyUsageCount`, `hasSensitiveSkin`, `hasAllergies` but frontend wasn't providing them
-3. **Authentication Context Error**: GraphQL context created as dict instead of proper BaseContext instance
-4. **Error Handling**: Generic catch blocks in `onboarding.tsx:202:22` and `207:20` masked actual GraphQL validation errors
-
-**Technical Analysis (Context7 Strawberry GraphQL Documentation)**: 
-- Strawberry GraphQL enables `auto_camel_case` by default for schema generation
-- Python field names like `date_of_birth` automatically become `dateOfBirth` in GraphQL schema
-- Frontend must send field names matching the GraphQL schema specification
-- GraphQL context must inherit from Strawberry's BaseContext for proper method access
-
-**Comprehensive Solution**: 
-
-**1. Fixed Field Naming Convention**:
-- Updated all snake_case field names to camelCase in GraphQL fragments
-- `date_of_birth` → `dateOfBirth`, `current_diaper_size` → `currentDiaperSize`, etc.
-
-**2. Added Missing Required Fields**:
-- Added `dailyUsageCount: 8` (default newborn usage)
-- Added `hasSensitiveSkin: false` (default assumption)
-- Added `hasAllergies: false` (default assumption)
-
-**3. Fixed Backend Authentication Context**:
-- Made `NestSyncGraphQLContext` inherit from `strawberry.fastapi.BaseContext`
-- Fixed authentication method access in `child_resolvers.py:73`
-
-**4. Enhanced Error Handling**:
-- Updated error catching to inspect `ApolloError` details instead of generic messages
-- Added proper GraphQL error display in frontend
-
-**Files Fixed**:
-- `/NestSync-frontend/lib/graphql/mutations.ts:33` - CHILD_PROFILE_FRAGMENT camelCase fields
-- `/NestSync-frontend/app/(auth)/onboarding.tsx:140-150` - Added missing required fields to createChild input
-- `/NestSync-frontend/app/(auth)/onboarding.tsx:202:22, 207:20` - Enhanced error handling for GraphQL errors
-- `/NestSync-backend/app/graphql/context.py:24` - NestSyncGraphQLContext inheritance fix
-- `/NestSync-backend/app/graphql/child_resolvers.py:73` - Authentication context usage
-
-**Best Practice Established**: 
-- **ALWAYS use camelCase field names** in frontend GraphQL operations to match Strawberry's auto-generated schema
-- **Include all required fields** defined in backend GraphQL input types
-- **GraphQL contexts must inherit from BaseContext** for proper method access
-- **Inspect ApolloError objects** instead of using generic error messages
-
-**Prevention**: 
-- Frontend GraphQL field names must always match the generated GraphQL schema
-- Cross-reference backend input type definitions when creating frontend mutations
-- Use GraphQL introspection tools to verify field requirements during development
-- Test GraphQL authentication context methods in development environment
-- Code review checklist should verify both field naming and required field completeness
-
-**Impact Resolution**: 
-- Onboarding flow now successfully creates child profiles with complete data
-- All GraphQL mutations work consistently with proper authentication
-- Clear error messages help developers identify specific validation issues
-- Established comprehensive GraphQL development patterns for future work
-
----
-
-### 12. JWT Token Expiration During Onboarding Completion - RESOLUTION IN PROGRESS
-**Status**: 🔄 PARTIALLY RESOLVED  
-**Date Identified**: 2025-09-07  
-**Date Backend Fixed**: 2025-09-07  
-**Category**: Authentication architecture / Multi-agent development resolution
-
-**Problem**: 
-- Users experiencing "Authentication error" during onboarding completion
-- Child profile creation appearing to fail despite backend success
-- JWT token expiration during long onboarding flow causing authentication failures
-- Data synchronization issues - created children not appearing in frontend dashboard
-- Authentication state persistence problems across page refreshes
-
-**Multi-Agent Investigation Results**: 
-This critical issue was addressed through coordinated parallel agent work across multiple specializations:
-
-**Agent 1 (Senior Frontend Engineer) - ✅ COMPLETED**: 
-- Implemented Apollo Client token refresh optimization with proactive validation
-- Added global token refresh coordination and enhanced error handling
-- Fixed timing issues and race conditions in token management
-- Updated authentication links with proper retry logic
-
-**Agent 2 (Senior Backend Engineer) - ✅ COMPLETED**: 
-- **Root Cause Identified**: GraphQL context caching issues preventing token refresh recognition
-- Fixed per-request token validation without caching conflicts
-- Backend JWT authentication now working perfectly (confirmed by server logs)
-- Enhanced NestSyncGraphQLContext for proper token validation per request
-
-**Agent 3 (QA Test Automation Engineer) - ✅ EVIDENCE GATHERED**: 
-- **Backend Authentication SUCCESS**: Multiple child creations logged successfully in backend
-- **Frontend UX FAILURE**: Error display mismatch - users see failures despite backend success
-- **Data Synchronization Issues**: Created children don't appear in dashboard components
-- **Authentication Persistence Problems**: Auth state lost across page refreshes
-
-**Agent 4 (System Architect) - ✅ ARCHITECTURAL ANALYSIS**: 
-- Inventory system integration architecturally complete and ready
-- **Current Blocker**: GraphQL context authentication blocking inventory functionality
-- **Technical Issue**: `'NestSyncGraphQLContext' object has no attribute 'get'` resolved in backend fixes
-
-**Backend Resolution ✅ COMPLETE**: 
-**Files Modified**:
-- `app/graphql/context.py` - Fixed GraphQL context caching that prevented token refresh recognition
-- `app/graphql/child_resolvers.py` - Implemented per-request token validation
-- `app/config/database.py` - Enhanced async session management for authentication
-
-**Technical Changes**:
-```python
-# FIXED: GraphQL context per-request token validation
-class NestSyncGraphQLContext(strawberry.fastapi.BaseContext):
-    def require_authentication(self) -> dict:
-        # Now properly validates tokens on each request
-        # Eliminates context caching issues
+## Critical Schema Naming Convention Issues
+
+### 1. snake_case vs camelCase GraphQL Schema Mismatch (P0 - Critical)
+
+**Date Encountered**: 2025-09-15
+**Feature**: Analytics Dashboard
+**Impact**: Multiple GraphQL query failures, missing analytics data
+
+**Problem Description**:
+- Backend GraphQL resolvers use snake_case field names (`child_id`, `weekly_data`)
+- Frontend queries use camelCase field names (`childId`, `weeklyData`)
+- Response wrapper objects contain nested data objects but frontend queries access fields directly
+- This causes recurring "Cannot query field" errors across analytics system
+
+**Examples of Failing Queries**:
+```
+"Cannot query field 'childId' on type 'WeeklyTrendsResponse'"
+"Cannot query field 'averageWeeklyChanges' on type 'WeeklyTrendsResponse'"
+"Cannot query field 'currentItems' on type 'InventoryInsightsResponse'"
 ```
 
-**Evidence of Success**:
-- Backend logs confirm successful child creation operations
-- JWT token refresh mechanism working correctly
-- GraphQL mutations completing with HTTP 200 responses
-- All authentication middleware properly validating refreshed tokens
+**Root Cause Analysis**:
+- Backend Strawberry GraphQL auto-generates camelCase from snake_case Python fields
+- Frontend queries written assuming flat response structure
+- Actual response has wrapper objects containing nested data (`trends`, `insights`, `summary`)
+- This creates compound naming convention + structural issues
 
-**Frontend Issues ❌ REMAINING**: 
-**Files Need Updating**:
-- Apollo Client cache invalidation after successful operations
-- Error handling in `app/(auth)/onboarding.tsx` showing failures for backend successes
-- Authentication state management in AuthGuard not recognizing valid sessions
-- Data synchronization between successful mutations and frontend component state
+**Immediate Solution**:
+1. Fix GraphQL queries to match actual response structure
+2. Update TypeScript types to reflect nested response objects
+3. Update frontend hooks to access nested data correctly
 
-**Current Issue Analysis**:
-The problem has **evolved** from JWT token expiration to **frontend response handling and state management**:
-1. **Authentication Infrastructure**: Working perfectly end-to-end
-2. **Backend Operations**: All succeeding with proper token validation
-3. **Frontend UX Layer**: Broken - showing errors when operations actually succeed
-4. **Data Synchronization**: Apollo Client cache not updating after successful mutations
-5. **Auth State Persistence**: Valid sessions not persisting across page refreshes
-
-**Critical Insight**: 
-This is no longer a "JWT token expiration" issue - it's become a "frontend response handling and state management" issue. The authentication infrastructure is working, but the user experience layer is completely broken.
-
-**Remaining Work - Priority 1 (Critical UX Issues)**:
-1. **Fix Error Display Logic**: Users see "Authentication error" when operations actually succeed
-2. **Apollo Client Cache Management**: Implement proper cache invalidation and refetch strategies
-3. **Auth State Persistence**: Fix session persistence across page refreshes using proper storage
-4. **Data Synchronization**: Ensure successful mutations properly update Apollo cache and UI
-
-**Remaining Work - Priority 2 (Data Flow)**:
-1. **Child Data Synchronization**: Successfully created children not appearing in child selector
-2. **Response Handling**: Fix mutation response handling to show success instead of errors
-3. **State Management**: Ensure Apollo Client state aligns with backend success
-
-**Remaining Work - Priority 3 (Architecture)**:
-1. **GraphQL Context Structure**: Complete inventory integration with fixed context structure
-2. **Error Handling**: Implement proper GraphQL error inspection instead of generic messages
+**Systemic Solution Required**:
+- **Phase 1**: Document all snake_case/camelCase inconsistencies across codebase
+- **Phase 2**: Implement consistent naming convention (prefer camelCase for consistency)
+- **Phase 3**: Create schema validation tools to prevent future mismatches
+- **Phase 4**: Add automated tests that verify GraphQL query-response compatibility
 
 **Prevention Strategies**:
-- **End-to-End Testing**: Validate both backend success AND frontend display in parallel
-- **Multi-Agent Coordination**: Continue parallel specialist approach for complex architecture issues
-- **State Management Patterns**: Use Expo's recommended authentication patterns for consistency
-- **Cache Invalidation**: Implement proper Apollo Client cache strategies after mutations
-
-**Impact Assessment**:
-- **Backend**: Fully functional, all authentication and data operations working
-- **User Experience**: Broken - users cannot complete onboarding despite backend success
-- **Development**: Cannot test new features due to authentication flow blocking
-- **Next Release**: Critical blocker for user onboarding completion
-
-**Next Actions Required**:
-1. **Frontend Agent**: Fix Apollo Client response handling and error display
-2. **QA Agent**: Validate complete user flow from frontend perspective
-3. **System Architect**: Review authentication state management architecture
-4. **Documentation**: Update architecture patterns based on successful backend resolution
-
-**Files to Monitor**:
-- `app/(auth)/onboarding.tsx` - Error handling and mutation response processing
-- `lib/graphql/client.ts` - Apollo Client cache invalidation strategies  
-- `stores/authStore.ts` - Authentication state persistence
-- `components/ui/AuthGuard.tsx` - Authentication state recognition
-
-**Timeline**: 
-- Backend resolution: ✅ Complete
-- Frontend UX fixes: 🔄 In progress (high priority)
-- Complete user flow: Target 24-48h
+1. GraphQL schema introspection validation in CI/CD
+2. Automated frontend type generation from backend schema
 
 ---
 
-### 16. Apollo Client Rate Limiting and Retry Logic Issues
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-07  
-**Category**: GraphQL client optimization  
+## Analytics Dashboard Design Deviation & Restoration (P1 - High)
 
-**Problem**: 
-- HTTP 429 rate limiting errors preventing diaper logging and API requests
-- Apollo Client aggressive retry logic causing server overload
-- Mutations failing due to repeated retry attempts hitting rate limits
-- Users experiencing "Failed to log diaper change" errors
+**Date Encountered**: 2025-09-15
+**Feature**: Analytics Dashboard
+**Impact**: Complete deviation from original psychology-driven UX design
 
-**Root Cause**: 
-- Apollo Client default retry configuration too aggressive for development
-- Retry logic applied to mutations causing duplicate requests
-- No distinction between retryable vs non-retryable errors
-- Backend rate limiting triggering on rapid-fire retry attempts
+**Problem Description**:
+Analytics dashboard was implemented as generic technical data visualization instead of the psychology-driven, confidence-building experience specified in the original design documentation.
 
-**Solution**: 
-- **Reduced Retry Attempts**: Lowered maxAttempts from 3 to 1 to prevent rate limiting
-- **Intelligent Retry Logic**: Excluded mutations, 429, and 401 errors from retries
-- **Enhanced Error Detection**: Added proper status code checking for retry decisions
-- **Delay Optimization**: Increased retry delay to reduce server load
+**Missing Core Elements**:
+1. **Canadian Trust Indicators**: "🇨🇦 Data stored in Canada" privacy reassurance
+2. **Psychology-Driven Language**: "Your baby's feeding schedule" vs "Average Daily Changes"
+3. **Core Sections**: Missing "📈 Your Baby's Patterns", "🔮 Smart Predictions", "💡 Smart Insights"
+4. **Confidence Building**: Phrases like "✅ Excellent consistency" and "normal for baby's age"
+5. **Stress Reduction**: Positive framing vs technical metrics
 
-**Files Modified**:
-- `NestSync-frontend/lib/graphql/client.ts:320` - Updated retry configuration
-- Apollo Client link chain optimized for error handling and rate limiting prevention
+**Original Design Vision**:
+Per `/design-documentation/features/analytics-dashboard/`, the analytics system should "transform raw diaper change data into **confidence-building insights** for overwhelmed Canadian parents through stress reduction, actionable intelligence, and privacy-first architecture."
 
-**Prevention**: 
-- Monitor API request patterns during development to avoid rate limiting
-- Use conservative retry policies for mutations and authentication operations
-- Implement proper error categorization for retry vs non-retry scenarios
-- Test with realistic usage patterns to validate retry behavior
-
----
-
-### 17. Modal Scrolling and Button Activation Issues  
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-07  
-**Category**: User interface functionality / Cross-platform compatibility  
-
-**Problem**: 
-- Users unable to access Save buttons in AddInventoryModal and QuickLogModal
-- Modal content extending beyond viewport without scrolling capability
-- Button activation logic not responding to form completion
-- "Add Stock" and "Log Change" buttons remaining disabled despite valid input
-
-**Root Cause Analysis**: 
-- **Missing ScrollView Implementation**: React Native modals don't scroll by default
-- **Button Validation Logic Gaps**: Form validation missing required field checks
-- **Cross-Platform Rendering**: Different modal behavior between web and native platforms
-
-**Technical Solutions Applied**:
-
-**1. Modal Scrolling (Senior Frontend Engineer)**:
-- Added `ScrollView` with `KeyboardAvoidingView` to both modals
-- Configured proper `contentContainerStyle` for form layout
-- Implemented platform-specific keyboard handling
-
-**2. Button Activation Logic Fixes**:
-- **QuickLogModal**: Added missing `selectedChangeType` validation check
-  ```typescript
-  disabled={!selectedChildId || !selectedChangeType || submitLoading}
-  ```
-- **AddInventoryModal**: Created comprehensive `isFormValid()` helper function
-  ```typescript
-  const isFormValid = () => {
-    if (!selectedChildId || !brand.trim() || !quantity.trim() || submitLoading) return false;
-    const quantityNumber = parseInt(quantity, 10);
-    return !isNaN(quantityNumber) && quantityNumber > 0;
-  };
-  ```
-
-**Files Modified**:
-- `components/modals/QuickLogModal.tsx` - Added ScrollView and fixed validation
-- `components/modals/AddInventoryModal.tsx` - Added ScrollView and comprehensive validation
-- Enhanced form validation logic for instant button activation
-
-**User Experience Impact**: 
-- Users can now scroll to access Save buttons on all devices
-- Buttons activate immediately when required fields are completed  
-- Consistent behavior across iOS, Android, and web platforms
-- Eliminated frustration from inaccessible UI elements
-
-**Prevention**: 
-- Always implement ScrollView for modals with form content
-- Test modal functionality on multiple screen sizes and platforms
-- Use comprehensive validation helpers for complex form logic
-- Validate button activation states during development
-
----
-
-### 18. Unrealistic Dashboard "Days of Cover" Calculation Error
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-07  
-**Category**: Business logic error / Data calculation accuracy  
-
-**Problem**: 
-- Dashboard showing "Days of Cover: 1309" (3.6 years) instead of realistic 20-40 days
-- Calculation using sparse logged usage data (0.14 diapers/day) vs realistic usage (6-8/day)
-- Users unable to make informed purchasing decisions with incorrect projections
-- Fundamental business logic error undermining app trustworthiness
-
-**Root Cause Analysis (Sequential Thinking Applied)**: 
-The calculation prioritized "precision" (actual logged data) over "accuracy" (realistic results):
-- **Sparse Logging**: Only 1 diaper change logged in 7 days = 0.14 daily rate  
-- **Missing Fallback Logic**: System didn't use child's profile `daily_usage_count` (8 diapers/day)
-- **Business Logic Error**: Treated incomplete user behavior data as complete usage data
-- **UX Misunderstanding**: Parents use app for tracking trends, not comprehensive logging
-
-**Technical Solution (Senior Backend Engineer)**:
-- **Modified Calculation Priority**: Now uses child profile `daily_usage_count` as primary source
-- **Intelligent Fallback Logic**: Only uses logged data when substantial (≥14 logged changes in 7 days)
-- **Safety Mechanism**: Always uses higher estimate to prevent underestimation for safety
-
-**Files Modified**:
-- `app/graphql/inventory_resolvers.py` - Fixed calculation logic with profile-first approach
-- Enhanced logging to show calculation decision process in backend logs
-
-**Results Validation**:
-- **Before**: 187 diapers ÷ 0.14 daily usage = 1309 days (unrealistic)
-- **After**: 187 diapers ÷ 8 daily usage = 23 days (realistic)  
-- Backend logs confirm: `profile_daily=8, weekly_logged=1, calculated_daily=8.0`
-
-**Prevention**: 
-- Always validate business logic calculations with realistic edge cases
-- Prioritize user safety (slight overestimation) over mathematical precision
-- Design systems that accommodate typical user behavior patterns
-- Implement sanity checks for critical business calculations (e.g., results >365 days)
-
----
-
-### 19. GraphQL Context Authentication Errors and JWT Token Refresh Issues
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-07  
-**Category**: Authentication architecture / GraphQL context management  
-
-**Problem**: 
-- Persistent dashboard loading errors: "Unable to load dashboard data. Please try again."
-- Backend errors: `'NestSyncGraphQLContext' object has no attribute 'get'`
-- JWT token expiration during user flows causing authentication failures
-- GraphQL context caching preventing proper token refresh recognition
-
-**Multi-Phase Resolution**:
-
-**Phase 1: GraphQL Context Structure (Senior Backend Engineer)**:
-- Fixed missing `get` attribute by ensuring proper `BaseContext` inheritance
-- Implemented per-request authentication caching to prevent race conditions  
-- Enhanced context debugging with comprehensive logging for token validation
-
-**Phase 2: JWT Token Management (Senior Frontend Engineer)**:
-- Implemented proactive token validation with configurable buffer (10 minutes)
-- Added global token refresh coordination to prevent multiple simultaneous refreshes
-- Enhanced Apollo Client token refresh logic with proper retry mechanisms
-
-**Phase 3: Context Caching Resolution (Senior Backend Engineer)**:
-- **Critical Fix**: Modified GraphQL context to validate tokens on each request
-- Eliminated context caching issues that prevented recognition of refreshed tokens
-- Added per-request token hash comparison for cache invalidation
-
-**Technical Implementation**:
-```python
-# Fixed GraphQL context per-request token validation
-class NestSyncGraphQLContext(BaseContext):
-    def __init__(self, request: Request):
-        self._cached_user = None
-        self._auth_attempted = False  
-        self._auth_token_hash = None
-        
-    async def get_user(self) -> Optional[User]:
-        # Per-request validation prevents caching conflicts
-        current_token_hash = hashlib.md5(token.encode()).hexdigest()
-        if self._auth_token_hash == current_token_hash and self._cached_user:
-            return self._cached_user
-        # Fresh validation for new/refreshed tokens
-```
-
-**Files Modified**:
-- `app/graphql/context.py` - Enhanced per-request authentication with caching fixes
-- `lib/graphql/client.ts` - Improved token refresh coordination and validation
-- `app/graphql/child_resolvers.py` - Fixed authentication context usage
-
-**Evidence of Success**:
-- Backend logs show successful authentication: "User authenticated successfully: 1485005a-8713-4cd8-9c50-b514fc8f6255"
-- HTTP 200 responses for previously failing GraphQL operations
-- Dashboard statistics now loading correctly with realistic calculations
-
-**Prevention**: 
-- Design authentication contexts for per-request validation without caching conflicts
-- Implement comprehensive token refresh strategies with race condition prevention
-- Add extensive logging for authentication flow debugging and validation
-- Test JWT expiration scenarios during long user sessions
-
----
-
-### 21. React Native Progress Component Import Compatibility Issue
-**Status**: ✅ RESOLVED
-**Date Resolved**: 2025-09-16
-**Category**: Component library integration
-
-**Problem**:
-- Analytics Dashboard showing `Cannot read properties of undefined (reading 'Bar')` error
-- Progress bars and circles failing to render in SimpleUsageIndicator, ConsistencyCircle, and ParentFriendlyProgressCard components
-- Users unable to view analytics visualization data
-- Complete Analytics functionality breakdown
-
-**Root Cause**:
-- Destructured import pattern `import { Progress } from 'react-native-progress'` incompatible with current package version
-- react-native-progress library exports using default exports pattern rather than named exports
-- Import pattern mismatch causing undefined references to Progress.Bar and Progress.Circle components
-
-**Solution**:
-- Changed import pattern from destructured imports to namespace imports: `import * as Progress from 'react-native-progress'`
-- Updated all three affected components consistently
-- Clean installation of node_modules to resolve any cached import issues
-- Verified compatibility with existing Progress.Bar and Progress.Circle component usage
-
-**Files Modified**:
-- `components/charts/SimpleUsageIndicator.tsx` - Usage analytics bar charts
-- `components/charts/ConsistencyCircle.tsx` - Weekly consistency circle visualization
-- `components/charts/ParentFriendlyProgressCard.tsx` - Parent progress tracking cards
-
-**Prevention**:
-- Always verify import patterns match library export structure
-- Test component imports immediately after package installation or updates
-- Use namespace imports for libraries with mixed export patterns
-- Document import patterns for critical visualization components
-
-**Impact Resolution**:
-- Analytics Dashboard fully functional with all progress visualizations working
-- Users can view usage analytics, consistency tracking, and progress cards
-- Component library integration standardized across analytics features
-- Design system visualization components operational
-
-### 22. **Data Migration Not Executed During Collaboration Implementation**
-**Status**: ✅ RESOLVED
-**Date Identified**: 2025-09-17
-**Date Resolved**: 2025-09-17
-**Category**: Data integrity / Migration execution
-
-**Problem**:
-- Dashboard showing "No Children Added" when Emma (6mo) should be visible with complete profile data
-- Family & Caregivers modal displaying "No Family Selected" instead of proper family collaboration data
-- Migration script created but not executed during collaboration feature implementation
-- Lost child data preventing users from accessing core functionality
-- Authentication working perfectly but child data missing from database
-
-**Evidence Collected (QA Test Automation Engineer)**:
-- **Dashboard Screenshot**: Shows "No Children Added" message instead of Emma's profile
-- **Family Modal Screenshot**: Shows "No Family Selected" despite collaboration implementation
-- **Console Debug**: `[useInventoryTrafficLight] Debug info: {childId: , loading: false, hasError: false, errorMessage: undefined, hasData: false}`
-- **Authentication Status**: ✅ Working (`isAuthenticated: true`, user: `parents@nestsync.com`, onboarding: completed)
-- **Child Data Status**: ❌ Missing (empty childId confirms database migration not executed)
+**Technical Restoration Completed**:
+1. ✅ Added Canadian trust indicator with flag and privacy messaging
+2. ✅ Transformed card titles to psychology-driven language:
+   - "Today's Changes" → "Baby's Schedule Today"
+   - "Current Streak" → "Feeding Pattern Streak"
+   - "Efficiency" → "Diaper Efficiency" with "🌟 Excellent!" target
+3. ✅ Implemented missing core sections:
+   - "📈 Your Baby's Patterns" (main section)
+   - "🔮 Smart Predictions" with confidence indicators and actions
+   - "💡 Smart Insights" with lightbulb icon
+4. ✅ Added confidence-building language and age-appropriate context
 
 **Root Cause Analysis**:
-The collaboration feature implementation created migration scripts but failed to execute them:
-1. **Migration Script Created**: Backend migration script exists but wasn't run during deployment
-2. **Data Dependency**: Collaboration features require existing child data to function properly
-3. **User Experience Impact**: Users cannot access dashboard, inventory tracking, or collaboration features
-4. **Development Workflow Gap**: Migration execution not included in feature implementation checklist
+Implementation focused on technical functionality (charts working, data loading) but missed the **core UX philosophy** documented in design specifications. The original design is specifically a **psychology-driven support system** for stressed parents, not a generic analytics dashboard.
+
+**Files Modified**:
+- `NestSync-frontend/app/(tabs)/planner.tsx`: Restored psychology-driven UI elements
+- Added Canadian trust indicators, prediction cards, and confidence-building language
+
+**Next Steps**:
+1. Replace generic charts with design-specified visualizations (simple dot charts)
+2. Add peak hours analysis with specific times (7-9am, 2-4pm, 8-10pm)
+3. Implement healthcare provider integration features
+3. Consistent naming convention documentation in CLAUDE.md
+4. Code review checklist for schema changes
+
+**Files Affected**:
+- `NestSync-frontend/lib/graphql/analytics-queries.ts` (queries)
+- `NestSync-frontend/hooks/useAnalytics.ts` (data access)
+- `NestSync-backend/app/graphql/analytics_types.py` (backend types)
+- `NestSync-backend/app/graphql/analytics_resolvers.py` (resolvers)
+
+**Recommended Next Steps**:
+1. Create dedicated branch: `fix/graphql-naming-conventions`
+2. Audit entire codebase for naming inconsistencies
+3. Implement systematic fix across all GraphQL operations
+4. Add schema validation tools and tests
+
+---
+
+## Critical Database & Migration Issues
+
+### 1. Database Migration State Corruption (P0 - Critical)
+
+**Date Encountered**: 2025-09-14
+**Feature**: Notification Preferences System
+**Impact**: Complete system failure, GraphQL resolvers throwing database errors
+
+**Problem Description**:
+- Alembic migration showed as "applied" but database tables didn't exist
+- Error: `relation "notification_preferences" does not exist`
+- `alembic current` showed revision 003 as applied
+- Database inspection revealed missing tables despite migration logs
+
+**Root Cause Analysis**:
+- Alembic migration state became corrupted/inconsistent
+- Database transaction may have partially failed without proper rollback
+- Migration tracking table showed success but actual DDL operations failed
+
+**Immediate Solution**:
+```bash
+# Reset Alembic to last known good state
+cd NestSync-backend
+alembic downgrade 002
+
+# Re-apply migration
+alembic upgrade head
+
+# Verify table creation
+psql postgresql://postgres:password@localhost:54322/postgres \
+  -c "\dt notification*"
+```
+
+**Prevention Strategies**:
+1. Always verify table existence after migrations: `\dt table_name`
+2. Use transaction-wrapped migrations for complex schema changes
+3. Implement migration verification scripts
+4. Keep database backups before major schema changes
+
+**Files Modified**:
+- `alembic/versions/20250913_1919_003_add_notification_system_tables.py`
+- Added table existence verification to deployment scripts
+
+---
+
+### 2. SQLAlchemy Metadata Caching Issue (P0 - Critical)
+
+**Date Encountered**: 2025-09-14
+**Feature**: Notification Preferences System
+**Impact**: Runtime errors accessing newly created tables
+
+**Problem Description**:
+- Tables existed in database but SQLAlchemy couldn't access them
+- Error persisted even after migration fix
+- `Base.metadata.reflect()` not picking up new table definitions
+- ORM queries failing with "table not found" errors
+
+**Root Cause Analysis**:
+- SQLAlchemy metadata cache not refreshing after table creation
+- `Base.metadata` object cached stale schema information
+- Engine connection pool maintained old metadata references
+
+**Immediate Solution**:
+```python
+# Added to app/config/database.py
+async def refresh_database_metadata():
+    """Force refresh of SQLAlchemy metadata cache"""
+    try:
+        engine = get_database_engine()
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.reflect)
+        logger.info("Database metadata refreshed successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to refresh metadata: {e}")
+        return False
+
+async def verify_table_exists(table_name: str) -> bool:
+    """Verify table exists in database"""
+    engine = get_database_engine()
+    async with engine.begin() as conn:
+        result = await conn.execute(
+            text("SELECT to_regclass(:table_name) IS NOT NULL"),
+            {"table_name": table_name}
+        )
+        return result.scalar()
+```
+
+**Prevention Strategies**:
+1. Implement automatic metadata refresh after migrations
+2. Add table verification to startup sequences
+3. Use explicit metadata refresh in development workflows
+4. Monitor SQLAlchemy metadata cache consistency
+
+**Files Modified**:
+- `app/config/database.py` - Added metadata refresh utilities
+- `app/graphql/notification_resolvers.py` - Added table verification calls
+
+---
+
+## GraphQL Resolver Implementation Issues
+
+### 3. UUID Type Conversion Bug (P1 - High)
+
+**Date Encountered**: 2025-09-14
+**Feature**: Notification Preferences System
+**Impact**: TypeError in 8 different resolver methods
+
+**Problem Description**:
+- Code attempted `uuid.UUID(user.id)` when `user.id` was already UUID type
+- Multiple resolver methods throwing `TypeError: badly formed hexadecimal UUID string`
+- Inconsistent type handling between different resolvers
+- Authentication context providing UUID objects, not strings
+
+**Root Cause Analysis**:
+- Unnecessary type conversion of already-UUID values
+- Copy-paste error propagated across multiple resolver methods
+- Lack of type checking/validation in resolver parameter handling
+- Mixed assumptions about user.id type format
+
+**Affected Methods**:
+1. `get_notification_preferences`
+2. `update_notification_preferences`
+3. `get_notification_history`
+4. `mark_notification_read`
+5. `mark_notification_dismissed`
+6. `get_notification_analytics`
+7. `test_notification_delivery`
+8. `bulk_update_notification_status`
+
+**Immediate Solution**:
+```python
+# BEFORE (Incorrect):
+preferences = await session.get(NotificationPreferences, uuid.UUID(user.id))
+
+# AFTER (Correct):
+preferences = await session.get(NotificationPreferences, user.id)
+```
+
+**Prevention Strategies**:
+1. Implement type validation in authentication context
+2. Add type hints and runtime checks for resolver parameters
+3. Create shared utility functions for common database operations
+4. Implement resolver testing with known type scenarios
+
+**Files Modified**:
+- `app/graphql/notification_resolvers.py` - Removed 8 unnecessary UUID() calls
+
+---
+
+## Business Logic & Default Data Issues
+
+### 4. Missing Default Notification Preferences (P1 - High)
+
+**Date Encountered**: 2025-09-14
+**Feature**: Notification Preferences System
+**Impact**: Poor user experience, UI failures, PIPEDA compliance issues
+
+**Problem Description**:
+- New users had no notification preferences record
+- GraphQL queries returning null instead of sensible defaults
+- UI components failing to render without preference data
+- PIPEDA consent tracking not initialized properly
+
+**Root Cause Analysis**:
+- No automatic preference creation on user registration
+- Database constraints allowed null preferences for users
+- Frontend assumed preferences always exist
+- Missing PIPEDA-compliant default consent states
+
+**Immediate Solution**:
+```python
+async def get_or_create_notification_preferences(
+    session: AsyncSession,
+    user_id: UUID
+) -> NotificationPreferences:
+    """Get user preferences or create PIPEDA-compliant defaults"""
+
+    preferences = await session.get(NotificationPreferences, user_id)
+
+    if not preferences:
+        preferences = NotificationPreferences(
+            user_id=user_id,
+            notifications_enabled=True,
+            critical_notifications=True,
+            important_notifications=True,
+            optional_notifications=False,
+            push_notifications=True,
+            email_notifications=True,
+            sms_notifications=False,
+            quiet_hours_enabled=True,
+            stock_alert_enabled=True,
+            stock_alert_threshold=3,
+            change_reminder_enabled=False,
+            expiry_warning_enabled=True,
+            health_tips_enabled=False,
+            marketing_enabled=False,
+            user_timezone=TIMEZONE_CANADA,
+            daily_notification_limit=10,
+            notification_consent_granted=False,
+            marketing_consent_granted=False
+        )
+
+        session.add(preferences)
+        await session.commit()
+        logger.info(f"Created default notification preferences for user {user_id}")
+
+    return preferences
+```
+
+**Prevention Strategies**:
+1. Implement user onboarding workflows that create required defaults
+2. Add database triggers for automatic preference creation
+3. Design UI components to handle null/missing data gracefully
+4. Create comprehensive PIPEDA compliance initialization
+
+**Files Modified**:
+- `app/graphql/notification_resolvers.py` - Added `get_or_create_notification_preferences`
+- Updated all resolver methods to use default creation logic
+
+---
+
+## Testing & Quality Assurance Issues
+
+### 5. Testing Methodology Gap (P2 - Medium)
+
+**Date Encountered**: 2025-09-14
+**Feature**: Notification Preferences System
+**Impact**: Slower bug discovery, missed critical database issues
+
+**Problem Description**:
+- Initially relied on agent delegation for testing instead of direct verification
+- Critical database issues not discovered until late in implementation
+- Assumption that delegated testing would catch database connectivity problems
+- Manual testing revealed issues that automated delegation missed
+
+**Root Cause Analysis**:
+- Misunderstanding of testing approach and tool capabilities
+- Over-reliance on indirect testing methods
+- Insufficient direct browser automation for verification
+- Gaps between theoretical implementation and actual functionality
+
+**Immediate Solution**:
+- Switched to direct Playwright MCP browser testing
+- Implemented real user credential testing (parents@nestsync.com)
+- Added comprehensive end-to-end verification workflow
+- Created evidence-based testing documentation
+
+**Testing Verification Process**:
+1. **Pre-Implementation State Check** - Test current functionality
+2. **Progressive Implementation Testing** - Test incrementally during development
+3. **Direct Browser Verification** - Use Playwright MCP for actual browser testing
+4. **Evidence Collection** - Screenshots, console logs, functional verification
+5. **Real User Testing** - Test with actual credentials in production environment
+
+**Prevention Strategies**:
+1. Always use direct Playwright MCP testing for UI functionality
+2. Implement progressive testing throughout development, not just at the end
+3. Create evidence-based verification requirements
+4. Establish clear testing methodology standards
+
+**Files Modified**:
+- Updated development workflow to require Playwright MCP verification
+- Created comprehensive testing validation checklist
+
+---
+
+## Mobile Development & Build Issues
+
+### 6. Project Path Spaces Breaking iOS Builds (P0 - Critical)
+
+**Date Encountered**: 2025-09-14
+**Feature**: Mobile Testing Setup for SDK Compatibility
+**Impact**: Complete iOS development build failure, blocking mobile testing
+
+**Problem Description**:
+- iOS development build scripts failing with path resolution errors
+- Error: `/bin/sh: /Users/mayenikhalo/Public/From: No such file or directory`
+- Xcode build system cannot handle spaces in project path
+- Affects all iOS development build processes and mobile testing
+
+**Root Cause Analysis**:
+- Project located at `/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/`
+- Spaces in "From aEroPartition" path segment break shell script execution
+- iOS build scripts not properly escaping or quoting paths with spaces
+- Xcode project generation fails when encountering unescaped spaces
+
+**Immediate Solution**:
+- Abandoned mobile testing approach requiring development builds
+- Reverted to web-only development and testing workflow
+- Documented as blocking issue for future mobile development
+
+**Long-Term Solutions**:
+1. **Path Relocation**: Move project to path without spaces (e.g., `/Users/mayenikhalo/Dev/NestSyncv1.2/`)
+2. **Script Hardening**: Update all build scripts to properly handle spaces in paths
+3. **Docker Development**: Use containerized mobile builds to avoid path issues
+4. **Alternative Testing**: Use Expo Go with compatible SDK versions for mobile testing
+
+**Prevention Strategies**:
+1. Always avoid spaces in development project paths
+2. Test build processes in paths with spaces during setup
+3. Use path validation scripts in project initialization
+4. Document path requirements in development setup guides
+
+**Files Affected**:
+- All iOS build scripts and Xcode project files
+- Development build configuration in app.json
+- Mobile testing and debugging workflows
+
+**Status**: Blocking mobile development - requires project relocation or build system redesign
+
+---
+
+### 7. GraphQL Schema Field Name Mismatch (P0 - Critical)
+
+**Date Encountered**: 2025-09-15
+**Feature**: Notification Preferences System UI
+**Impact**: Complete notification preferences UI failure - "Unable to load" error
+
+**Problem Description**:
+- Notification preferences dialog showed "Unable to load notification preferences" error
+- Frontend GraphQL queries expecting camelCase field names (e.g., `notificationsEnabled`)
+- Backend Strawberry GraphQL returning snake_case field names (e.g., `notifications_enabled`)
+- Schema mismatch preventing any notification preference data from loading in UI
+- Affected all users attempting to access notification settings
+
+**Root Cause Analysis**:
+- Frontend Apollo Client configured for camelCase field naming convention
+- Backend Strawberry GraphQL auto-generating field names from Python snake_case attributes
+- No field aliasing or transformation layer between frontend and backend
+- Schema introspection showed mismatch but wasn't caught during initial implementation
+
+**Immediate Solution**:
+```python
+# Added field aliases in app/graphql/types.py
+@strawberry.type
+class NotificationPreferencesType:
+    # Original snake_case fields remain unchanged
+    notifications_enabled: bool
+    stock_alert_enabled: bool
+    # ... other fields
+
+    # Added camelCase aliases for frontend compatibility
+    @strawberry.field(name="notificationsEnabled")
+    def notifications_enabled_alias(self) -> bool:
+        return self.notifications_enabled
+
+    @strawberry.field(name="stockAlertEnabled")
+    def stock_alert_enabled_alias(self) -> bool:
+        return self.stock_alert_enabled
+
+    @strawberry.field(name="changeReminderEnabled")
+    def change_reminder_enabled_alias(self) -> bool:
+        return self.change_reminder_enabled
+
+    # Added aliases for all 20+ fields with snake_case names
+```
+
+**Testing & Validation Process**:
+1. Used Sequential Thinking agent to systematically analyze the problem
+2. Researched best practices with Context7 for SQLAlchemy and Strawberry GraphQL
+3. Delegated backend fix to Senior Backend Engineer agent
+4. Validated with Playwright MCP end-to-end browser testing
+5. Successfully loaded notification preferences dialog with all fields populated
+
+**Prevention Strategies**:
+1. Establish consistent field naming convention across stack (prefer camelCase for GraphQL)
+2. Add GraphQL schema validation tests comparing frontend queries to backend schema
+3. Use GraphQL code generation tools to ensure type safety between frontend and backend
+4. Implement field transformation middleware for automatic case conversion
+5. Add schema introspection validation to CI/CD pipeline
+
+**Files Modified**:
+- `app/graphql/types.py` - Added 20+ field aliases for camelCase compatibility
+- `app/graphql/notification_resolvers.py` - Verified resolver returns correct type
+- Frontend queries remained unchanged (already using camelCase)
+
+**Learning Points**:
+- Field naming inconsistencies are a common GraphQL integration issue
+- Strawberry's field aliasing provides backward-compatible solution
+- Direct browser testing with Playwright MCP essential for UI validation
+- Agent orchestration effective for complex debugging scenarios
+
+---
+
+### 8. Analytics Dashboard GraphQL Query Schema Mismatch (P0 - Critical)
+
+**Date Encountered**: 2025-09-15
+**Feature**: Analytics Dashboard Implementation
+**Impact**: Complete analytics dashboard failure - "Unable to load analytics" error on iOS/Android
+
+**Problem Description**:
+- Analytics dashboard showed "Unable to load analytics. Check your connection." error
+- Backend GraphQL logs showing `Cannot query field 'getAnalyticsOverview' on type 'Query'. Did you mean 'getAnalyticsDashboard'?`
+- Frontend sending persistent `GetAnalyticsOverview` query every few minutes
+- Query mismatch prevented any analytics data from loading despite authentication working
+- Charts showed controlled error states instead of crashing (null safety working)
+
+**Root Cause Analysis**:
+- Frontend Apollo Client cache or Metro bundler cache contained stale `getAnalyticsOverview` query reference
+- Backend GraphQL schema only exposes `getAnalyticsDashboard` resolver
+- Hidden or cached GraphQL query operation not visible in codebase search
+- Query registration mismatch between frontend expectations and backend schema
+- Apollo Client automatic persisted queries may have cached invalid query
+
+**Immediate Solution Process**:
+```bash
+# 1. Clear all caches to remove stale query references
+npx expo start --clear
+rm -rf node_modules/.cache
+npm start -- --reset-cache
+
+# 2. Search for hidden query references
+grep -r "getAnalyticsOverview" . --exclude-dir=node_modules
+rg "GetAnalyticsOverview" --type-add 'cache:*.cache' --type cache
+
+# 3. Verify GraphQL schema alignment
+curl -X POST http://localhost:8001/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ __schema { queryType { fields { name } } } }"}' | jq .
+```
 
 **Technical Details**:
-- **User Account**: Valid authentication with completed onboarding status
-- **Expected Data**: Emma (6 months old) with inventory counts and usage tracking
-- **Current State**: Empty child data preventing dashboard functionality
-- **Impact Scope**: Complete loss of user data and core application functionality
-
-**Business Impact**:
-- **User Experience**: Critical failure - users cannot access primary app functions
-- **Data Integrity**: Risk of permanent data loss if migration delayed
-- **Feature Testing**: Cannot validate collaboration features without baseline child data
-- **Development Velocity**: Blocking further feature development and testing
-
-**Immediate Actions Required**:
-1. **Execute Migration Script**: Run the backend migration script to restore Emma's data immediately
-2. **Validate Data Restoration**: Verify Emma appears in dashboard with correct profile information
-3. **Test Collaboration Features**: Validate family sharing functionality after data restoration
-4. **Update Workflow**: Add migration execution requirement to feature implementation process
-
-**Prevention Strategy**:
-- **Migration Checklist**: Include migration script execution in feature deployment workflow
-- **Data Validation**: Implement automated checks for required baseline data before feature testing
-- **Documentation Requirements**: Document data dependencies for collaboration features
-- **Testing Protocol**: Establish pre-implementation data verification procedures
-
-**Files to Monitor**:
-- Backend migration scripts (location TBD)
-- Dashboard child data queries
-- Family collaboration data endpoints
-- Authentication and user profile systems
-
-**Evidence Files**:
-- `/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.playwright-mcp/dashboard-no-children-before-migration.png`
-- `/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.playwright-mcp/family-caregivers-modal-no-family-selected.png`
-- Console logs showing empty childId and missing data indicators
-
-**RESOLUTION COMPLETED ✅**:
-**Multi-Agent Parallel Execution Success** (2025-09-17):
-
-**Senior Backend Engineer**:
-- ✅ Successfully executed `migrate_users_to_families.py` migration script
-- ✅ Created complete family database structure (families, family_members, family_child_access, collaboration_logs tables)
-- ✅ Migrated all users to family-based collaboration model with data preservation
-- ✅ Emma's profile fully restored with family context and complete data integrity
-
-**QA Test Automation Engineer**:
-- ✅ Validated complete data restoration through Playwright testing
-- ✅ Confirmed dashboard functionality: "Here's how Emma is doing" (6mo, 10 items, 79 days remaining)
-- ✅ Verified complete activity history (10 diaper changes) and all dashboard features operational
-- ✅ Documented before/after states with comprehensive evidence collection
-
-**General Purpose Agent**:
-- ✅ Coordinated multi-agent execution with Context7 research for Alembic/Supabase best practices
-- ✅ Ensured proper timing of parallel operations and technical guidance
-- ✅ Documented successful patterns for future migration scenarios
-
-**Final State Achieved**:
-- **Emma's Data**: ✅ Completely restored (ID: e84df972-b1f5-4842-8e83-800a8b234e8c)
-- **Dashboard Functionality**: ✅ Fully operational with real data instead of "No Children Added"
-- **Inventory Tracking**: ✅ Working (10 well-stocked items, 79 days remaining, Size 2)
-- **Activity History**: ✅ Complete (10 logged diaper changes with timestamps)
-- **Authentication**: ✅ Perfect integration with family-based data model
-
-**Collaboration Features Status**:
-- **Backend**: ✅ Complete family infrastructure successfully created and populated
-- **Frontend**: ⚠️ Partial - Family modal shows backend integration gap (shows "No Family Selected")
-- **Core App**: ✅ Fully functional - users can access all primary dashboard features
-
-**Prevention Strategy Implemented**:
-- Migration execution checklist added to feature deployment workflow
-- Multi-agent parallel execution pattern documented for complex data migrations
-- Comprehensive testing validation requirements established with evidence documentation
-
-**Impact Resolution**: Critical issue completely resolved - users can now access full dashboard functionality with restored child data and operational inventory tracking system.
-
----
-
-## Issue #24: Cache Invalidation - "No Children Added" Despite Data Existence (2025-09-17) [RESOLVED]
-
-**Severity**: P0 (Critical) - Application showing empty state despite inventory data existing
-**Reporter**: User reported fundamental logical inconsistency
-**Status**: RESOLVED ✅
-**Resolution Date**: 2025-09-17
-
-### Problem Summary
-Critical cache invalidation issue where child data exists in backend but UI shows "No Children Added". This created a logical impossibility where inventory exists without children.
-
-### Root Cause Analysis
-**Final Root Cause**: Apollo Client cache normalization issue combined with authentication error masking
-- Backend was working perfectly (returning 3 Emma children correctly)
-- Authentication errors were being silently swallowed in MY_CHILDREN_QUERY resolver
-- Apollo Client cache contained child objects but `myChildren.edges` was empty due to improper merge functions
-- Family migration was incomplete but became secondary after cache fix
-
-**Contributing Issues**:
-1. **Silent Authentication Error Masking**: MY_CHILDREN_QUERY returned empty ChildConnection instead of proper GraphQL errors
-2. **Apollo Client Cache Type Policies**: Missing proper merge functions for ChildConnection edges
-3. **Incomplete Family Migration**: Missing FamilyChildAccess records for 2 out of 3 children
-4. **GraphQL Schema Configuration**: Missing ChildConnection import and type annotation
-
-### Multi-Agent Investigation Process
-
-**Phase 1: Duplicate Child Resolution**
-- **QA Test Automation Engineer**: Captured evidence of duplicate Emma entries and excessive GraphQL requests (15+)
-- **Senior Backend Engineer**: Confirmed database integrity - Emma exists exactly once
-- **Context7 Research**: Provided Apollo Client cache management best practices
-
-**Phase 2: Cache Integration**
-- **Senior Frontend Engineer**: Implemented comprehensive type policies and centralized useChildren hook
-- Fixed duplicate cache entries across 5+ components
-- Eliminated redundant GraphQL requests
-
-**Phase 3: Authentication Context Investigation**
-- **System Architect & Senior Backend Engineer**: Identified authentication error masking in MY_CHILDREN_QUERY resolver
-- Fixed silent error swallowing that prevented proper debugging
-- **QA Test Automation Engineer**: Revealed true authentication issues via end-to-end testing
-
-**Phase 4: Family Migration & Final Resolution**
-- **System Architect**: Completed family migration with proper FamilyChildAccess records
-- **QA Test Automation Engineer**: Discovered final root cause was Apollo Client cache merge functions
-- **Senior Frontend Engineer**: Implemented proper cache type policies for ChildConnection
-
-### Technical Resolution
-
-**Backend Fixes**:
-1. **Authentication Error Handling** (`/app/graphql/child_resolvers.py`):
-   ```python
-   # CRITICAL FIX: Properly propagate authentication errors instead of masking them
-   except GraphQLError as auth_error:
-       raise GQLError(
-           message="Authentication required to access children",
-           extensions={"code": "UNAUTHENTICATED", "original_error": str(auth_error)}
-       )
-   ```
-
-2. **Family Migration Completion**:
-   - Added missing FamilyChildAccess records for 2 out of 3 children
-   - Verified family architecture (Family, FamilyMember, FamilyChildAccess)
-   - Ensured all 3 Emma records accessible through both legacy and family patterns
-
-3. **Hybrid Resolver Enhancement** (`/app/graphql/child_resolvers.py`):
-   - Support both family-based and legacy parent-child queries
-   - Comprehensive logging for debugging
-   - Prioritizes pattern with MORE children for data completeness
-
-**Frontend Fixes** (Final Resolution):
-1. **Apollo Client Cache Policies** (`/lib/graphql/client.ts`):
-   ```typescript
-   ChildConnection: {
-     keyFields: false,
-     fields: {
-       edges: {
-         merge(existing = [], incoming = [], { readField }) {
-           if (existing.length === 0 || !incoming.length) {
-             return incoming; // Use fresh data for new queries
-           }
-           // Proper deduplication for pagination scenarios
-         }
-       }
-     }
-   },
-   myChildren: {
-     merge(existing, incoming, { args, readField }) {
-       return incoming || { edges: [], pageInfo: { totalCount: 0 } };
-     }
-   }
-   ```
-
-2. **Centralized Data Access** (`/hooks/useChildren.ts`):
-   - Single source of truth replacing 5+ duplicate useQuery instances
-   - Consistent error handling and loading states
-   - Proper GraphQL request deduplication
-
-### Verification & Testing
-
-**QA Validation Results**:
-- ✅ Dashboard displays "Good afternoon! Here's how Emma is doing" (not "No Children Added")
-- ✅ MY_CHILDREN_QUERY returns populated edges array with all 3 children
-- ✅ Child selector shows "Currently viewing Emma. Tap to switch children." (no duplicates)
-- ✅ Apollo Client cache properly normalized with child data
-- ✅ Authentication flows work correctly with proper error propagation
-- ✅ Console logs: `✅ Children data loaded successfully: {count: 3, children: Array(3)}`
-
-**Performance Improvements**:
-- Reduced GraphQL requests from 15+ to 1 per screen
-- Eliminated duplicate child cache entries
-- Improved cache hit ratio with proper normalization
-- Fixed authentication error debugging capabilities
-
-### Business Impact
-
-**Critical Resolution**:
-- Eliminated logical impossibility of inventory without children
-- Restored full application functionality for affected users
-- Prevented data integrity perception issues
-
-**User Experience**:
-- Dashboard now properly displays "Here's how Emma is doing"
-- Child selector functions correctly: "Currently viewing Emma. Tap to switch children."
-- Consistent data display across all screens
-- All inventory cards display properly with child context
-
-### Knowledge Transfer
-
-**Apollo Client Cache Debugging Pattern**:
-```typescript
-// Always check both cache normalization AND connection merge functions
-typePolicies: {
-  EntityConnection: {
-    keyFields: false, // Connections are not cached by ID
-    fields: {
-      edges: {
-        merge(existing = [], incoming = []) {
-          // Handle fresh queries vs pagination differently
-          if (existing.length === 0) return incoming;
-          // ... pagination logic
-        }
-      }
-    }
-  }
-}
-```
-
-**Authentication Error Debugging**:
-```python
-# Never silently mask authentication errors in GraphQL resolvers
-except GraphQLError as auth_error:
-    # WRONG: return empty_result  # Masks the real issue
-    # RIGHT: raise proper GraphQL error with context
-    raise GQLError(message="...", extensions={"code": "UNAUTHENTICATED"})
-```
-
-**Hybrid Architecture Pattern** (For future family migrations):
-```python
-# Always support both patterns during migration transition
-family_count = await session.execute(family_query)
-legacy_count = await session.execute(legacy_query)
-
-# Use the pattern that returns MORE children (prioritize data completeness)
-if legacy_count > family_count:
-    use_legacy_pattern()
-elif family_count > 0:
-    use_family_pattern()
-else:
-    return_empty_result()
-```
-
-### Future Prevention
-
-**Monitoring**:
-- Added cache invalidation detection to continuous monitoring
-- Family migration status tracking
-- GraphQL request pattern analysis
-- Authentication error surface rate monitoring
-
-**Development Standards**:
-- Require both family and legacy pattern testing
-- Mandatory cache policy definition for new GraphQL types
-- No silent error masking in GraphQL resolvers
-- Multi-agent investigation protocol for complex issues
-- End-to-end testing validation for authentication flows
-
-**Resolution Evidence**:
-- Screenshot: `nestsync-validation-success-final.png` - Dashboard showing "Good afternoon! Here's how Emma is doing"
-- Network logs: Backend returning 3 children, frontend successfully displaying them
-- Console evidence: `✅ Children data loaded successfully: {count: 3, children: Array(3)}`
-
----
-
-## ACTIVE BOTTLENECKS
-
-### 25. **Duplicate Child Rendering in ChildSelector Modal - Apollo Client Cache Corruption**
-**Status**: ✅ RESOLVED
-**Date Identified**: 2025-09-17
-**Date Resolved**: 2025-09-17
-**Category**: Apollo Client cache management / React component optimization
-
-**Problem**:
-- Emma (6mo child) appearing twice in child selector modal with React "duplicate key" console errors
-- Console showing: "Encountered two children with the same key, `e84df972-b1f5-4842-8e83-800a8b234e8c`. Keys should be unique"
-- Blocking all collaboration features from functioning properly
-- 15+ excessive GraphQL requests causing performance issues
-- Users experiencing broken child selection functionality
-
-**Multi-Agent Investigation Results**:
-This P0 critical issue was resolved through systematic parallel agent investigation:
-
-**QA Test Automation Engineer** - Evidence Collection:
-- ✅ Captured visual evidence of Emma appearing twice in ChildSelector modal
-- ✅ Documented exact React key duplication errors in browser console
-- ✅ Confirmed 15+ concurrent GraphQL requests pattern indicating cache issues
-- ✅ Identified Family & Caregivers modal showing "No Family Selected" despite backend data
-
-**Senior Backend Engineer** - Data Integrity Validation:
-- ✅ **Database Clean**: Emma exists exactly once in children table (ID: e84df972-b1f5-4842-8e83-800a8b234e8c)
-- ✅ **GraphQL Correct**: my_children resolver returns single Emma entry with totalCount: 1
-- ✅ **Root Cause Confirmed**: Duplication originates from frontend Apollo Client layer, NOT backend
-
-**General Purpose Agent** - Context7 Research:
-- ✅ Comprehensive Apollo Client cache management best practices researched
-- ✅ Type policies, merge functions, and proper cache normalization patterns documented
-- ✅ FlatList keyExtractor and React rendering optimization techniques provided
-
-**Senior Frontend Engineer** - Cache Architecture Fixes:
-- ✅ **Enhanced Apollo Client Cache Configuration** with proper Child type policy and keyFields
-- ✅ **Implemented Robust Merge Functions** with deduplication logic to prevent duplicate cache entries
-- ✅ **Created Centralized useChildren Hook** replacing 5+ duplicate useQuery instances across components
-- ✅ **Updated Cache Normalization** with comprehensive type policies for proper object identification
-
-**Root Cause Analysis**:
-The duplicate Emma rendering was caused by **Apollo Client cache corruption** with multiple contributing factors:
-
-1. **Multiple Concurrent useQuery Instances**: 5+ components using separate MY_CHILDREN_QUERY instances
-2. **Missing Cache Type Policies**: No Child type keyFields defined for proper cache normalization
-3. **Improper Merge Functions**: Cache merge logic allowing duplicate entries instead of deduplication
-4. **Cache-First Policy Conflicts**: Stale cache data conflicting with fresh GraphQL responses
-
-**Comprehensive Solution Applied**:
-
-**1. Apollo Client Cache Configuration Enhanced**:
-```typescript
-cache: new InMemoryCache({
-  typePolicies: {
-    Child: {
-      keyFields: ["id"], // Ensures proper cache normalization
-    },
-    Query: {
-      fields: {
-        myChildren: {
-          merge(existing, incoming, { args }) {
-            // Proper deduplication and fresh data handling
-            if (!args?.after) return incoming; // Replace for fresh fetches
-            // Merge with deduplication for pagination
-          }
-        }
-      }
-    }
-  }
-})
-```
-
-**2. Centralized Data Management**:
-- **Single useChildren Hook**: All components now use centralized data source
-- **Components Updated**: index.tsx, planner.tsx, ContextAwareFAB.tsx, QuickLogModal.tsx, AddInventoryModal.tsx
-- **Eliminated Redundant Queries**: Reduced from 15+ concurrent requests to 1 optimized query
-
-**3. Cache Normalization Improvements**:
-- **Proper Object Identification**: Child objects have unique cache keys preventing duplicates
-- **Robust Merge Logic**: Cache updates handle both fresh data and pagination correctly
-- **Performance Optimization**: Single cache entry per child with efficient updates
-
-**Files Modified**:
-- `NestSync-frontend/lib/graphql/client.ts` - Enhanced cache configuration with type policies
-- `NestSync-frontend/hooks/useChildren.ts` - New centralized hook with duplicate detection
-- `NestSync-frontend/app/(tabs)/index.tsx` - Updated to use useChildren hook
-- `NestSync-frontend/app/(tabs)/planner.tsx` - Updated to use useChildren hook
-- `NestSync-frontend/components/ui/ContextAwareFAB.tsx` - Updated to use useChildren hook
-- `NestSync-frontend/components/modals/QuickLogModal.tsx` - Updated to use useChildren hook
-- `NestSync-frontend/components/modals/AddInventoryModal.tsx` - Updated to use useChildren hook
-
-**Impact Resolution**:
-- ✅ **Eliminated Duplicate Child Rendering**: Emma appears exactly once in child selector
-- ✅ **Resolved React Key Conflicts**: No more "duplicate key" console errors
-- ✅ **Improved Performance**: Reduced from 15+ GraphQL requests to 1 centralized query
-- ✅ **Enhanced Cache Architecture**: Proper normalization prevents similar issues
-- ✅ **Unblocked Collaboration Features**: Child selection now works properly for family sharing
-
-**Prevention Strategy**:
-- Always implement proper Apollo Client type policies for cache normalization
-- Use centralized data management patterns instead of duplicate component queries
-- Apply Context7 research for industry-standard cache management practices
-- Implement comprehensive cache debugging and duplicate detection systems
-
-**Timeline**:
-- Investigation: ✅ Complete (multi-agent parallel execution)
-- Cache Architecture Fixes: ✅ Complete (comprehensive Apollo Client enhancement)
-- Component Integration: ✅ Complete (centralized hook pattern)
-- Validation Testing: ✅ Complete (Emma appears once, no duplicates)
+- **Frontend Query Expected**: `getAnalyticsOverview(childId: String)`
+- **Backend Schema Available**: `getAnalyticsDashboard(childId: String)`
+- **Error Pattern**: Query sent every 3-5 minutes due to Apollo Client polling
+- **User Impact**: Analytics dashboard completely non-functional on native platforms
+- **Web Behavior**: May work differently due to different Apollo Client configuration
+
+**Implementation History**:
+1. **Phase 1**: Fixed render errors with comprehensive null safety in `useAnalytics.ts`
+2. **Phase 2**: Resolved Victory Native XL web compatibility with platform-conditional rendering
+3. **Phase 3**: Fixed backend SQLAlchemy imports and eager loading issues
+4. **Phase 4**: Identified persistent GraphQL query mismatch as root cause
+
+**Files Involved**:
+- `hooks/useAnalytics.ts` - Analytics hooks with null safety fixes
+- `lib/graphql/analytics-queries.ts` - Query definitions and types
+- `NestSync-backend/app/graphql/analytics_resolvers.py` - Backend resolver fixes
+- Apollo Client cache and Metro bundler cache (hidden references)
+
+**Prevention Strategies**:
+1. Implement GraphQL schema validation in CI/CD pipeline
+2. Add frontend/backend query compatibility tests
+3. Use GraphQL code generation to prevent schema drift
+4. Regular cache clearing during development
+5. Monitor GraphQL query logs for schema mismatches
 
 **Quality Assurance Results**:
-- Backend data integrity confirmed clean (single Emma record)
-- Apollo Client cache corruption resolved through proper type policies
-- React component rendering optimized with centralized data management
-- Collaboration features unblocked and ready for testing
+- ✅ Null safety implemented - no more crashes on missing data
+- ✅ Cross-platform chart rendering working (Victory Native XL + Recharts)
+- ✅ Backend resolvers fixed and importing correctly
+- ✅ Authentication and user session management working
+- ❌ Analytics data still not loading due to query mismatch
+- ❌ iOS/Android showing "Unable to load analytics" error
+
+**Final Resolution Plan**:
+1. Clear all Apollo Client and Metro caches completely
+2. Search entire codebase for hidden `getAnalyticsOverview` references
+3. Update all query references to use `getAnalyticsDashboard`
+4. Validate GraphQL schema alignment with introspection
+5. Test end-to-end analytics loading on all platforms
+
+**Status**: Critical - blocking analytics functionality on native platforms
 
 ---
 
-### 23. **Frontend GraphQL Integration Gap for Collaboration Features**
-**Status**: ⚠️ ACTIVE
-**Date Identified**: 2025-09-17
-**Category**: Frontend integration / GraphQL queries
+## Development Workflow Learnings
 
-**Problem**:
-- Backend family infrastructure successfully created and populated with complete data
-- Frontend Family & Caregivers modal shows "No Family Selected" despite backend family data existing
-- GraphQL queries for collaboration features need integration with new family-based data model
-- Users can access core dashboard functionality but cannot utilize collaboration features
+### Key Patterns for Future Development
 
-**Technical Details**:
-- Backend: ✅ Complete (families, family_members, family_child_access tables populated)
-- Frontend: ❌ GraphQL queries not yet integrated with family collaboration endpoints
-- Modal functionality: ✅ Working (opens correctly) but ❌ No data displayed
-
-**Impact**:
-- Core app functionality: ✅ Fully operational
-- Collaboration features: ❌ Non-functional due to frontend integration gap
-- User experience: Partial - main features work, collaboration features need completion
-
-**Next Steps Required**:
-1. Update frontend GraphQL queries to use collaboration resolvers
-2. Integrate family data fetching in collaboration components
-3. Test end-to-end collaboration feature functionality
-4. Complete frontend-backend integration for collaboration features
-
----
-
-### 20. **User Login Status Blocking Dashboard Access - can_login Property Issue**
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-07  
-**Category**: Authentication logic / User account status  
-
-**Problem**: 
-- Persistent "Unable to load dashboard data. Please try again." despite successful authentication
-- Backend logs show: `User cannot login: user=True, can_login=False`
-- Valid JWT tokens and successful user lookup, but `user.can_login` property blocks access
-- Users cannot access dashboard, diaper logging, or any authenticated features
-
-**Root Cause Identified (Senior Backend Engineer)**:
-The authentication issue was caused by a **different user record** than initially suspected:
-- **Test User (`andre_ero@yahoo.ca`)**: ✅ Working perfectly, all authentication successful
-- **Problem User (`sarah.test.2025@gmail.com`)**: ❌ Had `can_login=False` due to incomplete registration
-
-**Specific Blocking Conditions**:
-User ID `7bfb3572-12f0-44f1-847d-b4ead4eb3b9c` (`sarah.test.2025@gmail.com`) had:
-1. **Status**: `pending_verification` (should be `active`)
-2. **Email Verified**: `False` (should be `True`)
-
-**Solution Implemented**:
-Updated the problematic user record in database:
-```sql
-UPDATE users 
-SET 
-    status = 'active',
-    email_verified = true,
-    email_verified_at = NOW(),
-    updated_at = NOW()
-WHERE supabase_user_id = '7bfb3572-12f0-44f1-847d-b4ead4eb3b9c'
+**Database Migrations**:
+```bash
+# Always verify after migrations
+alembic upgrade head
+psql $DATABASE_URL -c "\dt notification*"
 ```
 
-**Verification Results**:
-- **andre_ero@yahoo.ca**: `CAN LOGIN: ✅ YES`  
-- **sarah.test.2025@gmail.com**: `CAN LOGIN: ✅ YES`
-
-**QA Validation (Test Automation Engineer)**:
-- ✅ Authentication fixes completely successful and working
-- ✅ User login functionality restored perfectly
-- ✅ Dashboard loads with realistic calculations (Days of Cover ~23 days)
-- ✅ Diaper logging and inventory management fully functional
-- ✅ All modals scroll properly with working Save buttons
-- ✅ No authentication errors or rate limiting issues
-
-**Final Status**: 
-- Authentication infrastructure: ✅ FULLY WORKING
-- GraphQL context: ✅ RESOLVED  
-- JWT tokens: ✅ VALID
-- User lookup: ✅ SUCCESS
-- **User permission check**: ✅ WORKING (can_login=True for all users)
-
-**Impact Resolution**: 
-- Users can now access all authenticated features without errors
-- Dashboard loading works reliably with correct business calculations
-- Complete application functionality restored for development and testing
-
-**Prevention**: 
-- Monitor user registration completion status during account creation
-- Implement automated checks for incomplete user records in development
-- Add logging for user status validation during authentication flow
-- Regular database health checks for user account integrity
-
-**Note**: QA testing revealed remaining "Unable to load dashboard data" is due to Apollo Client network configuration (hardcoded localhost vs actual IP), not authentication issues.
-
----
-
-### 9. **COPYRIGHT INFRINGEMENT RISK - Splash Screen Animation**
-**Status**: ⚠️ CRITICAL  
-**Date Identified**: 2025-09-05  
-**Category**: Legal compliance  
-
-**Problem**:
-- `caring-mother.json` Lottie animation (107KB) has no documented licensing or attribution
-- Professional-quality animation suggests commercial origin with stripped metadata
-- Commercial distribution without proper licensing creates significant legal liability
-
-**Business Impact**:
-- Potential legal damages: $15,500-$95,000+ CAD under Canadian Copyright Act
-- App store rejection risk due to IP violations
-- Brand reputation damage in trust-focused Canadian market
-- PIPEDA compliance brand positioning at risk
-
-**Current Status**: 
-Animation serving as temporary development placeholder only - NOT FOR PRODUCTION USE
-
-**Required Actions**:
-1. **Immediate (24-48h)**: Add placeholder documentation in codebase
-2. **30-day deadline**: Source legitimate replacement animation  
-3. **Before production**: Complete legal license verification
-
-**Remediation Options**:
-- Licensed stock animation: $10-$200 (LottieFiles, Adobe Stock)
-- Custom animation development: $500-$5,000
-- Creative Commons with proper attribution: $0+
-
-**Decision Made**: Keep as placeholder, plan custom animation for future
-
----
-
-### 10. **INCLUSIVITY DESIGN FAILURE - Gender-Exclusive Animation**
-**Status**: ⚠️ CRITICAL  
-**Date Identified**: 2025-09-05  
-**Category**: Psychology-driven UX compliance  
-
-**Problem**:
-- "Caring mother" animation exclusively represents female caregivers
-- Alienates 30% of target demographic (EFFICIENCY_DAD persona - male caregivers)
-- Contradicts documented psychology-driven UX design principles
-- Accessibility labels reinforce gender exclusion: "Caring mother with child"
-
-**UX Analysis Results**:
-- OVERWHELMED_NEW_MOM persona: 8.5/10 effectiveness
-- EFFICIENCY_DAD persona: 3/10 effectiveness (critical failure)
-- Overall compliance score: 6.5/10 (unacceptable for launch)
-
-**Business Impact**:
-- 30% user alienation unacceptable for product launch
-- Potential discrimination concerns in Canadian market
-- Undermines inclusive brand positioning for diverse family structures
-
-**Required Actions**:
-1. Replace with gender-neutral animation (family-focused or baby-centric)
-2. Update accessibility labels to remove gender-specific language  
-3. Implement persona-aware animation timing system
-
-**Timeline**: Must be resolved before public beta release
-
----
-
-### 11. Design System Color Implementation Gap
-**Status**: ⚠️ ACTIVE  
-**Date Identified**: 2025-09-04  
-**Category**: Design system implementation  
-
-**Problem**:
-- Updated `Colors.ts` with NestSync design system colors (#0891B2 primary blue, etc.)
-- Colors not being applied to UI components - still showing generic Expo colors
-- Theme system may not be properly connected to component implementations
-
-**Evidence from Playwright Testing**:
-- Login screen still shows generic blue colors instead of NestSync Primary Blue (#0891B2)
-- Registration button using default Expo tint colors
-- Header and navigation elements not reflecting updated color palette
-
-**Potential Solutions to Investigate**:
-1. Check if components are importing from correct color constants
-2. Verify theme provider configuration is using updated Colors.ts
-3. Review component styling to ensure proper color token usage
-4. Check if colors need to be updated in additional theme configuration files
-
-**Next Actions Required**:
-- Audit component color usage across the application
-- Update theme provider configuration
-- Test color changes in development environment
-
-### 12. Registration Form Validation Issues
-**Status**: ⚠️ ACTIVE  
-**Date Identified**: 2025-09-04  
-**Category**: Form validation  
-
-**Problem**:
-- Registration form accepting invalid email formats
-- Password field not enforcing complexity requirements
-- Province dropdown working but needs validation integration
-
-**Evidence from Testing**:
-- Email field accepts malformed addresses
-- No real-time validation feedback for users
-- Form submission succeeds with invalid data
-
-**Impact on User Personas**:
-- **Sarah (overwhelmed new mom)**: Needs clear, forgiving validation with helpful error messages
-- **Mike (efficiency dad)**: Expects quick, accurate feedback to avoid data re-entry
-
-**Next Actions Required**:
-- Implement comprehensive form validation
-- Add real-time validation feedback
-- Ensure Canadian-specific validation (postal codes, phone numbers)
-
-### 13. **LOTTIE VERSION COMPATIBILITY ISSUES**
-**Status**: ⚠️ ACTIVE  
-**Date Identified**: 2025-09-05  
-**Category**: Dependency management  
-
-**Problem**:
-- Version mismatch between installed `lottie-react-native@7.3.4` and expected `7.2.2`
-- Build warnings and potential future compatibility issues
-- Unsuccessful downgrade attempts due to dependency conflicts
-
-**Current Status**:
-Functional with warnings, upgrade attempts failed
-
-**Decision**: 
-Keep current functional version until major animation replacement occurs
-
-**Impact**: 
-Low-medium priority, not blocking development but creates build warnings
-
-### 14. **MISSING DESIGN DOCUMENTATION**
-**Status**: ⚠️ ACTIVE  
-**Date Identified**: 2025-09-05  
-**Category**: Documentation and collaboration  
-
-**Problem**:
-- Limited formal design documentation (wireframes, mockups, design specs)
-- Extensive design rationale embedded in code comments but no visual references
-- Difficult design-development collaboration without formal specifications
-
-**Current State**:
-- Psychology-driven UX principles documented in Colors.ts
-- User persona system documented in auth.ts
-- No visual design references or formal design specifications
-
-**Impact**:
-- Knowledge transfer challenges for new team members
-- Inconsistent implementation without visual design references
-- Design-development collaboration bottlenecks
-
-**Required Actions**:
-1. Extract embedded design system into formal documentation
-2. Create visual design reference library
-3. Document psychology-driven UX patterns formally
-
----
-
-### 15. **FRONTEND AUTHENTICATION STATE MANAGEMENT DISCONNECT**
-**Status**: ⚠️ ACTIVE  
-**Date Identified**: 2025-09-07  
-**Category**: Authentication architecture  
-
-**Problem**:
-- Backend authentication succeeds and finds user in database (HTTP 200 responses)
-- Frontend AuthGuard shows `isAuthenticated: false` preventing access to onboarding flow
-- Authentication state disconnect between successful backend authentication and frontend state persistence
-- Users successfully sign in but cannot proceed past authentication screens
-
-**Root Cause Analysis (Context7 Expo Documentation Research)**:
-- **Current Implementation**: Using custom authentication patterns instead of Expo's recommended `useStorageState` hook
-- **State Management Issue**: Authentication success not properly updating frontend authentication context
-- **Token Persistence**: Potential disconnect between token storage and authentication state updates
-- **Platform Compatibility**: Possible cross-platform state management inconsistencies
-
-**Technical Analysis (Context7 Expo Authentication Best Practices)**:
-According to Expo documentation, the recommended authentication pattern uses:
-```typescript
-// Proper Expo authentication pattern
-const [[isLoading, session], setSession] = useStorageState('session');
-
-export function SessionProvider({ children }: PropsWithChildren) {
-  return (
-    <AuthContext.Provider
-      value={{
-        signIn: () => setSession('xxx'),
-        signOut: () => setSession(null),
-        session,
-        isLoading,
-      }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
+**SQLAlchemy Metadata**:
+```python
+# Refresh metadata after schema changes
+await refresh_database_metadata()
+await verify_table_exists("table_name")
 ```
 
-**Current State Investigation Needed**:
-- Review current `AuthStore` implementation vs recommended `useStorageState` pattern
-- Check if authentication success triggers proper state updates in frontend context
-- Verify token storage and retrieval consistency across platforms
-- Examine AuthGuard implementation for proper state dependency
+**GraphQL Resolvers**:
+```python
+# Always use get_or_create for user-specific data
+preferences = await get_or_create_notification_preferences(session, user.id)
+```
 
-**Context7 Research Findings**:
-- **Expo's `useStorageState` Hook**: Provides proper async state management with platform detection
-- **SessionProvider Pattern**: Recommended context pattern for authentication state management  
-- **Cross-Platform Storage**: Handles web vs native storage differences automatically
-- **Proper State Persistence**: Built-in loading states and session management
-
-**Evidence from QA Testing**:
-- Backend logs show successful GraphQL authentication and user queries
-- Frontend shows user not authenticated despite backend success
-- Disconnect specifically between authentication success and state persistence
-- Issue prevents testing of fixed GraphQL mutations due to access blocking
-
-**Required Actions**:
-1. **Investigate Current Authentication Architecture**: Compare current implementation with Expo's recommended patterns
-2. **Implement `useStorageState` Pattern**: Replace custom storage hooks with Expo's recommended approach
-3. **Update SessionProvider**: Ensure authentication context uses proper async state management
-4. **Test Cross-Platform**: Verify authentication state persistence works on web and native
-5. **Fix AuthGuard Logic**: Ensure proper dependency on authentication state changes
-
-**Impact**:
-- **User Experience**: Users cannot complete onboarding despite successful authentication
-- **Development**: Cannot test fixed GraphQL mutations due to authentication blocking
-- **Testing**: QA validation blocked for authentication-dependent features
-
-**Prevention**:
-- Follow Expo's recommended authentication patterns from project start
-- Implement proper async state management for authentication contexts
-- Test authentication state persistence across all platforms during development
-- Regular comparison with official Expo documentation for authentication best practices
-
-**Timeline**: High priority - blocks user onboarding and development testing
+**Testing Verification**:
+```bash
+# Direct browser testing required
+npx playwright test --browser=chromium
+# Use real credentials: parents@nestsync.com / Shazam11#
+```
 
 ---
 
-## MONITORING BOTTLENECKS
+## Prevention Checklist
 
-### 8. Development Server Management
-**Status**: 🔍 MONITORING  
-**Date Identified**: 2025-09-04  
-**Category**: Development workflow  
+**Before Database Migrations**:
+- [ ] Review migration SQL for completeness
+- [ ] Test migration in development environment
+- [ ] Plan rollback strategy
+- [ ] Prepare table verification commands
 
-**Observation**:
-- Multiple Expo development servers running simultaneously on different ports
-- Can lead to confusion about which server is current
-- Resource consumption from multiple Metro bundlers
+**After Database Migrations**:
+- [ ] Verify tables exist: `\dt table_name`
+- [ ] Refresh SQLAlchemy metadata
+- [ ] Test ORM model access
+- [ ] Run basic CRUD operations
 
-**Current State**:
-- Servers running on ports 8086, 8090, 8082, 8083, 8084, 8085, 8087, 8088
-- Multiple backend servers on ports 8000, 8001
+**GraphQL Resolver Development**:
+- [ ] Add comprehensive error handling
+- [ ] Implement default data creation logic
+- [ ] Add type validation for parameters
+- [ ] Test with null/missing data scenarios
 
-**Monitoring for**:
-- Development workflow confusion
-- Port conflicts
-- Resource usage impact
-- Testing complications
-
-**Potential Prevention**:
-- Standardize on single development port
-- Create shutdown scripts for cleanup
-- Document server management procedures
-
----
-
-## PREVENTION STRATEGIES
-
-### Cross-Platform Testing
-- Always test picker components on both iOS and Android
-- Validate form components across platforms before committing
-- Use device simulators for comprehensive testing
-
-### Design System Implementation
-- Verify color token usage after any design system updates
-- Test theme changes in live development environment
-- Document theme provider configuration changes
-
-### User Experience Validation
-- Test forms with invalid data to ensure proper validation
-- Verify error messages are helpful for stressed parents
-- Check accessibility compliance for all form elements
-
-### Development Environment Setup
-- Create comprehensive development setup checklist
-- Ensure both frontend and backend servers are running before testing
-- Implement health checks and server status monitoring
-- Standardize development ports and document server startup procedures
-
-### Authentication System Reliability
-- Always verify email confirmation links are working during testing
-- Create automated diagnostic tools for authentication issues
-- Test authentication flows after any backend changes
-- Monitor Supabase service limits and plan accordingly
-
-### Code Quality and Async Patterns
-- Follow proper async/await patterns for database operations
-- Use TypeScript/Python linting rules for async context managers
-- Create templates for common GraphQL resolver patterns
-- Implement code review checklists for backend database operations
-
-### Password Management in Development
-**Important Note**: Passwords in Supabase (and any secure authentication system) are stored as cryptographic hashes and cannot be viewed in plain text. This is a security best practice.
-
-**For Development Testing**:
-- Keep track of test account passwords you create
-- Use password reset functionality when needed
-- Consider creating a development user management system
-- Document test account credentials securely for the development team
+**Feature Implementation**:
+- [ ] Use direct Playwright MCP testing
+- [ ] Test with real user credentials
+- [ ] Collect evidence (screenshots, logs)
+- [ ] Verify end-to-end functionality
+- [ ] Document testing results
 
 ---
----
 
-### 8. Platform Network Inconsistency (Mobile vs Web vs Simulator)
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-06  
-**Category**: Cross-platform networking architecture  
+## Critical Authentication Infrastructure Failures
 
-**Problem**: 
-- Users confused by inconsistent behavior: "Why do we have to why are they bringing up different issues? If one is working, the other ones might work, might not work. Why is there no consistency across all platforms?"
-- Mobile device authentication failing with "Network request failed" and "Sign in error: [ApolloError: Network request failed]"
-- Web browser authentication working perfectly with same credentials
-- iOS Simulator authentication working but mobile devices cannot connect
-- Backend returning "400 Bad Request: Invalid host header" for IP-based requests
+### 9. Gotrue SDK Compatibility Authentication Crisis (P0 - Critical)
 
-**Root Cause Analysis**: 
-The fundamental issue is **how different platforms interpret "localhost"**:
+**Date Encountered**: 2025-09-15
+**Feature**: User Authentication System
+**Impact**: Complete authentication system failure - no users can sign in
 
-1. **Web Browser (works ✅)**: `localhost` = `127.0.0.1` (same machine)
-2. **iOS Simulator (works ✅)**: `localhost` = host machine (Mac)  
-3. **Physical Mobile Device (fails ❌)**: `localhost` = the device itself, NOT the development machine
-4. **Playwright Browser (works ✅)**: Runs on host machine, so `localhost` works
+**Problem Description**:
+- Authentication fails with Pydantic validation error: `1 validation error for Session user.identities.0.identity_id Field required`
+- Error occurs when gotrue SDK v2.9.1 expects `identity_id` field but Supabase API returns `id` field
+- All sign-in attempts fail with test credentials (parents@nestsync.com / Shazam11#)
+- Frontend displays full error message to users instead of graceful error handling
+- Backend logs show: `Error verifying JWT token: Signature has expired` and `Supabase auth error during sign in`
 
-**Technical Details**:
-- GraphQL endpoint configured as `http://localhost:8001/graphql` in development
-- Mobile devices need the computer's actual IP address (e.g., `10.0.0.236:8001`)
-- Backend CORS configuration didn't include IP-based origins
-- FastAPI TrustedHostMiddleware rejecting IP-based requests with invalid wildcard patterns
+**Root Cause Analysis**:
+- **Version Incompatibility**: gotrue SDK v2.9.1 introduced breaking change in Pydantic validation model
+- **Field Mapping Mismatch**: gotrue expects `identity_id` in user.identities array, Supabase returns `id`
+- **Docker Container Drift**: requirements.txt already pinned gotrue==2.5.4 but Docker container running 2.9.1
+- **Dependency Management Gap**: No validation preventing incompatible SDK versions from being deployed
+- **Systemic Issue**: 9th documented P0/P1 critical infrastructure failure indicating systemic architectural problems
 
-**Solution**: 
-- **Dynamic CORS Configuration**: Backend now automatically detects local IP (`10.0.0.236`) and adds to CORS origins
-- **Smart Platform Detection**: Frontend uses platform-specific endpoints:
-  ```typescript
-  const GRAPHQL_ENDPOINT = __DEV__ 
-    ? Platform.select({
-        ios: 'http://10.0.0.236:8001/graphql',     // iOS Simulator  
-        android: 'http://10.0.0.2:8001/graphql',   // Android Emulator
-        default: 'http://localhost:8001/graphql'    // Web
-      })
-    : 'https://nestsync-api.railway.app/graphql';
-  ```
-- **Backend Host Validation**: Disabled TrustedHostMiddleware in development for flexible IP access
-- **Enhanced CORS Origins**: Added comprehensive IP patterns for all development scenarios
+**Immediate Solution Implemented**:
+```python
+# 1. Response transformation function in app/auth/supabase.py
+def _transform_identity_response(response_data: Any) -> Any:
+    """Transform Supabase response for gotrue compatibility"""
+    if hasattr(user, 'identities') and user.identities:
+        for identity in user.identities:
+            if hasattr(identity, 'id') and not hasattr(identity, 'identity_id'):
+                if hasattr(identity, '__setitem__'):
+                    identity['identity_id'] = identity.get('id')
+
+# 2. Applied to all auth methods: sign_up, sign_in, refresh_token
+response = _transform_identity_response(response)
+```
+
+```bash
+# 3. Docker container rebuild to enforce gotrue==2.5.4
+./docker/docker-dev.sh down
+./docker/docker-dev.sh up  # Forces rebuild with pinned version
+```
+
+**Systemic Prevention Required**:
+1. **Dependency Compatibility Validation**: Automated testing of SDK version compatibility
+2. **Docker Build Verification**: Ensure Docker containers match requirements.txt versions
+3. **Authentication Smoke Tests**: Continuous validation of critical authentication paths
+4. **Breaking Change Detection**: Alert system for dependency updates with breaking changes
+5. **Quality Gates**: Block deployments with failing authentication tests
+
+**Pattern Recognition - Critical Infrastructure Failures**:
+This represents the 9th documented P0/P1 failure, indicating a systemic pattern:
+1. Schema mismatches (multiple GraphQL issues)
+2. Database migration corruption
+3. SQLAlchemy metadata caching
+4. UUID type conversion bugs (8 resolver methods)
+5. Missing default data creation
+6. Analytics dashboard design deviation
+7. iOS build path space issues
+8. GraphQL query operation mismatches
+9. **Authentication SDK compatibility (this issue)**
 
 **Files Modified**:
-- `NestSync-backend/.env` - Added IP-based CORS origins  
-- `NestSync-backend/main.py` - Dynamic IP detection and CORS configuration
-- `NestSync-backend/app/config/settings.py` - Improved CORS parsing
-- `NestSync-frontend/lib/graphql/client.ts` - Ready for platform-specific endpoints
+- `NestSync-backend/app/auth/supabase.py` - Added field transformation
+- `NestSync-backend/requirements.txt` - Already pinned gotrue==2.5.4
+- Docker container rebuild required to apply version pinning
 
-**Prevention**: 
-- Always design network configuration for mobile development from the start
-- Test authentication on all target platforms (web, iOS simulator, physical device)
-- Use dynamic IP detection for development CORS configuration
-- Document platform networking differences clearly for team understanding
+**Prevention Strategies**:
+1. Implement dependency compatibility matrix testing
+2. Add authentication flow smoke tests (every 15 minutes)
+3. Create Docker build verification that matches requirements.txt
+4. Establish quality gates for critical path testing
+5. **Architectural Review**: Address systemic fragility causing recurring P0 failures
 
-**Impact Resolution**: 
-- All platforms now have consistent authentication experience
-- Mobile devices can successfully connect to development backend
-- Clear documentation of platform networking differences for future reference
-- Eliminated user confusion about cross-platform inconsistencies
-
----
-
-### 9. Intelligent Weight Unit System Implementation
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-06  
-**Category**: User experience enhancement / Canadian localization  
-
-**Problem**: 
-- User feedback: "I think we shouldn't be weighing in grams; we should weigh in pounds, but I'm thinking there should be an intelligent way of doing it rather than pounds. We should make it in such a way that we can switch between units."
-- No weight input in child onboarding flow despite backend support
-- Canadian context requires both metric (official) and imperial (practical) unit support
-- Need for intelligent unit detection based on user locale and preferences
-
-**Requirements Analysis**: 
-- **Canadian Context**: Official metric system but many prefer imperial for body weight
-- **Intelligence**: Auto-detect preference using `expo-localization` 
-- **Flexibility**: Manual unit toggle with preference persistence
-- **Data Consistency**: Always store in grams for database normalization
-- **User Experience**: Real-time conversion display showing both units
-
-**Solution**: 
-- **Weight Conversion Utilities** (`lib/utils/weightConversion.ts`):
-  - Precise conversion: grams ↔ pounds/ounces (99.96-100% accuracy)
-  - Smart formatting: "7 lbs 3 oz", "3.25 kg", "3250 g" 
-  - Canadian preference detection using device locale
-  - Newborn weight validation (1-6.8kg range)
-
-- **Smart WeightInput Component** (`components/ui/WeightInput.tsx`):
-  - Dual unit display with real-time conversion
-  - Interactive unit toggle (kg/g ↔ lbs/oz modes)
-  - Separate pound/ounce inputs for imperial precision
-  - Persistent user preference in AsyncStorage
-  - Validation with helpful error messages
-
-- **Unit Preference Context** (`contexts/UnitPreferenceContext.tsx`):
-  - Auto-detection: `getLocales()[0].measurementSystem`
-  - Mixed measurement system support for Canadian users
-  - Global state management with hooks
-  - AsyncStorage persistence across app sessions
-
-- **Onboarding Integration**:
-  - Added weight input after birth date in child information step
-  - Optional but encouraged with contextual helper text
-  - Canadian-aware: "🇨🇦 Both units commonly used in Canada"
-
-**Files Created/Modified**:
-- `lib/utils/weightConversion.ts` - Core conversion utilities
-- `contexts/UnitPreferenceContext.tsx` - Unit preference management  
-- `components/ui/WeightInput.tsx` - Smart weight input component
-- `app/_layout.tsx` - Added UnitPreferenceProvider
-- `app/(auth)/onboarding.tsx` - Integrated WeightInput component
-- `lib/types/onboarding.ts` - Weight field already existed (currentWeight?: number)
-
-**Canadian Localization Features**:
-- Official metric support with intelligent imperial accommodation
-- Cultural sensitivity acknowledging both measurement systems
-- PIPEDA compliance through existing privacy framework
-- Bilingual-ready architecture for future French localization
-
-**Prevention**: 
-- Always consider cultural measurement preferences in Canadian applications
-- Use expo-localization for intelligent defaults in international apps
-- Design unit conversion systems for precision and user experience
-- Test weight input validation across different measurement systems
-
-**Impact**: 
-- Enhanced user experience with familiar measurement units
-- Reduced cognitive load for stressed new parents
-- Intelligent Canadian localization improving adoption
-- Consistent data storage with flexible user presentation
+**Testing Validation**:
+- [ ] Authentication with parents@nestsync.com succeeds
+- [ ] No Pydantic validation errors in backend logs
+- [ ] Analytics dashboard loads after successful authentication
+- [ ] Docker container gotrue version matches requirements.txt
 
 ---
 
-### 10. expo-localization Configuration and Installation Issues
-**Status**: ✅ RESOLVED  
-**Date Resolved**: 2025-09-06  
-**Category**: Package configuration / Development environment  
+## References & Related Documentation
 
-**Problem**: 
-- Multiple Metro bundler errors: "Unable to resolve module expo-localization"
-- Package installed but not properly configured for Expo development
-- Weight unit system dependent on localization data not accessible
-- App failing to start due to missing localization dependencies
-
-**Root Cause**: 
-- `expo-localization` package installed but missing required config plugin in `app.json`
-- Metro bundler unable to resolve module without proper Expo SDK integration
-- Config plugin required for native localization API access on iOS/Android
-- Package installation alone insufficient for Expo managed workflow
-
-**Context7 Research**: 
-According to Expo documentation, `expo-localization` requires:
-1. Installation: `npx expo install expo-localization` ✅
-2. Config plugin: `"plugins": ["expo-localization"]` in `app.json` ✅
-3. Proper Metro configuration for native module resolution ✅
-
-**Solution**: 
-- **Package Installation**: Confirmed `expo-localization@~16.1.6` properly installed
-- **Config Plugin**: Verified `expo-localization` plugin present in `app.json` line 38
-- **Metro Rebuild**: Cleared Metro cache and performed fresh bundle rebuild
-- **Module Resolution**: Confirmed Metro successfully resolved module after cache clear
-
-**Technical Resolution**: 
-The issue was resolved by the combination of:
-1. Proper package installation with Expo CLI
-2. Correct config plugin configuration in `app.json`
-3. Metro cache clearing to rebuild module resolution map
-4. Complete Metro rebundle with fresh dependency resolution
-
-**Files Verified/Modified**:
-- `package.json` - Added `expo-localization@~16.1.6`
-- `app.json` - Confirmed `expo-localization` plugin configuration
-- Metro cache cleared and rebuilt successfully
-
-**Prevention**: 
-- Always verify config plugin requirements for Expo SDK packages
-- Clear Metro cache when adding new native dependencies
-- Follow Expo's recommended installation patterns: `npx expo install [package]`
-- Test module resolution after package installation before implementation
-
-**Learning**: 
-- Expo SDK packages often require both package installation AND config plugin setup
-- Metro bundler cache can prevent proper module resolution of newly added packages
-- Context7 documentation provides accurate configuration requirements for Expo packages
-
-## USAGE INSTRUCTIONS
-
-### Adding New Bottlenecks
-1. Identify the category (ACTIVE, RESOLVED, MONITORING)
-2. Document the problem with specific evidence
-3. Include impact on user personas when applicable
-4. List potential solutions and next actions
-5. Update status as work progresses
-
-### Resolving Bottlenecks
-1. Move from ACTIVE to RESOLVED when fixed
-2. Document the solution that worked
-3. Add prevention strategies
-4. Update related files and documentation
-
-### Regular Review
-- Review MONITORING bottlenecks weekly for patterns
-- Update ACTIVE bottlenecks with progress
-- Archive old RESOLVED bottlenecks quarterly
+- **CLAUDE.md**: Main development patterns and architecture guidelines
+- **Database Schema**: `alembic/versions/` - Migration history and table definitions
+- **GraphQL Schema**: `app/graphql/` - Resolver implementations and type definitions
+- **Testing Credentials**: `parents@nestsync.com` / `Shazam11#` for consistent testing
 
 ---
 
-**Last Updated**: 2025-09-06  
-**Next Review**: 2025-09-13
+*Last Updated: 2025-09-15*
+*Next Review: When implementing database-heavy features or GraphQL schema changes*
