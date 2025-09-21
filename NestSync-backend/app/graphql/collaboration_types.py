@@ -190,6 +190,7 @@ class CaregiverInvitation:
     created_at: datetime
     expires_at: datetime
     status: InvitationStatus
+    invitation_token: str
     family_name: Optional[str] = None
     inviter_name: Optional[str] = None
 
@@ -205,6 +206,7 @@ class CaregiverInvitation:
             created_at=invitation_orm.created_at,
             expires_at=invitation_orm.expires_at,
             status=InvitationStatus(invitation_orm.status.value),
+            invitation_token=invitation_orm.invitation_token,
             family_name=invitation_orm.family.name if invitation_orm.family else None,
             inviter_name=invitation_orm.inviter.display_name if invitation_orm.inviter else None
         )

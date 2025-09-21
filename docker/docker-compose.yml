@@ -1,4 +1,4 @@
-version: '3.8'
+# Docker Compose version field is deprecated as of v2.0
 
 services:
   # PostgreSQL Database
@@ -90,6 +90,12 @@ services:
       GOTRUE_SMTP_HOST: mailhog
       GOTRUE_SMTP_PORT: 1025
       GOTRUE_SMTP_SENDER_NAME: NestSync
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - nestsync-network
 
@@ -107,6 +113,12 @@ services:
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
       PGRST_DB_USE_LEGACY_GUCS: "false"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - nestsync-network
 
@@ -132,6 +144,12 @@ services:
       GLOBAL_S3_BUCKET: stub
     volumes:
       - storage_data:/var/lib/storage
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - nestsync-network
 
@@ -150,6 +168,12 @@ services:
       PG_META_DB_NAME: postgres
       PG_META_DB_USER: postgres
       PG_META_DB_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - nestsync-network
 

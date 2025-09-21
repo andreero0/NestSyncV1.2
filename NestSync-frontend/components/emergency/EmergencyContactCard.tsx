@@ -12,7 +12,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { EmergencyContact } from '../../lib/storage/EmergencyStorageService';
-// import { emergencyStorage } from '../../lib/storage/EmergencyStorageService'; // Temporarily commented for web compatibility
+import { emergencyStorage } from '../../lib/storage/EmergencyStorageService';
 
 interface EmergencyContactCardProps {
   contact: EmergencyContact;

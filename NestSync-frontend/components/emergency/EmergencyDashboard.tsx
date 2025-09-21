@@ -13,7 +13,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { /* emergencyStorage, */ EmergencyProfile } from '../../lib/storage/EmergencyStorageService';
+import { emergencyStorage, EmergencyProfile } from '../../lib/storage/EmergencyStorageService';
 import EmergencyContactCard from './EmergencyContactCard';
 import MedicalInfoCard from './MedicalInfoCard';
 import EmergencyShareModal from './EmergencyShareModal';

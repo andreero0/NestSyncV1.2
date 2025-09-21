@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Switch, Alert, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import NotificationPreferencesModal from '@/components/settings/NotificationPreferences';
 import FamilyManagement from '@/components/collaboration/FamilyManagement';
+import { useEmergencyProfiles } from '@/hooks/useEmergencyProfiles';
+import { getEmergencyStorage } from '@/lib/storage/EmergencyStorageService';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -28,6 +31,7 @@ interface SettingItem {
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
   
   // Privacy settings state
   const [dataSharing, setDataSharing] = useState(false);
@@ -41,6 +45,14 @@ export default function SettingsScreen() {
   const { currentFamily, isCollaborationEnabled } = useCollaborationAvailable();
   const pendingInvitationsCount = usePendingInvitationsCount();
   const [showFamilyManagement, setShowFamilyManagement] = useState(false);
+
+  // Emergency system state
+  const {
+    emergencyProfiles,
+    isEmergencyDataComplete,
+    emergencySetupProgress
+  } = useEmergencyProfiles();
+  const [isEmergencyModeEnabled, setIsEmergencyModeEnabled] = useState(false);
 
   // Inventory preferences state
   const [inventoryPreferences, setInventoryPreferences] = useAsyncStorage('nestsync_inventory_preferences');
@@ -66,6 +78,17 @@ export default function SettingsScreen() {
       }
     }
   }, [inventoryPreferences]);
+
+  // Load emergency mode state
+  useEffect(() => {
+    try {
+      const emergencyStorage = getEmergencyStorage();
+      const isActive = emergencyStorage.isEmergencyModeActive();
+      setIsEmergencyModeEnabled(isActive);
+    } catch (error) {
+      console.error('Failed to load emergency mode state:', error);
+    }
+  }, []);
 
   // Save inventory preferences
   const saveInventoryPreferences = async (newPrefs: Partial<{
@@ -169,6 +192,65 @@ export default function SettingsScreen() {
   const handleAutoReorderToggle = async (value: boolean) => {
     setAutoReorderSuggestions(value);
     await saveInventoryPreferences({ autoReorderSuggestions: value });
+  };
+
+  // Emergency system handlers
+  const handleEmergencyModeToggle = async (value: boolean) => {
+    try {
+      const emergencyStorage = getEmergencyStorage();
+
+      if (value && !isEmergencyDataComplete) {
+        Alert.alert(
+          'Emergency Setup Required',
+          `Your emergency profiles are ${emergencySetupProgress}% complete. Please complete emergency contact and medical information setup before enabling emergency mode.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Set Up Now',
+              onPress: () => {
+                console.log('Navigate to emergency setup');
+                // TODO: Navigate to emergency setup screen
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      emergencyStorage.setEmergencyMode(value);
+      setIsEmergencyModeEnabled(value);
+
+      if (value) {
+        Alert.alert(
+          'Emergency Mode Enabled',
+          'Emergency mode is now active. You can quickly access emergency contacts and medical information.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to toggle emergency mode:', error);
+      Alert.alert(
+        'Error',
+        'Failed to toggle emergency mode. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleEmergencySetup = () => {
+    console.log('Navigate to emergency test screen');
+    // Navigate to emergency test screen for setup and testing
+    try {
+      // Use router.push to navigate to the emergency test screen
+      router.push('/emergency-test');
+    } catch (error) {
+      console.error('Failed to navigate to emergency setup:', error);
+      Alert.alert(
+        'Navigation Error',
+        'Unable to open emergency setup. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const accountSettings: SettingItem[] = [
@@ -288,6 +370,28 @@ export default function SettingsScreen() {
       type: 'toggle',
       value: autoReorderSuggestions,
       onToggle: handleAutoReorderToggle
+    }
+  ];
+
+  const emergencySettings: SettingItem[] = [
+    {
+      id: 'emergency-mode',
+      title: 'Emergency Mode',
+      description: isEmergencyDataComplete
+        ? 'Quick access to emergency contacts and medical info'
+        : `Setup ${emergencySetupProgress}% complete - complete setup to enable`,
+      icon: 'cross.circle.fill',
+      type: 'toggle',
+      value: isEmergencyModeEnabled,
+      onToggle: handleEmergencyModeToggle
+    },
+    {
+      id: 'emergency-setup',
+      title: 'Emergency Profiles Setup',
+      description: `${emergencyProfiles.length} profiles configured • ${emergencySetupProgress}% complete`,
+      icon: 'person.fill.badge.plus',
+      type: 'navigation',
+      onPress: handleEmergencySetup
     }
   ];
 
@@ -411,6 +515,30 @@ export default function SettingsScreen() {
               </ThemedText>
             </ThemedView>
             {inventorySettings.map(renderSettingItem)}
+          </ThemedView>
+
+          {/* Emergency Section */}
+          <ThemedView style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Emergency & Safety
+            </ThemedText>
+            <ThemedView style={[styles.emergencyNotice, {
+              backgroundColor: colors.surface,
+              borderColor: isEmergencyDataComplete ? colors.info : colors.warning
+            }]}>
+              <IconSymbol
+                name={isEmergencyDataComplete ? "checkmark.shield.fill" : "exclamationmark.triangle.fill"}
+                size={20}
+                color={isEmergencyDataComplete ? colors.info : colors.warning}
+              />
+              <ThemedText style={[styles.emergencyNoticeText, { color: colors.textSecondary }]}>
+                {isEmergencyDataComplete
+                  ? "Emergency system is ready. Quick access to contacts and medical info during emergencies."
+                  : "Set up emergency contacts and medical information for your children to enable emergency mode."
+                }
+              </ThemedText>
+            </ThemedView>
+            {emergencySettings.map(renderSettingItem)}
           </ThemedView>
 
           {/* Privacy Section */}
@@ -744,6 +872,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   collaborationNoticeText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  // Emergency section styles
+  emergencyNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    marginBottom: 16,
+    gap: 12,
+  },
+  emergencyNoticeText: {
     flex: 1,
     fontSize: 14,
     lineHeight: 20,

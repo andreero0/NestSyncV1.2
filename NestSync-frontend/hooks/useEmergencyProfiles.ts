@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-// import { emergencyStorage, EmergencyProfile, EmergencyContact, MedicalInfo } from '../lib/storage/EmergencyStorageService';
+import { emergencyStorage, EmergencyProfile, EmergencyContact, MedicalInfo } from '../lib/storage/EmergencyStorageService';
 import { useChildren } from './useChildren';
 
 /**
@@ -105,12 +105,14 @@ export function useEmergencyProfiles() {
     try {
       const currentProfiles = emergencyStorage.getAllEmergencyProfiles();
       const currentProfileIds = new Set(currentProfiles.map(p => p.childId));
+      let profilesChanged = false;
 
       // Create emergency profiles for new children
       for (const child of children) {
         if (!currentProfileIds.has(child.id)) {
           const newProfile = createEmergencyProfileFromChild(child);
           await emergencyStorage.storeEmergencyProfile(newProfile);
+          profilesChanged = true;
 
           if (__DEV__) {
             console.log(`Created emergency profile for child: ${child.name}`);
@@ -149,17 +151,30 @@ export function useEmergencyProfiles() {
             }
 
             await emergencyStorage.storeEmergencyProfile(updatedProfile);
+            profilesChanged = true;
           }
         }
       }
 
-      // Reload profiles after sync
-      await loadEmergencyProfiles();
+      // Only reload profiles if something changed to prevent infinite loop
+      if (profilesChanged) {
+        const startTime = Date.now();
+        const profiles = emergencyStorage.getAllEmergencyProfiles();
+        const accessTime = Date.now() - startTime;
+
+        setEmergencyProfiles(profiles);
+        setStorageHealth({ isHealthy: accessTime < 100, lastAccessTime: accessTime });
+        setLastSyncAt(new Date());
+
+        if (__DEV__) {
+          console.log(`Emergency profiles reloaded after sync in ${accessTime}ms:`, profiles.length, 'profiles');
+        }
+      }
 
     } catch (error) {
       console.error('Emergency profile sync failed:', error);
     }
-  }, [children, childrenLoading, createEmergencyProfileFromChild, loadEmergencyProfiles]);
+  }, [children, childrenLoading, createEmergencyProfileFromChild]);
 
   /**
    * Update emergency contact
@@ -180,14 +195,21 @@ export function useEmergencyProfiles() {
           };
 
           await emergencyStorage.storeEmergencyProfile(profile);
-          await loadEmergencyProfiles();
+
+          // Inline profile reload to avoid circular dependency
+          const startTime = Date.now();
+          const profiles = emergencyStorage.getAllEmergencyProfiles();
+          const accessTime = Date.now() - startTime;
+          setEmergencyProfiles(profiles);
+          setStorageHealth({ isHealthy: accessTime < 100, lastAccessTime: accessTime });
+          setLastSyncAt(new Date());
         }
       }
     } catch (error) {
       console.error('Failed to update emergency contact:', error);
       throw error;
     }
-  }, [loadEmergencyProfiles]);
+  }, []);
 
   /**
    * Add emergency contact
@@ -206,13 +228,20 @@ export function useEmergencyProfiles() {
       if (profile) {
         profile.emergencyContacts.push(newContact);
         await emergencyStorage.storeEmergencyProfile(profile);
-        await loadEmergencyProfiles();
+
+        // Inline profile reload to avoid circular dependency
+        const startTime = Date.now();
+        const profiles = emergencyStorage.getAllEmergencyProfiles();
+        const accessTime = Date.now() - startTime;
+        setEmergencyProfiles(profiles);
+        setStorageHealth({ isHealthy: accessTime < 100, lastAccessTime: accessTime });
+        setLastSyncAt(new Date());
       }
     } catch (error) {
       console.error('Failed to add emergency contact:', error);
       throw error;
     }
-  }, [loadEmergencyProfiles]);
+  }, []);
 
   /**
    * Update medical information
@@ -228,12 +257,18 @@ export function useEmergencyProfiles() {
         lastUpdated: new Date().toISOString(),
       });
 
-      await loadEmergencyProfiles();
+      // Inline profile reload to avoid circular dependency
+      const startTime = Date.now();
+      const profiles = emergencyStorage.getAllEmergencyProfiles();
+      const accessTime = Date.now() - startTime;
+      setEmergencyProfiles(profiles);
+      setStorageHealth({ isHealthy: accessTime < 100, lastAccessTime: accessTime });
+      setLastSyncAt(new Date());
     } catch (error) {
       console.error('Failed to update medical info:', error);
       throw error;
     }
-  }, [loadEmergencyProfiles]);
+  }, []);
 
   /**
    * Get emergency profile by child ID
@@ -253,9 +288,9 @@ export function useEmergencyProfiles() {
       if (!profile) return false;
 
       // Check if at least one emergency contact exists
-      const hasEmergencyContact = profile.emergencyContacts.some(contact =>
+      const hasEmergencyContact = profile.emergencyContacts?.some(contact =>
         contact.phoneNumber.trim().length > 0
-      );
+      ) ?? false;
 
       return hasEmergencyContact;
     });
@@ -272,10 +307,10 @@ export function useEmergencyProfiles() {
     for (const child of children) {
       const profile = emergencyStorage.getEmergencyProfile(child.id);
       if (profile) {
-        const hasContact = profile.emergencyContacts.some(c => c.phoneNumber.trim().length > 0);
-        const hasMedicalInfo = profile.medicalInfo.emergencyMedicalInfo.trim().length > 0 ||
-                              profile.medicalInfo.allergies.length > 0 ||
-                              profile.medicalInfo.medicalConditions.length > 0;
+        const hasContact = profile.emergencyContacts?.some(c => c.phoneNumber.trim().length > 0) ?? false;
+        const hasMedicalInfo = profile.medicalInfo?.emergencyMedicalInfo?.trim().length > 0 ||
+                              profile.medicalInfo?.allergies?.length > 0 ||
+                              profile.medicalInfo?.medicalConditions?.length > 0;
 
         if (hasContact && hasMedicalInfo) {
           completedProfiles++;
@@ -289,14 +324,14 @@ export function useEmergencyProfiles() {
   // Load emergency profiles on mount
   useEffect(() => {
     loadEmergencyProfiles();
-  }, [loadEmergencyProfiles]);
+  }, []); // Remove loadEmergencyProfiles dependency to prevent infinite loop
 
   // Sync with child data when children change
   useEffect(() => {
     if (!childrenLoading && children) {
       syncWithChildData();
     }
-  }, [children, childrenLoading, syncWithChildData]);
+  }, [children, childrenLoading]); // Remove syncWithChildData dependency to prevent infinite loop
 
   return {
     // Data

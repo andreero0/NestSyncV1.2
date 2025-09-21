@@ -140,7 +140,7 @@ class CollaborationQueries:
 
     @strawberry.field
     async def pending_invitations(self, info: Info) -> CaregiverInvitationConnection:
-        """Get pending invitations for current user"""
+        """Get pending invitations for current user with deduplication safeguard"""
         try:
             user_id = await get_user_id_from_context(info)
 
@@ -154,7 +154,8 @@ class CollaborationQueries:
                 if not user_email:
                     return CaregiverInvitationConnection(nodes=[], total_count=0)
 
-                # Get pending invitations
+                # Get pending invitations with deduplication at query level
+                # Use DISTINCT ON to ensure only one invitation per family
                 result = await session.execute(
                     select(CaregiverInvitation)
                     .options(
@@ -165,13 +166,30 @@ class CollaborationQueries:
                         CaregiverInvitation.email == user_email,
                         CaregiverInvitation.status == ModelInvitationStatus.PENDING
                     )
-                    .order_by(CaregiverInvitation.created_at.desc())
+                    .order_by(
+                        CaregiverInvitation.family_id,
+                        CaregiverInvitation.created_at.desc()
+                    )
+                    .distinct(CaregiverInvitation.family_id)
                 )
                 invitations = result.scalars().all()
 
+                # Additional safeguard: Remove duplicates in memory if any slip through
+                seen_families = set()
+                unique_invitations = []
+                for invitation in invitations:
+                    if invitation.family_id not in seen_families:
+                        seen_families.add(invitation.family_id)
+                        unique_invitations.append(invitation)
+                    else:
+                        logger.warning(f"Filtered duplicate invitation {invitation.id} for family {invitation.family_id}")
+
+                # Sort by creation date descending for consistent UI ordering
+                unique_invitations.sort(key=lambda x: x.created_at, reverse=True)
+
                 return CaregiverInvitationConnection(
-                    nodes=[CaregiverInvitationType.from_orm(inv) for inv in invitations],
-                    total_count=len(invitations)
+                    nodes=[CaregiverInvitationType.from_orm(inv) for inv in unique_invitations],
+                    total_count=len(unique_invitations)
                 )
 
         except Exception as e:
@@ -255,6 +273,7 @@ class CollaborationMutations:
         try:
             user_id = await get_user_id_from_context(info)
 
+            # Create the invitation in the database
             invitation = await CollaborationService.invite_caregiver(
                 family_id=str(input.family_id),
                 inviter_id=user_id,
@@ -263,6 +282,31 @@ class CollaborationMutations:
                 access_restrictions=input.access_restrictions
             )
 
+            # Send invitation email in separate async context to avoid greenlet issues
+            try:
+                from app.services.email_service import EmailService
+
+                # Get family and inviter names for email
+                family_name = await CollaborationService._get_family_name(str(input.family_id))
+                inviter_name = await CollaborationService._get_user_name(user_id)
+
+                email_sent = await EmailService.send_caregiver_invitation(
+                    email=input.email,
+                    family_name=family_name,
+                    inviter_name=inviter_name,
+                    invitation_token=invitation.invitation_token,
+                    role=input.role.value
+                )
+
+                if email_sent:
+                    logger.info(f"✅ Invitation email sent successfully to {input.email}")
+                else:
+                    logger.warning(f"⚠️ Invitation created but email failed for {input.email}")
+
+            except Exception as email_error:
+                # Don't fail the entire invitation if email fails
+                logger.error(f"📧 Email sending failed for invitation {invitation.id}: {email_error}")
+
             return InviteCaregiverResponse(
                 success=True,
                 invitation=CaregiverInvitationType.from_orm(invitation),
@@ -270,17 +314,19 @@ class CollaborationMutations:
             )
 
         except PermissionError as e:
+            logger.warning(f"Permission denied for caregiver invitation: {e}")
             return InviteCaregiverResponse(
                 success=False,
                 error="Permission denied: Cannot invite members"
             )
         except ValueError as e:
+            logger.warning(f"Invalid input for caregiver invitation: {e}")
             return InviteCaregiverResponse(
                 success=False,
                 error=str(e)
             )
         except Exception as e:
-            logger.error(f"Error inviting caregiver: {e}")
+            logger.error(f"❌ Critical error inviting caregiver: {e}")
             return InviteCaregiverResponse(
                 success=False,
                 error=f"Failed to send invitation: {str(e)}"

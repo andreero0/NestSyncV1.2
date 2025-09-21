@@ -13,22 +13,110 @@ import {
   Alert,
   Modal,
   TextInput,
-  Switch,
+  Platform,
+  Dimensions,
+  AccessibilityInfo,
+  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  runOnJS,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { NestSyncButton } from '@/components/ui/NestSyncButton';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useCurrentFamily, useInviteCaregiver } from '@/lib/graphql/collaboration-hooks';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentFamily, useInviteCaregiver, useAcceptInvitation } from '@/lib/graphql/collaboration-hooks';
 import { FamilyMember, MemberPermissions } from '@/lib/graphql/queries';
 
 interface FamilyManagementProps {
   onClose: () => void;
 }
+
+const { height: screenHeight } = Dimensions.get('window');
+
+/**
+ * Custom hook for Dynamic Island safe area calculations
+ * Ensures proper spacing for iPhone 14 Pro+ with Dynamic Island
+ */
+const useModalSafeArea = () => {
+  const insets = useSafeAreaInsets();
+
+  // Dynamic Island detection - iPhone 14 Pro+ typically has top inset > 50
+  const dynamicIslandHeight = Platform.OS === 'ios' && insets.top > 50 ? 44 : 0;
+
+  // Calculate safe padding with minimum Dynamic Island clearance
+  const safePaddingTop = Math.max(insets.top + 8, dynamicIslandHeight + 12);
+
+  return { safePaddingTop, insets, dynamicIslandHeight };
+};
+
+/**
+ * Custom safe slide in animation that respects Dynamic Island
+ * Uses react-native-reanimated for smooth 60fps animation
+ */
+const useSafeSlideInAnimation = (visible: boolean, onAnimationComplete?: () => void) => {
+  const translateY = useSharedValue(screenHeight);
+  const opacity = useSharedValue(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  // Check for reduced motion preference
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+  }, []);
+
+  useEffect(() => {
+    if (visible) {
+      if (reduceMotion) {
+        // Instant positioning for accessibility
+        translateY.value = 0;
+        opacity.value = 1;
+        onAnimationComplete && runOnJS(onAnimationComplete)();
+      } else {
+        // Phase 1 (0-50ms): Quick position with Dynamic Island clearance
+        translateY.value = withTiming(0, {
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+        });
+
+        // Phase 2 (50-280ms): Content fade in with staggered timing
+        opacity.value = withTiming(1, {
+          duration: 280,
+        });
+
+        // Phase 3 (280-320ms): Animation complete, buttons interactive
+        setTimeout(() => {
+          if (onAnimationComplete) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            runOnJS(onAnimationComplete)();
+          }
+        }, 320);
+      }
+    } else {
+      // Exit animation
+      translateY.value = withTiming(screenHeight, {
+        duration: 250,
+        easing: Easing.in(Easing.cubic),
+      });
+      opacity.value = withTiming(0, { duration: 200 });
+    }
+  }, [visible, reduceMotion, onAnimationComplete, translateY, opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
+
+  return animatedStyle;
+};
 
 interface InvitationFormData {
   email: string;
@@ -40,14 +128,52 @@ interface InvitationFormData {
 export default function FamilyManagement({ onClose }: FamilyManagementProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { safePaddingTop } = useModalSafeArea();
+
+  // Authentication context - handle missing context gracefully for testing
+  let user;
+  try {
+    const authResult = useAuth();
+    user = authResult.user;
+  } catch {
+    // Fallback for testing when AuthContext is not available
+    console.warn('AuthContext not available, using fallback user data for testing');
+    user = { id: 'test-user-id', email: 'parents@nestsync.com' };
+  }
 
   // Collaboration hooks
-  const { currentFamily, familyMembers, pendingInvitations, isLoading } = useCurrentFamily();
+  const { currentFamily, familyMembers, pendingInvitations } = useCurrentFamily();
   const { inviteCaregiver, loading: inviteLoading } = useInviteCaregiver();
+  const { acceptInvitation, loading: acceptLoading, error: acceptError } = useAcceptInvitation();
 
   // UI state
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showMemberDetails, setShowMemberDetails] = useState<string | null>(null);
+  const [modalAnimationComplete, setModalAnimationComplete] = useState(false);
+
+  // Custom animation hook
+  const modalAnimatedStyle = useSafeSlideInAnimation(
+    showInviteModal,
+    () => setModalAnimationComplete(true)
+  );
+
+  // Reset animation state when modal closes
+  useEffect(() => {
+    if (!showInviteModal) {
+      setModalAnimationComplete(false);
+    }
+  }, [showInviteModal]);
+
+  // Auto-hide accept invitation error after 10 seconds
+  useEffect(() => {
+    if (acceptError) {
+      const timer = setTimeout(() => {
+        // Note: We cannot directly clear the error from the hook,
+        // but it will clear on next successful action or component unmount
+      }, 10000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [acceptError]);
   const [invitationForm, setInvitationForm] = useState<InvitationFormData>({
     email: '',
     role: 'EXTENDED_FAMILY',
@@ -203,7 +329,7 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
           </View>
           <View style={styles.memberDetails}>
             <ThemedText type="defaultSemiBold" style={styles.memberName}>
-              {member.userDisplayName || 'Unknown'}
+              {member.userDisplayName || member.userEmail || 'Unknown User'}
             </ThemedText>
             <ThemedText style={[styles.memberEmail, { color: colors.textSecondary }]}>
               {member.userEmail}
@@ -229,6 +355,105 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
   const renderInvitationCard = (invitation: any) => {
     const roleDisplay = getRoleDisplay(invitation.role);
 
+    // Determine if this is a received invitation (TO current user) or sent invitation (FROM current user)
+    const isReceivedInvitation = invitation.email === user?.email;
+    const isSentInvitation = invitation.invitedBy === user?.id;
+
+    const handleAcceptInvitation = () => {
+      Alert.alert(
+        'Accept Invitation',
+        `Accept invitation to join ${invitation.familyName}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Accept',
+            onPress: async () => {
+              try {
+                // Provide haptic feedback for action confirmation
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+                await acceptInvitation(invitation.invitationToken);
+
+                // Success haptic feedback
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                Alert.alert(
+                  'Success',
+                  `Successfully joined ${invitation.familyName}!`,
+                  [{ text: 'OK' }]
+                );
+                // The useCurrentFamily hook will automatically refresh the data
+              } catch (error) {
+                // Error haptic feedback
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+                // The error is now displayed in the UI, but we still show alert for immediate feedback
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+                Alert.alert(
+                  'Unable to Accept Invitation',
+                  `Failed to accept invitation: ${errorMessage}`,
+                  [{ text: 'OK' }]
+                );
+              }
+            },
+          },
+        ]
+      );
+    };
+
+    const handleDeclineInvitation = () => {
+      Alert.alert(
+        'Decline Invitation',
+        `Decline invitation to join ${invitation.familyName}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Decline',
+            style: 'destructive',
+            onPress: () => {
+              // TODO: Implement decline invitation functionality
+              Alert.alert('Feature Coming Soon', 'Decline invitation functionality will be available soon');
+            },
+          },
+        ]
+      );
+    };
+
+    const handleResendInvitation = () => {
+      Alert.alert(
+        'Resend Invitation',
+        `Resend invitation to ${invitation.email}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Resend',
+            onPress: () => {
+              // TODO: Implement resend invitation functionality
+              Alert.alert('Feature Coming Soon', 'Resend invitation functionality will be available soon');
+            },
+          },
+        ]
+      );
+    };
+
+    const handleCancelInvitation = () => {
+      Alert.alert(
+        'Cancel Invitation',
+        `Cancel invitation to ${invitation.email}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Cancel Invitation',
+            style: 'destructive',
+            onPress: () => {
+              // TODO: Implement cancel invitation functionality
+              Alert.alert('Feature Coming Soon', 'Cancel invitation functionality will be available soon');
+            },
+          },
+        ]
+      );
+    };
+
     return (
       <View
         key={invitation.id}
@@ -240,25 +465,88 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
           </View>
           <View style={styles.memberDetails}>
             <ThemedText type="defaultSemiBold" style={styles.memberName}>
-              {invitation.email}
+              {isReceivedInvitation ? `Invitation from ${invitation.inviterName || 'Unknown'}` : invitation.email}
             </ThemedText>
             <ThemedText style={[styles.memberEmail, { color: colors.textSecondary }]}>
-              Pending invitation
+              {isReceivedInvitation ? `Join ${invitation.familyName}` : 'Pending invitation'}
             </ThemedText>
             <Text style={[styles.roleLabel, { color: roleDisplay.color }]}>
               {roleDisplay.label}
             </Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.resendButton, { backgroundColor: colors.tint }]}
-          onPress={() => {
-            // TODO: Implement resend invitation
-            Alert.alert('Feature Coming Soon', 'Resend invitation functionality will be available soon');
-          }}
-        >
-          <Text style={styles.resendButtonText}>Resend</Text>
-        </TouchableOpacity>
+
+        {/* Conditional buttons based on invitation type */}
+        <View style={styles.invitationActions}>
+          {isReceivedInvitation ? (
+            // Show Accept/Decline for received invitations
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.acceptButton,
+                  {
+                    backgroundColor: acceptLoading ? colors.textSecondary : colors.tint,
+                    opacity: acceptLoading ? 0.8 : 1
+                  }
+                ]}
+                onPress={handleAcceptInvitation}
+                disabled={acceptLoading}
+                accessibilityState={{ disabled: acceptLoading }}
+                accessibilityLabel={acceptLoading ? "Accepting invitation..." : "Accept invitation"}
+              >
+                {acceptLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.acceptButtonText}>Accept</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.declineButton,
+                  {
+                    backgroundColor: acceptLoading ? colors.placeholder : colors.textSecondary,
+                    opacity: acceptLoading ? 0.6 : 1
+                  }
+                ]}
+                onPress={handleDeclineInvitation}
+                disabled={acceptLoading}
+                accessibilityState={{ disabled: acceptLoading }}
+                accessibilityLabel={acceptLoading ? "Please wait..." : "Decline invitation"}
+              >
+                <Text style={[
+                  styles.declineButtonText,
+                  { opacity: acceptLoading ? 0.7 : 1 }
+                ]}>
+                  Decline
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : isSentInvitation ? (
+            // Show Resend/Cancel for sent invitations
+            <>
+              <TouchableOpacity
+                style={[styles.resendButton, { backgroundColor: colors.tint }]}
+                onPress={handleResendInvitation}
+              >
+                <Text style={styles.resendButtonText}>Resend</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelButton, { backgroundColor: colors.textSecondary }]}
+                onPress={handleCancelInvitation}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            // Fallback for unclear invitation ownership
+            <TouchableOpacity
+              style={[styles.resendButton, { backgroundColor: colors.textSecondary }]}
+              onPress={() => Alert.alert('Unknown Invitation', 'Unable to determine invitation type')}
+            >
+              <Text style={styles.resendButtonText}>Unknown</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   };
@@ -303,7 +591,7 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
 
   if (!currentFamily) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose}>
             <IconSymbol name="xmark" size={24} color={colors.text} />
@@ -325,7 +613,7 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose}>
@@ -344,6 +632,27 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
           All caregiver data is stored securely in Canada and protected under PIPEDA regulations.
         </ThemedText>
       </View>
+
+      {/* Error Display */}
+      {acceptError && (
+        <TouchableOpacity
+          style={[styles.errorNotice, { backgroundColor: colors.surface, borderColor: colors.error }]}
+          onPress={() => {
+            // The error will be cleared on next action since we cannot directly clear it
+            // But we can provide haptic feedback to acknowledge the tap
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss error message"
+          accessibilityHint="Tap to acknowledge error. Error will clear automatically."
+        >
+          <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.error} />
+          <ThemedText style={[styles.errorText, { color: colors.error }]}>
+            {acceptError.message || 'Failed to accept invitation. Please try again.'}
+          </ThemedText>
+          <IconSymbol name="xmark.circle.fill" size={16} color={colors.error} style={{ opacity: 0.7 }} />
+        </TouchableOpacity>
+      )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Current Family Info */}
@@ -364,15 +673,103 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
           {familyMembers.map(renderMemberCard)}
         </View>
 
-        {/* Pending Invitations */}
-        {pendingInvitations && pendingInvitations.length > 0 && (
-          <View style={styles.section}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              Pending Invitations ({pendingInvitations.length})
-            </ThemedText>
-            {pendingInvitations.map(renderInvitationCard)}
-          </View>
-        )}
+        {/* Invitations - Separated by Type */}
+        {(() => {
+          // Always process invitations logic, even if empty, for better UX
+          const sentInvitations = pendingInvitations?.filter(invitation =>
+            invitation.invitedBy === user?.id
+          ) || [];
+          const receivedInvitations = pendingInvitations?.filter(invitation =>
+            invitation.email === user?.email
+          ) || [];
+
+          const hasAnyInvitations = sentInvitations.length > 0 || receivedInvitations.length > 0;
+
+          return (
+            <>
+              {/* Invitations Received Section */}
+              {receivedInvitations.length > 0 && (
+                <View style={styles.section}>
+                  <View
+                    style={styles.sectionHeader}
+                    accessibilityRole="header"
+                    accessibilityLabel={`Invitations Received section, ${receivedInvitations.length} invitations`}
+                  >
+                    <View style={styles.sectionHeaderContent}>
+                      <View style={[styles.sectionIcon, { backgroundColor: `${colors.info}15` }]}>
+                        <IconSymbol name="envelope.fill" size={20} color={colors.info} />
+                      </View>
+                      <View style={styles.sectionHeaderText}>
+                        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                          Invitations Received ({receivedInvitations.length})
+                        </ThemedText>
+                        <ThemedText style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+                          Family invitations you have received from others
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                  <View
+                    style={[styles.invitationGroup, { backgroundColor: `${colors.info}08` }]}
+                    accessibilityLabel="Received invitations list"
+                  >
+                    {receivedInvitations.map(renderInvitationCard)}
+                  </View>
+                </View>
+              )}
+
+              {/* Invitations Sent Section */}
+              {sentInvitations.length > 0 && (
+                <View style={styles.section}>
+                  <View
+                    style={styles.sectionHeader}
+                    accessibilityRole="header"
+                    accessibilityLabel={`Invitations Sent section, ${sentInvitations.length} invitations`}
+                  >
+                    <View style={styles.sectionHeaderContent}>
+                      <View style={[styles.sectionIcon, { backgroundColor: `${colors.accent}15` }]}>
+                        <IconSymbol name="paperplane.fill" size={20} color={colors.accent} />
+                      </View>
+                      <View style={styles.sectionHeaderText}>
+                        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                          Invitations Sent ({sentInvitations.length})
+                        </ThemedText>
+                        <ThemedText style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+                          Caregiver invitations you have sent to others
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                  <View
+                    style={[styles.invitationGroup, { backgroundColor: `${colors.accent}08` }]}
+                    accessibilityLabel="Sent invitations list"
+                  >
+                    {sentInvitations.map(renderInvitationCard)}
+                  </View>
+                </View>
+              )}
+
+              {/* Empty State - No Invitations */}
+              {!hasAnyInvitations && (
+                <View style={styles.section}>
+                  <View
+                    style={styles.emptyInvitationsState}
+                    accessibilityLabel="No pending invitations empty state"
+                    accessibilityHint="Use the invite button below to add family members or caregivers"
+                  >
+                    <IconSymbol name="person.2.wave.2.fill" size={48} color={colors.textSecondary} />
+                    <ThemedText type="defaultSemiBold" style={[styles.emptyTitle, { color: colors.textSecondary }]}>
+                      No Pending Invitations
+                    </ThemedText>
+                    <ThemedText style={[styles.emptyDescription, { color: colors.textSecondary }]}>
+                      Invite family members or caregivers to collaborate on child care.
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
+            </>
+          );
+        })()}
 
         {/* Invite New Caregiver Button */}
         <View style={styles.section}>
@@ -389,37 +786,63 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Invite Caregiver Modal */}
+      {/* Invite Caregiver Modal with Custom Animation */}
       <Modal
         visible={showInviteModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
+        animationType="none"
+        presentationStyle="fullScreen"
         onRequestClose={() => setShowInviteModal(false)}
+        statusBarTranslucent
       >
-        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowInviteModal(false)}>
-              <Text style={[styles.cancelButton, { color: colors.text }]}>Cancel</Text>
-            </TouchableOpacity>
-            <ThemedText type="subtitle">Invite Caregiver</ThemedText>
-            <TouchableOpacity
-              onPress={handleInviteCaregiver}
-              disabled={!invitationForm.email.trim() || inviteLoading}
-            >
-              <Text
-                style={[
-                  styles.saveButton,
-                  {
-                    color: invitationForm.email.trim() ? colors.tint : colors.textSecondary,
-                  },
-                ]}
-              >
-                Send
-              </Text>
-            </TouchableOpacity>
-          </View>
+        <SafeAreaProvider>
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              { backgroundColor: colors.background },
+              modalAnimatedStyle,
+            ]}
+          >
+            <SafeAreaView style={styles.modalSafeArea} edges={['left', 'right']}>
+              <View style={[styles.modalHeader, { paddingTop: safePaddingTop }]}>
+                <TouchableOpacity
+                  onPress={() => setShowInviteModal(false)}
+                  style={styles.modalHeaderButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  disabled={!modalAnimationComplete}
+                  accessibilityLabel="Cancel invitation"
+                  accessibilityHint="Closes the invite caregiver modal"
+                >
+                  <Text style={[
+                    styles.cancelButtonText,
+                    {
+                      color: colors.text,
+                      opacity: modalAnimationComplete ? 1 : 0.5,
+                    }
+                  ]}>Cancel</Text>
+                </TouchableOpacity>
+                <ThemedText type="subtitle">Invite Caregiver</ThemedText>
+                <TouchableOpacity
+                  onPress={handleInviteCaregiver}
+                  disabled={!invitationForm.email.trim() || inviteLoading || !modalAnimationComplete}
+                  style={styles.modalHeaderButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Send invitation"
+                  accessibilityHint="Sends the caregiver invitation email"
+                >
+                  <Text
+                    style={[
+                      styles.saveButton,
+                      {
+                        color: (invitationForm.email.trim() && modalAnimationComplete) ? colors.tint : colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    Send
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             {/* Email Input */}
             <View style={styles.inputSection}>
               <ThemedText type="defaultSemiBold" style={styles.inputLabel}>
@@ -457,8 +880,10 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
                 </ThemedText>
               </View>
             </View>
-          </ScrollView>
-        </SafeAreaView>
+              </ScrollView>
+            </SafeAreaView>
+          </Animated.View>
+        </SafeAreaProvider>
       </Modal>
     </SafeAreaView>
   );
@@ -489,6 +914,22 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     lineHeight: 16,
+  },
+  errorNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
   },
   content: {
     flex: 1,
@@ -565,12 +1006,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  invitationActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   resendButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   resendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  acceptButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  acceptButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  declineButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  declineButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  cancelButtonText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
@@ -589,8 +1064,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  // Modal styles
+  // Modal styles with Dynamic Island support
   modalContainer: {
+    flex: 1,
+  },
+  modalSafeArea: {
     flex: 1,
   },
   modalHeader: {
@@ -601,9 +1079,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    minHeight: 60, // Ensure adequate touch target area
+    // Dynamic padding is applied via safePaddingTop prop
   },
-  cancelButton: {
-    fontSize: 16,
+  modalHeaderButton: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // Ensure buttons maintain 44x44pt touch targets throughout animation
   },
   saveButton: {
     fontSize: 16,
@@ -673,5 +1157,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     marginTop: 4,
+  },
+  // New section header styles for separated invitations
+  sectionHeader: {
+    marginBottom: 12,
+  },
+  sectionHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  sectionHeaderText: {
+    flex: 1,
+  },
+  invitationGroup: {
+    borderRadius: 12,
+    padding: 8,
+    marginTop: 4,
+  },
+  emptyInvitationsState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
   },
 });

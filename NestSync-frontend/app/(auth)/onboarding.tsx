@@ -14,7 +14,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -41,6 +41,7 @@ import {
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const searchParams = useLocalSearchParams();
   const { user, isLoading } = useAuth();
   const { persona, preferences, updatePreferences } = useUserPersona();
   const { step, setStep, complete } = useOnboarding();
@@ -134,12 +135,16 @@ export default function OnboardingScreen() {
 
   // Notification preferences now use default values (removed from UI flow)
 
+  // Check for development bypass parameter
+  const isDevelopmentBypass = searchParams['dev-bypass'] === 'true' && __DEV__;
+
   useEffect(() => {
     // If user already completed onboarding, redirect to main app
-    if (user?.onboardingCompleted) {
+    // UNLESS we're in development bypass mode
+    if (user?.onboardingCompleted && !isDevelopmentBypass) {
       router.replace('/(tabs)');
     }
-  }, [user]);
+  }, [user, isDevelopmentBypass]);
 
   const handlePersonaSelection = async (personaType: UserPersona) => {
     try {

@@ -104,17 +104,26 @@ class CollaborationService:
 
         async for session in get_async_session():
             try:
-                # Check if invitation already exists for this email/family
+                # Check if any invitation already exists for this email/family combination
                 existing = await session.execute(
                     select(CaregiverInvitation)
                     .where(
                         CaregiverInvitation.family_id == family_id,
-                        CaregiverInvitation.email == email,
-                        CaregiverInvitation.status == InvitationStatus.PENDING
+                        CaregiverInvitation.email == email
                     )
+                    .order_by(CaregiverInvitation.created_at.desc())
                 )
-                if existing.scalar_one_or_none():
-                    raise ValueError(f"Pending invitation already exists for {email}")
+                existing_invitation = existing.scalar_one_or_none()
+
+                if existing_invitation:
+                    if existing_invitation.status == InvitationStatus.PENDING:
+                        # Return existing pending invitation instead of creating duplicate
+                        logger.info(f"Returning existing pending invitation {existing_invitation.id} for {email} in family {family_id}")
+                        return existing_invitation
+                    elif existing_invitation.status in [InvitationStatus.EXPIRED, InvitationStatus.REVOKED]:
+                        # Cancel the old invitation by updating its status before creating new one
+                        existing_invitation.status = InvitationStatus.REVOKED
+                        logger.info(f"Revoked old invitation {existing_invitation.id} before creating new one")
 
                 # Generate secure invitation token
                 invitation_token = secrets.token_urlsafe(32)
@@ -130,6 +139,7 @@ class CollaborationService:
                     access_restrictions=access_restrictions or {}
                 )
                 session.add(invitation)
+                await session.flush()  # Get the ID
 
                 # Log invitation
                 await CollaborationLogService.log_action(
@@ -144,21 +154,20 @@ class CollaborationService:
                     }
                 )
 
+                # Eager load all required relationships before commit to prevent detached object issues
+                result = await session.execute(
+                    select(CaregiverInvitation)
+                    .options(
+                        selectinload(CaregiverInvitation.family),
+                        selectinload(CaregiverInvitation.inviter)
+                    )
+                    .where(CaregiverInvitation.id == invitation.id)
+                )
+                invitation = result.scalar_one()
+
                 await session.commit()
 
-                # Send invitation email
-                family_name = await CollaborationService._get_family_name(family_id)
-                inviter_name = await CollaborationService._get_user_name(inviter_id)
-
-                await EmailService.send_caregiver_invitation(
-                    email=email,
-                    family_name=family_name,
-                    inviter_name=inviter_name,
-                    invitation_token=invitation_token,
-                    role=role
-                )
-
-                logger.info(f"Sent invitation {invitation.id} to {email} for family {family_id}")
+                logger.info(f"Invitation {invitation.id} saved to database for {email} in family {family_id}")
                 return invitation
 
             except Exception as e:
@@ -216,6 +225,7 @@ class CollaborationService:
                     joined_at=datetime.now(timezone.utc)
                 )
                 session.add(family_member)
+                await session.flush()  # Get the ID
 
                 # Update invitation status
                 invitation.status = InvitationStatus.ACCEPTED
@@ -233,6 +243,14 @@ class CollaborationService:
                         'invited_by': invitation.invited_by
                     }
                 )
+
+                # Eager load user relationship before commit to prevent detached object issues
+                result = await session.execute(
+                    select(FamilyMember)
+                    .options(selectinload(FamilyMember.user))
+                    .where(FamilyMember.id == family_member.id)
+                )
+                family_member = result.scalar_one()
 
                 await session.commit()
 

@@ -10,7 +10,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import EmergencyDashboard from '../components/emergency/EmergencyDashboard';
-// import { emergencyStorage } from '../lib/storage/EmergencyStorageService';
+import { emergencyStorage } from '../lib/storage/EmergencyStorageService';
 
 /**
  * Emergency Dashboard Screen

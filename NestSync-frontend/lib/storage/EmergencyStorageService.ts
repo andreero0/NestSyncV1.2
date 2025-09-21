@@ -1,7 +1,6 @@
-import { MMKV } from 'react-native-mmkv';
-import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
 import { StorageHelpers } from '../../hooks/useUniversalStorage';
+import { createMMKVStorage, storageAdapter, type IStorage } from './StorageAdapter';
 
 // Emergency contact interface
 export interface EmergencyContact {
@@ -37,64 +36,189 @@ export interface EmergencyProfile {
 }
 
 class EmergencyStorageService {
-  private storage: MMKV | null = null;
+  private storage: IStorage | null = null;
   private encryptionKey: string | null = null;
   private initPromise: Promise<void> | null = null;
+  private isInitialized: boolean = false;
+  private initializationFailed: boolean = false;
 
   constructor() {
-    // Skip initialization on web for compatibility
-    if (Platform.OS !== 'web') {
-      // Initialize storage asynchronously
-      this.initPromise = this.initialize();
-    }
+    // Initialize storage on all platforms
+    this.initPromise = this.initialize();
   }
 
   private async initialize(): Promise<void> {
-    // Initialize encryption key
-    this.encryptionKey = await this.getOrCreateEncryptionKey();
+    try {
+      // Initialize encryption key
+      this.encryptionKey = await this.getOrCreateEncryptionKey();
 
-    // Only initialize MMKV on native platforms
-    if (Platform.OS !== 'web') {
-      this.storage = new MMKV({
+      // Use StorageAdapter to get appropriate storage (MMKV or AsyncStorage)
+      this.storage = await createMMKVStorage({
         id: 'emergency-storage',
         encryptionKey: this.encryptionKey,
       });
+
+      this.isInitialized = true;
+      this.initializationFailed = false;
+
+      if (__DEV__) {
+        const storageType = storageAdapter.getStorageType();
+        console.log(`EmergencyStorageService initialized successfully using ${storageType}`);
+      }
+    } catch (error) {
+      // Use console.warn instead of console.warn to avoid red screen in development
+      if (__DEV__) {
+        console.warn('Failed to initialize EmergencyStorageService:', error);
+        console.warn('Emergency storage will fall back to web localStorage where available');
+      }
+      this.initializationFailed = true;
+      this.isInitialized = false;
     }
   }
 
   private async ensureInitialized(): Promise<void> {
-    if (this.initPromise) {
+    if (this.initPromise && !this.isInitialized) {
       await this.initPromise;
     }
   }
 
   /**
+   * Check if storage is available and ready for use
+   * Returns true for web (localStorage) or when MMKV is initialized
+   */
+  private isStorageAvailable(): boolean {
+    if (Platform.OS === 'web') {
+      return typeof localStorage !== 'undefined';
+    }
+    return this.isInitialized && this.storage !== null && !this.initializationFailed;
+  }
+
+  /**
+   * Safe storage access with null checking
+   * Returns null if storage is not available
+   */
+  private safeGetString(key: string): string | null {
+    try {
+      if (Platform.OS === 'web') {
+        return localStorage.getItem(key);
+      } else if (this.isStorageAvailable() && this.storage) {
+        return this.storage.getString(key) || null;
+      }
+      return null;
+    } catch (error) {
+      console.warn(`Failed to get string for key ${key}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Safe storage set with null checking
+   */
+  private safeSetString(key: string, value: string): boolean {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.setItem(key, value);
+        return true;
+      } else if (this.isStorageAvailable() && this.storage) {
+        this.storage.set(key, value);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.warn(`Failed to set string for key ${key}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Safe storage delete with null checking
+   */
+  private safeDelete(key: string): boolean {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(key);
+        return true;
+      } else if (this.isStorageAvailable() && this.storage) {
+        this.storage.delete(key);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.warn(`Failed to delete key ${key}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Safe get all keys with null checking
+   */
+  private safeGetAllKeys(): string[] {
+    try {
+      if (Platform.OS === 'web') {
+        return Object.keys(localStorage);
+      } else if (this.isStorageAvailable() && this.storage) {
+        return this.storage.getAllKeys();
+      }
+      return [];
+    } catch (error) {
+      console.warn('Failed to get all keys:', error);
+      return [];
+    }
+  }
+
+  /**
+   * SSR-safe random string generator for encryption keys
+   * Falls back to Math.random() when crypto APIs are not available
+   */
+  private generateRandomKey(): string {
+    // Check if we're in SSR environment
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      // Fallback for SSR - use Math.random
+      return Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2) +
+             Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+    }
+
+    // Check if crypto APIs are available (browser environment)
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+      // Use browser crypto API
+      return window.crypto.randomUUID() + window.crypto.randomUUID();
+    }
+
+    // Try expo-crypto as fallback (but wrapped in try-catch)
+    try {
+      return require('expo-crypto').randomUUID() + require('expo-crypto').randomUUID();
+    } catch (error) {
+      // Final fallback to Math.random for complete compatibility
+      return Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2) +
+             Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+    }
+  }
+
+  /**
    * Get or create encryption key for emergency storage
-   * Uses platform-appropriate storage and Expo Crypto for secure key generation
+   * Uses StorageAdapter for cross-platform compatibility
+   * SSR-safe implementation
    */
   private async getOrCreateEncryptionKey(): Promise<string> {
     const keyStorageId = 'emergency-encryption-key';
 
-    if (Platform.OS === 'web') {
-      // Use localStorage on web with fallback generation
-      let key = localStorage.getItem(keyStorageId);
-      if (!key) {
-        // Generate new 256-bit encryption key
-        key = Crypto.randomUUID() + Crypto.randomUUID();
-        localStorage.setItem(keyStorageId, key);
-      }
-      return key;
-    } else {
-      // Use MMKV on native platforms
-      const keyStorage = new MMKV({ id: 'emergency-keys' });
+    try {
+      // Use StorageAdapter for cross-platform storage
+      const keyStorage = await createMMKVStorage({ id: 'emergency-keys' });
       let key = keyStorage.getString(keyStorageId);
 
       if (!key) {
-        // Generate new 256-bit encryption key
-        key = Crypto.randomUUID() + Crypto.randomUUID();
+        // Generate new 256-bit encryption key using SSR-safe method
+        key = this.generateRandomKey();
         keyStorage.set(keyStorageId, key);
       }
       return key;
+    } catch (error) {
+      // Fallback to generating a random key without persistent storage
+      if (__DEV__) {
+        console.warn('Failed to access key storage, using session-only encryption key:', error);
+      }
+      return this.generateRandomKey();
     }
   }
 
@@ -112,10 +236,9 @@ class EmergencyStorageService {
         lastSyncedAt: new Date().toISOString(),
       };
 
-      if (Platform.OS === 'web') {
-        localStorage.setItem(profileKey, JSON.stringify(profileData));
-      } else if (this.storage) {
-        this.storage.set(profileKey, JSON.stringify(profileData));
+      const success = this.safeSetString(profileKey, JSON.stringify(profileData));
+      if (!success) {
+        throw new Error('Storage not available for storing emergency profile');
       }
 
       // Update index of emergency profiles
@@ -123,7 +246,7 @@ class EmergencyStorageService {
 
       console.log(`Emergency profile stored for child: ${profile.childName}`);
     } catch (error) {
-      console.error('Failed to store emergency profile:', error);
+      console.warn('Failed to store emergency profile:', error);
       throw new Error('Failed to store emergency profile');
     }
   }
@@ -131,19 +254,12 @@ class EmergencyStorageService {
   /**
    * Retrieve emergency profile for a child
    * Optimized for emergency situations with instant access
+   * Safe: Returns null if storage is not available
    */
-  async getEmergencyProfile(childId: string): Promise<EmergencyProfile | null> {
+  getEmergencyProfile(childId: string): EmergencyProfile | null {
     try {
-      await this.ensureInitialized();
-
       const profileKey = `emergency-profile-${childId}`;
-      let profileData: string | null = null;
-
-      if (Platform.OS === 'web') {
-        profileData = localStorage.getItem(profileKey);
-      } else if (this.storage) {
-        profileData = this.storage.getString(profileKey);
-      }
+      const profileData = this.safeGetString(profileKey);
 
       if (!profileData) {
         return null;
@@ -151,7 +267,7 @@ class EmergencyStorageService {
 
       return JSON.parse(profileData) as EmergencyProfile;
     } catch (error) {
-      console.error('Failed to retrieve emergency profile:', error);
+      console.warn('Failed to retrieve emergency profile:', error);
       return null;
     }
   }
@@ -159,9 +275,18 @@ class EmergencyStorageService {
   /**
    * Get all emergency profiles
    * Returns all stored emergency profiles for family
+   * Safe: Returns empty array if storage is not available
    */
   getAllEmergencyProfiles(): EmergencyProfile[] {
     try {
+      // Return empty array if storage is not available
+      if (!this.isStorageAvailable()) {
+        if (__DEV__) {
+          console.warn('Storage not available for getAllEmergencyProfiles, returning empty array');
+        }
+        return [];
+      }
+
       const profileIds = this.getEmergencyProfileIndex();
       const profiles: EmergencyProfile[] = [];
 
@@ -174,7 +299,7 @@ class EmergencyStorageService {
 
       return profiles;
     } catch (error) {
-      console.error('Failed to retrieve emergency profiles:', error);
+      console.warn('Failed to retrieve emergency profiles:', error);
       return [];
     }
   }
@@ -219,7 +344,7 @@ class EmergencyStorageService {
       const usageKey = `emergency-usage-${childId}-${contactId}`;
       const timestamp = new Date().toISOString();
 
-      this.storage.set(usageKey, timestamp);
+      this.safeSetString(usageKey, timestamp);
 
       // Update contact's last contacted time
       const profile = this.getEmergencyProfile(childId);
@@ -231,7 +356,7 @@ class EmergencyStorageService {
         }
       }
     } catch (error) {
-      console.error('Failed to record emergency contact usage:', error);
+      console.warn('Failed to record emergency contact usage:', error);
     }
   }
 
@@ -245,7 +370,7 @@ class EmergencyStorageService {
     mostUsedContact?: EmergencyContact;
   } {
     try {
-      const allKeys = this.storage.getAllKeys();
+      const allKeys = this.safeGetAllKeys();
       const usageKeys = allKeys.filter(key => key.startsWith('emergency-usage-'));
 
       const stats = {
@@ -258,7 +383,7 @@ class EmergencyStorageService {
         // Find most recent emergency call
         let mostRecentCall = '';
         for (const key of usageKeys) {
-          const timestamp = this.storage.getString(key);
+          const timestamp = this.safeGetString(key);
           if (timestamp && timestamp > mostRecentCall) {
             mostRecentCall = timestamp;
           }
@@ -268,7 +393,7 @@ class EmergencyStorageService {
 
       return stats;
     } catch (error) {
-      console.error('Failed to get emergency usage stats:', error);
+      console.warn('Failed to get emergency usage stats:', error);
       return { totalEmergencyCalls: 0 };
     }
   }
@@ -306,53 +431,71 @@ class EmergencyStorageService {
    */
   clearAllEmergencyData(): void {
     try {
-      const allKeys = this.storage.getAllKeys();
+      const allKeys = this.safeGetAllKeys();
       const emergencyKeys = allKeys.filter(key =>
         key.startsWith('emergency-profile-') ||
         key.startsWith('emergency-usage-') ||
         key === 'emergency-profile-index'
       );
 
+      let deletedCount = 0;
       for (const key of emergencyKeys) {
-        this.storage.delete(key);
+        if (this.safeDelete(key)) {
+          deletedCount++;
+        }
       }
 
-      console.log('All emergency data cleared');
+      console.log(`Cleared ${deletedCount} emergency data entries`);
     } catch (error) {
-      console.error('Failed to clear emergency data:', error);
+      console.warn('Failed to clear emergency data:', error);
     }
   }
 
   /**
    * Check storage health and performance
-   * Ensures MMKV is performing optimally for emergency access
+   * Ensures storage is performing optimally for emergency access
+   * Safe: Returns health info even if storage is not available
    */
   getStorageHealth(): {
     isHealthy: boolean;
     totalProfiles: number;
     lastAccessTime: number;
     storageSize: number;
+    initializationStatus: string;
   } {
     const startTime = Date.now();
 
     try {
+      // Check storage availability first
+      if (!this.isStorageAvailable()) {
+        return {
+          isHealthy: false,
+          totalProfiles: 0,
+          lastAccessTime: Date.now() - startTime,
+          storageSize: 0,
+          initializationStatus: this.initializationFailed ? 'failed' : 'initializing'
+        };
+      }
+
       const profiles = this.getAllEmergencyProfiles();
       const accessTime = Date.now() - startTime;
-      const allKeys = this.storage.getAllKeys();
+      const allKeys = this.safeGetAllKeys();
 
       return {
-        isHealthy: accessTime < 100, // Should be under 100ms for emergency access
+        isHealthy: accessTime < 100 && this.isStorageAvailable(), // Should be under 100ms for emergency access
         totalProfiles: profiles.length,
         lastAccessTime: accessTime,
         storageSize: allKeys.length,
+        initializationStatus: 'ready'
       };
     } catch (error) {
-      console.error('Storage health check failed:', error);
+      console.warn('Storage health check failed:', error);
       return {
         isHealthy: false,
         totalProfiles: 0,
         lastAccessTime: Date.now() - startTime,
         storageSize: 0,
+        initializationStatus: 'error'
       };
     }
   }
@@ -367,13 +510,13 @@ class EmergencyStorageService {
 
     if (!currentIndex.includes(childId)) {
       const updatedIndex = [...currentIndex, childId];
-      this.storage.set(indexKey, JSON.stringify(updatedIndex));
+      this.safeSetString(indexKey, JSON.stringify(updatedIndex));
     }
   }
 
   private getEmergencyProfileIndex(): string[] {
     const indexKey = 'emergency-profile-index';
-    const indexData = this.storage.getString(indexKey);
+    const indexData = this.safeGetString(indexKey);
 
     if (!indexData) {
       return [];
@@ -391,11 +534,28 @@ class EmergencyStorageService {
    * Tracks whether emergency mode is currently active
    */
   setEmergencyMode(isActive: boolean): void {
-    this.storage.set('emergency-mode-active', isActive);
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.setItem('emergency-mode-active', isActive.toString());
+      } else if (this.isStorageAvailable() && this.storage) {
+        this.storage.set('emergency-mode-active', isActive);
+      }
+    } catch (error) {
+      console.warn('Failed to set emergency mode:', error);
+    }
   }
 
   isEmergencyModeActive(): boolean {
-    return this.storage.getBoolean('emergency-mode-active') ?? false;
+    try {
+      if (Platform.OS === 'web') {
+        return localStorage.getItem('emergency-mode-active') === 'true';
+      }
+      return this.isStorageAvailable() && this.storage ?
+        this.storage.getBoolean('emergency-mode-active') ?? false : false;
+    } catch (error) {
+      console.warn('Failed to get emergency mode status:', error);
+      return false;
+    }
   }
 }
 

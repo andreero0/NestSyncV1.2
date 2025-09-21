@@ -885,6 +885,7 @@ export const PENDING_INVITATIONS_QUERY = gql`
         createdAt
         expiresAt
         status
+        invitationToken
         familyName
         inviterName
       }
@@ -1104,6 +1105,7 @@ export interface CaregiverInvitation {
   createdAt: string;
   expiresAt: string;
   status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+  invitationToken: string;
   familyName?: string;
   inviterName?: string;
 }

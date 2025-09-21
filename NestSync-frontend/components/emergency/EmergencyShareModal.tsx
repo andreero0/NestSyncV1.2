@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
-import { EmergencyProfile /* , emergencyStorage */ } from '../../lib/storage/EmergencyStorageService';
+import { EmergencyProfile, emergencyStorage } from '../../lib/storage/EmergencyStorageService';
 
 interface EmergencyShareModalProps {
   visible: boolean;

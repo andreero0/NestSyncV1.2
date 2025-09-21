@@ -138,11 +138,27 @@ class ChildMutations:
                     success=False,
                     error="Daily usage count must be between 1 and 20"
                 )
-            
+
             # Create child record
             async for session in get_async_session():
                 # Use the authenticated user's ID as parent_id
                 parent_id = current_user.id
+
+                # DUPLICATION PREVENTION: Check for existing child with same name for this parent
+                existing_child_check = await session.execute(
+                    select(Child).where(
+                        Child.parent_id == parent_id,
+                        Child.name == input.name.strip(),
+                        Child.is_deleted == False
+                    )
+                )
+                existing_child = existing_child_check.scalar_one_or_none()
+
+                if existing_child:
+                    return CreateChildResponse(
+                        success=False,
+                        error=f"A child with the name '{input.name.strip()}' already exists. Please choose a different name or add a nickname (e.g., 'Emma 2', 'Emma Jr.')."
+                    )
                 
                 # Ensure enum values are properly converted to strings
                 diaper_size = str(input.current_diaper_size.value) if input.current_diaper_size else None
@@ -926,122 +942,76 @@ class ChildQueries:
                 from sqlalchemy import func
                 from app.models import Family, FamilyMember, FamilyChildAccess
 
-                # HYBRID PATTERN: Try both patterns and use the one with MORE children
-                logger.info(f"HYBRID_RESOLVER: Attempting both patterns for user {current_user.id}")
+                # DEDUPLICATED UNIFIED PATTERN: Query both patterns and deduplicate by child.id
+                logger.info(f"DEDUPLICATED_RESOLVER: Querying all children for user {current_user.id}")
 
-                # STEP 1: Check family-based query pattern
-                family_count_result = await session.execute(
-                    select(func.count(Child.id.distinct())).select_from(Child)
-                    .join(FamilyChildAccess, Child.id == FamilyChildAccess.child_id)
-                    .join(Family, FamilyChildAccess.family_id == Family.id)
-                    .join(FamilyMember, Family.id == FamilyMember.family_id)
+                # STEP 1: Get children from family-based relationships
+                family_query = select(Child).select_from(Child)\
+                    .join(FamilyChildAccess, Child.id == FamilyChildAccess.child_id)\
+                    .join(Family, FamilyChildAccess.family_id == Family.id)\
+                    .join(FamilyMember, Family.id == FamilyMember.family_id)\
                     .where(
                         FamilyMember.user_id == current_user.id,
                         FamilyMember.status == 'ACTIVE',
                         Child.is_deleted == False,
                         FamilyChildAccess.is_deleted == False
-                    )
-                )
-                family_total_count = family_count_result.scalar() or 0
-                logger.info(f"HYBRID_RESOLVER: Family-based query found {family_total_count} children")
+                    ).order_by(Child.created_at.desc())
 
-                # STEP 2: Check legacy direct parent-child pattern
-                legacy_count_result = await session.execute(
-                    select(func.count(Child.id)).where(
-                        Child.parent_id == current_user.id,
-                        Child.is_deleted == False
-                    )
-                )
-                legacy_total_count = legacy_count_result.scalar() or 0
-                logger.info(f"HYBRID_RESOLVER: Legacy direct query found {legacy_total_count} children")
+                family_result = await session.execute(family_query)
+                family_children = family_result.scalars().all()
+                logger.info(f"DEDUPLICATED_RESOLVER: Family-based query found {len(family_children)} children")
 
-                # STEP 3: Use the pattern that returns MORE children (prioritize data completeness)
-                if legacy_total_count > family_total_count:
-                    logger.info(f"HYBRID_RESOLVER: Using legacy direct pattern ({legacy_total_count} > {family_total_count})")
-                    # Use legacy pattern
-                    children = []
-                    total_count = legacy_total_count
+                # STEP 2: Get children from legacy direct parent-child relationships
+                legacy_query = select(Child).where(
+                    Child.parent_id == current_user.id,
+                    Child.is_deleted == False
+                ).order_by(Child.created_at.desc())
 
-                    # Handle cursor-based pagination for legacy pattern
-                    offset = 0
-                    if after:
-                        try:
-                            cursor_data = b64decode(after.encode('ascii')).decode('ascii')
-                            if cursor_data.startswith('child:'):
-                                after_id = cursor_data.split(':')[1]
-                                # Calculate offset for legacy pagination
-                                offset_result = await session.execute(
-                                    select(func.count(Child.id)).where(
-                                        Child.parent_id == current_user.id,
-                                        Child.is_deleted == False,
-                                        Child.id > uuid.UUID(after_id)
-                                    ).order_by(Child.created_at.desc())
-                                )
-                                offset = offset_result.scalar() or 0
-                        except (ValueError, TypeError, AttributeError) as cursor_error:
-                            logger.warning(f"Invalid cursor in legacy pattern: {after}, error: {cursor_error}")
-                            offset = 0
+                legacy_result = await session.execute(legacy_query)
+                legacy_children = legacy_result.scalars().all()
+                logger.info(f"DEDUPLICATED_RESOLVER: Legacy direct query found {len(legacy_children)} children")
 
-                    # Get children using direct parent-child relationship
-                    legacy_query = select(Child).where(
-                        Child.parent_id == current_user.id,
-                        Child.is_deleted == False
-                    ).order_by(Child.created_at.desc()).limit(first + 1).offset(offset)
+                # STEP 3: Deduplicate by child.id and prioritize family-based data
+                children_dict = {}
 
-                    result = await session.execute(legacy_query)
-                    children = result.scalars().all()
+                # Add legacy children first (lower priority)
+                for child in legacy_children:
+                    children_dict[child.id] = child
+                    logger.info(f"DEDUPLICATED_RESOLVER: Added legacy child {child.id} ({child.name})")
 
-                elif family_total_count > 0:
-                    # Family-based pattern has some children - use it
-                    logger.info(f"HYBRID_RESOLVER: Using family-based pattern for user {current_user.id}")
+                # Add family children second (higher priority - will overwrite duplicates)
+                for child in family_children:
+                    if child.id in children_dict:
+                        logger.info(f"DEDUPLICATED_RESOLVER: Found duplicate child {child.id} ({child.name}) - using family-based version")
+                    children_dict[child.id] = child
+                    logger.info(f"DEDUPLICATED_RESOLVER: Added/updated family child {child.id} ({child.name})")
 
-                    # Handle cursor-based pagination for family pattern
-                    offset = 0
-                    if after:
-                        try:
-                            cursor_data = b64decode(after.encode('ascii')).decode('ascii')
-                            if cursor_data.startswith('child:'):
-                                after_id = cursor_data.split(':')[1]
-                                # Calculate offset for family-based pagination
-                                offset_result = await session.execute(
-                                    select(func.count(Child.id.distinct())).select_from(Child)
-                                    .join(FamilyChildAccess, Child.id == FamilyChildAccess.child_id)
-                                    .join(Family, FamilyChildAccess.family_id == Family.id)
-                                    .join(FamilyMember, Family.id == FamilyMember.family_id)
-                                    .where(
-                                        FamilyMember.user_id == current_user.id,
-                                        FamilyMember.status == 'ACTIVE',
-                                        Child.is_deleted == False,
-                                        FamilyChildAccess.is_deleted == False,
-                                        Child.id > uuid.UUID(after_id)
-                                    ).order_by(Child.created_at.desc())
-                                )
-                                offset = offset_result.scalar() or 0
-                        except (ValueError, TypeError, AttributeError) as cursor_error:
-                            logger.warning(f"Invalid cursor in family pattern: {after}, error: {cursor_error}")
-                            offset = 0
+                # Convert to list and sort by created_at (newest first)
+                all_children = list(children_dict.values())
+                all_children.sort(key=lambda c: c.created_at, reverse=True)
 
-                    # Get children using family-based query
-                    family_query = select(Child).select_from(Child)\
-                        .join(FamilyChildAccess, Child.id == FamilyChildAccess.child_id)\
-                        .join(Family, FamilyChildAccess.family_id == Family.id)\
-                        .join(FamilyMember, Family.id == FamilyMember.family_id)\
-                        .where(
-                            FamilyMember.user_id == current_user.id,
-                            FamilyMember.status == 'ACTIVE',
-                            Child.is_deleted == False,
-                            FamilyChildAccess.is_deleted == False
-                        ).order_by(Child.created_at.desc()).limit(first + 1).offset(offset)
+                total_count = len(all_children)
+                logger.info(f"DEDUPLICATED_RESOLVER: After deduplication: {total_count} unique children")
 
-                    result = await session.execute(family_query)
-                    children = result.scalars().all()
-                    total_count = family_total_count
+                # STEP 4: Apply pagination to deduplicated results
+                offset = 0
+                if after:
+                    try:
+                        cursor_data = b64decode(after.encode('ascii')).decode('ascii')
+                        if cursor_data.startswith('child:'):
+                            after_id = cursor_data.split(':')[1]
+                            # Find offset position of child with after_id
+                            for i, child in enumerate(all_children):
+                                if str(child.id) == after_id:
+                                    offset = i + 1
+                                    break
+                    except (ValueError, TypeError, AttributeError) as cursor_error:
+                        logger.warning(f"Invalid cursor: {after}, error: {cursor_error}")
+                        offset = 0
 
-                else:
-                    # Both patterns found no children
-                    logger.info(f"HYBRID_RESOLVER: Both family and legacy patterns found no children for user {current_user.id}")
-                    children = []
-                    total_count = 0
+                # Apply pagination
+                paginated_children = all_children[offset:offset + first + 1]
+                children = paginated_children
 
                 # Process results (same for both patterns)
                 has_next_page = len(children) > first

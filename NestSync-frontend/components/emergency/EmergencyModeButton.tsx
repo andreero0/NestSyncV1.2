@@ -12,7 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-// import { emergencyStorage } from '../../lib/storage/EmergencyStorageService'; // Temporarily commented for web compatibility
+import { emergencyStorage } from '../../lib/storage/EmergencyStorageService';
 
 interface EmergencyModeButtonProps {
   // Optional props for customization
@@ -38,8 +38,13 @@ const EmergencyModeButton: React.FC<EmergencyModeButtonProps> = ({
   // Check if emergency mode is active on mount
   useEffect(() => {
     const checkEmergencyMode = () => {
-      const isActive = false; // emergencyStorage.isEmergencyModeActive(); // Temporarily commented for web compatibility
-      setIsEmergencyMode(isActive);
+      try {
+        const isActive = emergencyStorage.isEmergencyModeActive();
+        setIsEmergencyMode(isActive);
+      } catch (error) {
+        console.warn('Failed to check emergency mode status:', error);
+        setIsEmergencyMode(false);
+      }
     };
 
     checkEmergencyMode();
@@ -77,7 +82,7 @@ const EmergencyModeButton: React.FC<EmergencyModeButtonProps> = ({
       // Toggle emergency mode
       const newEmergencyMode = !isEmergencyMode;
       setIsEmergencyMode(newEmergencyMode);
-      // emergencyStorage.setEmergencyMode(newEmergencyMode); // Temporarily commented for web compatibility
+      emergencyStorage.setEmergencyMode(newEmergencyMode); // Re-enabled - storage service has web compatibility
 
       if (newEmergencyMode) {
         // Navigate to emergency dashboard
@@ -168,6 +173,11 @@ const EmergencyModeButton: React.FC<EmergencyModeButtonProps> = ({
   };
 
   const colors = isEmergencyMode ? emergencyColors : normalColors;
+
+  // Only render the button when emergency mode is enabled
+  if (!isEmergencyMode) {
+    return null;
+  }
 
   return (
     <Animated.View

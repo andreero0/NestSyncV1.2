@@ -71,10 +71,12 @@ def get_development_cors_origins() -> List[str]:
             f"http://{local_ip}:8082",
             f"http://{local_ip}:8083",
             f"http://{local_ip}:8084",
+            f"http://{local_ip}:8085",
             f"http://{local_ip}:19006",
             f"http://{local_ip}:3000",
             # Add localhost origins for all ports
-            "http://localhost:8084"
+            "http://localhost:8084",
+            "http://localhost:8085"
         ]
         
         base_origins.extend(dynamic_origins)

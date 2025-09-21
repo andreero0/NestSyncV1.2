@@ -87,6 +87,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     const inAuthGroup = segments[0] === '(auth)';
+    const isOnboardingRoute = segments.includes('onboarding');
+
+    // Development bypass: Allow direct access to onboarding if URL contains 'dev-bypass' query param
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const isDevelopmentBypass = __DEV__ && urlParams?.has('dev-bypass');
 
     if (!isAuthenticated && !inAuthGroup) {
       // User is not authenticated, redirect to login
@@ -96,18 +101,23 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
       // User is authenticated but in auth group
-      if (user?.onboardingCompleted) {
-        // Redirect to main app if onboarding is complete
+      if (user?.onboardingCompleted && !isDevelopmentBypass) {
+        // Redirect to main app if onboarding is complete (unless dev bypass)
         if (__DEV__) {
           console.log('AuthGuard: Redirecting to main app - onboarding completed');
         }
         router.replace('/(tabs)');
       } else {
-        // Redirect to onboarding if not complete
-        if (__DEV__) {
-          console.log('AuthGuard: Redirecting to onboarding - not completed');
+        // Redirect to onboarding if not complete or if dev bypass is active
+        if (__DEV__ && isDevelopmentBypass) {
+          console.log('AuthGuard: Development bypass active - allowing onboarding access');
         }
-        router.replace('/(auth)/onboarding');
+        if (!isOnboardingRoute) {
+          if (__DEV__) {
+            console.log('AuthGuard: Redirecting to onboarding - not completed or dev bypass');
+          }
+          router.replace('/(auth)/onboarding');
+        }
       }
     }
   }, [isAuthenticated, isInitialized, user?.onboardingCompleted, segments, splashCompleted]);

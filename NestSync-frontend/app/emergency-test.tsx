@@ -14,11 +14,11 @@ import {
   EmergencyContactCard,
   MedicalInfoCard,
   EmergencyShareModal,
-  // emergencyStorage, // Temporarily commented for web compatibility
   type EmergencyProfile,
   type EmergencyContact,
   type MedicalInfo,
 } from '../components/emergency';
+import { getEmergencyStorage } from '../lib/storage/EmergencyStorageService';
 
 /**
  * Emergency Features Test Screen
@@ -85,12 +85,14 @@ export default function EmergencyTestScreen() {
   // Test functions
   const testStoragePerformance = async () => {
     try {
+      const storage = getEmergencyStorage();
+
       // Store test profile
-      await emergencyStorage.storeEmergencyProfile(sampleEmergencyProfile);
+      await storage.storeEmergencyProfile(sampleEmergencyProfile);
 
       // Measure retrieval performance
       const startTime = Date.now();
-      const retrievedProfile = emergencyStorage.getEmergencyProfile(sampleEmergencyProfile.childId);
+      const retrievedProfile = storage.getEmergencyProfile(sampleEmergencyProfile.childId);
       const accessTime = Date.now() - startTime;
 
       setStorageHealth({ isHealthy: accessTime < 100, lastAccessTime: accessTime });
@@ -123,7 +125,8 @@ export default function EmergencyTestScreen() {
   };
 
   const testEmergencyMode = () => {
-    emergencyStorage.setEmergencyMode(true);
+    const storage = getEmergencyStorage();
+    storage.setEmergencyMode(true);
     router.push('/emergency-dashboard');
   };
 
@@ -137,7 +140,8 @@ export default function EmergencyTestScreen() {
           text: 'Clear',
           style: 'destructive',
           onPress: () => {
-            emergencyStorage.clearAllEmergencyData();
+            const storage = getEmergencyStorage();
+            storage.clearAllEmergencyData();
             setTestProfile(null);
             Alert.alert('Test Data Cleared', 'All emergency test data has been removed.', [{ text: 'OK' }]);
           },

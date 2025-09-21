@@ -12,7 +12,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import { Colors } from '../../constants/Colors';
 
@@ -24,44 +26,76 @@ export default function DevOnboardingReset() {
 
   const { user, onboardingCompleted, resetOnboardingForDev, isLoading } = useAuthStore();
   const [isResetting, setIsResetting] = useState(false);
+  const router = useRouter();
+
+  // Web-compatible confirmation function
+  const showConfirmation = (message: string, onConfirm: () => void) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) {
+        onConfirm();
+      }
+    } else {
+      Alert.alert(
+        'Reset Onboarding',
+        message,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Reset', style: 'destructive', onPress: onConfirm },
+        ]
+      );
+    }
+  };
 
   const handleResetOnboarding = async () => {
     if (!user) {
-      Alert.alert('Error', 'No authenticated user found');
+      const errorMessage = 'No authenticated user found';
+      if (Platform.OS === 'web') {
+        window.alert(errorMessage);
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
       return;
     }
 
-    Alert.alert(
-      'Reset Onboarding',
-      `This will reset your onboarding status and redirect you to the onboarding flow.\n\nCurrent status: ${
-        onboardingCompleted ? 'Completed' : 'Not Completed'
-      }\n\nContinue?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            setIsResetting(true);
-            try {
-              const result = await resetOnboardingForDev();
-              if (result.success) {
-                Alert.alert('Success', 'Onboarding status reset successfully!');
-              } else {
-                Alert.alert('Error', result.error || 'Failed to reset onboarding status');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'An unexpected error occurred');
-            } finally {
-              setIsResetting(false);
-            }
-          },
-        },
-      ]
-    );
+    const confirmMessage = `This will reset your onboarding status and redirect you to the onboarding flow.\n\nCurrent status: ${
+      onboardingCompleted ? 'Completed' : 'Not Completed'
+    }\n\nContinue?`;
+
+    showConfirmation(confirmMessage, async () => {
+      setIsResetting(true);
+      try {
+        const result = await resetOnboardingForDev();
+        if (result.success) {
+          const successMessage = 'Onboarding status reset successfully! Redirecting to onboarding...';
+          if (Platform.OS === 'web') {
+            window.alert(successMessage);
+          } else {
+            Alert.alert('Success', successMessage);
+          }
+
+          // Navigate to onboarding with development bypass
+          setTimeout(() => {
+            router.push('/(auth)/onboarding?dev-bypass=true');
+          }, 500);
+        } else {
+          const errorMessage = result.error || 'Failed to reset onboarding status';
+          if (Platform.OS === 'web') {
+            window.alert(`Error: ${errorMessage}`);
+          } else {
+            Alert.alert('Error', errorMessage);
+          }
+        }
+      } catch (error) {
+        const errorMessage = 'An unexpected error occurred';
+        if (Platform.OS === 'web') {
+          window.alert(`Error: ${errorMessage}`);
+        } else {
+          Alert.alert('Error', errorMessage);
+        }
+      } finally {
+        setIsResetting(false);
+      }
+    });
   };
 
   return (
