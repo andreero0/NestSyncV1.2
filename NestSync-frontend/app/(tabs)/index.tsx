@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, View, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
+import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -50,6 +51,7 @@ interface QuickAction {
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
   
   // State for selected child with persistence
   const [selectedChildId, setSelectedChildId] = useState<string>('');
@@ -255,6 +257,27 @@ export default function HomeScreen() {
       onPress: () => {
         if (actionsDisabled) return;
         Alert.alert('Coming Soon', 'Diaper size guide will be available in a future update!');
+      }
+    },
+    {
+      id: 'smart-reorder',
+      title: 'Smart Reorder',
+      icon: 'brain.head.profile',
+      color: actionsDisabled ? colors.textSecondary : colors.premium,
+      onPress: () => {
+        if (actionsDisabled) {
+          Alert.alert(
+            'Please Wait',
+            selectedChildId ? 'Loading child data...' : 'Please select a child first',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        // Navigate to reorder suggestions screen with selected child
+        router.push({
+          pathname: '/reorder-suggestions',
+          params: { childId: selectedChildId }
+        });
       }
     }
   ];
@@ -712,7 +735,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   quickActionButton: {
-    width: (width - 52) / 2, // Responsive width accounting for padding and gap
+    width: (width - 64) / 3, // Responsive width for 3 columns accounting for padding and gap
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,

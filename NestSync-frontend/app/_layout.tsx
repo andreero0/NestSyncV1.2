@@ -195,6 +195,14 @@ function ThemedNavigationWrapper() {
               gestureEnabled: false, // Prevent accidental dismissal in emergency
             }}
           />
+          <Stack.Screen
+            name="reorder-suggestions"
+            options={{
+              headerShown: false, // Custom header handled in screen component
+              presentation: 'modal',
+              gestureEnabled: true,
+            }}
+          />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style={actualTheme === 'dark' ? 'light' : 'dark'} />

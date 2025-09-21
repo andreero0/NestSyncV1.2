@@ -14,6 +14,7 @@ import { useChildren } from '@/hooks/useChildren';
 import { NestSyncColors } from '@/constants/Colors';
 import { formatDiaperSize } from '@/utils/formatters';
 import { EditInventoryModal } from '@/components/modals/EditInventoryModal';
+import { ReorderSuggestionsContainer } from '@/components/reorder/ReorderSuggestionsContainer';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 // Analytics imports temporarily disabled - preserved for future enhancement
 // import { useAnalyticsDashboard } from '@/hooks/useAnalytics';
@@ -322,6 +323,13 @@ export default function PlannerScreen() {
     // The inventory query will automatically refetch due to the mutations' refetchQueries
   };
 
+  // Handle premium upgrade requirement from reorder component
+  const handleUpgradeRequired = () => {
+    // Navigate to premium subscription screen (future implementation)
+    console.log('Premium upgrade required for reorder suggestions');
+    // TODO: Navigate to premium upgrade screen when available
+  };
+
 
 
   return (
@@ -481,16 +489,58 @@ export default function PlannerScreen() {
             </ThemedView>
           ) : currentView === 'planner' ? (
             /* Planner View - Predictive Cards for Future Needs */
-            <ThemedView style={styles.section}>
-              {/* Planner Header */}
-              <View style={styles.plannerHeader}>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>
-                  Upcoming Tasks
-                </ThemedText>
-                <ThemedText style={[styles.plannerSubtitle, { color: colors.textSecondary }]}>
-                  Based on your patterns and inventory
-                </ThemedText>
-              </View>
+            <>
+              {/* Smart Reorder Suggestions Section */}
+              {childId && (
+                <ThemedView style={styles.section}>
+                  <View style={styles.plannerHeader}>
+                    <ThemedText type="subtitle" style={styles.sectionTitle}>
+                      Smart Reorder Suggestions
+                    </ThemedText>
+                    <ThemedText style={[styles.plannerSubtitle, { color: colors.textSecondary }]}>
+                      AI-powered recommendations based on your usage patterns
+                    </ThemedText>
+                  </View>
+
+                  {/* Compact Reorder Container */}
+                  <View style={styles.reorderPreviewContainer}>
+                    <ReorderSuggestionsContainer
+                      childId={childId}
+                      initialFilter="all"
+                      context="planner"
+                      onUpgradeRequired={handleUpgradeRequired}
+                      compact={true}
+                      limit={3}
+                      showPagination={false}
+                      footer={
+                        <TouchableOpacity
+                          onPress={() => router.push('/reorder-suggestions')}
+                          style={[styles.viewAllButton, { backgroundColor: colors.tint }]}
+                          accessibilityRole="button"
+                          accessibilityLabel="View all reorder suggestions"
+                        >
+                          <IconSymbol name="arrow.right.circle.fill" size={20} color="#FFFFFF" />
+                          <Text style={[styles.viewAllText, { color: '#FFFFFF' }]}>
+                            View All Suggestions
+                          </Text>
+                        </TouchableOpacity>
+                      }
+                    />
+                  </View>
+                </ThemedView>
+              )}
+
+              {/* Upcoming Tasks Section */}
+              <ThemedView style={styles.section}>
+                {/* Planner Header */}
+                <View style={styles.plannerHeader}>
+                  <ThemedText type="subtitle" style={styles.sectionTitle}>
+                    Upcoming Tasks
+                  </ThemedText>
+                  <ThemedText style={[styles.plannerSubtitle, { color: colors.textSecondary }]}>
+                    Based on your patterns and inventory
+                  </ThemedText>
+                </View>
 
               {/* Planner Cards */}
               {plannerItems.map((item) => (
@@ -535,7 +585,8 @@ export default function PlannerScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
-            </ThemedView>
+              </ThemedView>
+            </>
           ) : (
             /* Inventory View - Filtered Items */
             <ThemedView style={styles.section}>
@@ -1548,5 +1599,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+
+  // Reorder Preview Styles
+  reorderPreviewContainer: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 12,
+    marginHorizontal: 16,
+    gap: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  viewAllText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });

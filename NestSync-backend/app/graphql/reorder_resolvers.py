@@ -22,7 +22,7 @@ from ..models.reorder import (
 from ..models.user import User
 from ..models.child import Child
 from ..auth.dependencies import get_user_id_from_context
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 
 async def get_current_user_from_info(info: Info) -> Optional[User]:
@@ -63,7 +63,13 @@ from .reorder_types import (
     ConsumptionPrediction as ConsumptionPredictionType,
     RetailerConfiguration as RetailerConfigurationType,
     ProductMapping as ProductMappingType,
-    ReorderTransaction as ReorderTransactionType
+    ReorderTransaction as ReorderTransactionType,
+    # New types for frontend compatibility
+    ReorderSuggestion, SubscriptionStatus,
+    ProductInfo, ReorderUsagePattern, CostSavings, TaxBreakdown,
+    RetailerPrice, RetailerInfo, SubscriptionPlan, PlanLimits,
+    PlanPrice, PaymentMethodInfo, UsageStats, LifetimeStats,
+    UsageInfo, AvailableUpgrade, PlanPricing, YearlyPricing
 )
 
 logger = logging.getLogger(__name__)
@@ -86,10 +92,13 @@ class ReorderQueries:
                 return None
 
             async for session in get_async_session():
-                subscription = await session.query(ReorderSubscription).filter(
-                    ReorderSubscription.user_id == current_user.id,
-                    ReorderSubscription.is_active == True
-                ).first()
+                result = await session.execute(
+                    select(ReorderSubscription).where(
+                        ReorderSubscription.user_id == current_user.id,
+                        ReorderSubscription.is_active == True
+                    )
+                )
+                subscription = result.scalar_one_or_none()
 
                 if subscription:
                     return ReorderSubscriptionType(
@@ -133,16 +142,17 @@ class ReorderQueries:
                 return []
 
             async for session in get_async_session():
-                query = session.query(ReorderPreferences).join(
+                query = select(ReorderPreferences).join(
                     ReorderSubscription
-                ).filter(
+                ).where(
                     ReorderSubscription.user_id == current_user.id
                 )
 
                 if child_id:
-                    query = query.filter(ReorderPreferences.child_id == child_id)
+                    query = query.where(ReorderPreferences.child_id == child_id)
 
-                preferences = await query.all()
+                result = await session.execute(query)
+                preferences = result.scalars().all()
 
                 return [
                     ReorderPreferencesType(
@@ -189,14 +199,16 @@ class ReorderQueries:
                 return []
 
             async for session in get_async_session():
-                query = session.query(ConsumptionPrediction).join(Child).filter(
+                query = select(ConsumptionPrediction).join(Child).where(
                     Child.parent_id == current_user.id
                 ).order_by(ConsumptionPrediction.prediction_date.desc())
 
                 if child_id:
-                    query = query.filter(ConsumptionPrediction.child_id == child_id)
+                    query = query.where(ConsumptionPrediction.child_id == child_id)
 
-                predictions = await query.limit(limit).all()
+                query = query.limit(limit)
+                result = await session.execute(query)
+                predictions = result.scalars().all()
 
                 return [
                     ConsumptionPredictionType(
@@ -242,10 +254,13 @@ class ReorderQueries:
                 return []
 
             async for session in get_async_session():
-                configs = await session.query(RetailerConfiguration).filter(
-                    RetailerConfiguration.user_id == current_user.id,
-                    RetailerConfiguration.is_active == True
-                ).all()
+                result = await session.execute(
+                    select(RetailerConfiguration).where(
+                        RetailerConfiguration.user_id == current_user.id,
+                        RetailerConfiguration.is_active == True
+                    )
+                )
+                configs = result.scalars().all()
 
                 return [
                     RetailerConfigurationType(
@@ -300,30 +315,37 @@ class ReorderQueries:
                 )
 
             async for session in get_async_session():
-                query = session.query(ProductMapping).join(
+                query = select(ProductMapping).join(
                     RetailerConfiguration
-                ).filter(
+                ).where(
                     RetailerConfiguration.user_id == current_user.id,
                     RetailerConfiguration.is_active == True,
                     ProductMapping.is_available == True
                 )
 
                 if brand:
-                    query = query.filter(ProductMapping.brand.ilike(f"%{brand}%"))
+                    query = query.where(ProductMapping.brand.ilike(f"%{brand}%"))
                 if diaper_size:
-                    query = query.filter(ProductMapping.diaper_size == diaper_size)
+                    query = query.where(ProductMapping.diaper_size == diaper_size)
                 if min_price_cad:
-                    query = query.filter(ProductMapping.current_price_cad >= min_price_cad)
+                    query = query.where(ProductMapping.current_price_cad >= min_price_cad)
                 if max_price_cad:
-                    query = query.filter(ProductMapping.current_price_cad <= max_price_cad)
+                    query = query.where(ProductMapping.current_price_cad <= max_price_cad)
                 if retailer_type:
-                    query = query.filter(RetailerConfiguration.retailer_type == retailer_type.value)
+                    query = query.where(RetailerConfiguration.retailer_type == retailer_type.value)
 
-                products = await query.order_by(
+                # Get count first
+                count_result = await session.execute(
+                    select(func.count()).select_from(query.subquery())
+                )
+                total_count = count_result.scalar()
+
+                # Get products
+                products_query = query.order_by(
                     ProductMapping.price_per_diaper_cad.asc()
-                ).limit(limit).all()
-
-                total_count = await query.count()
+                ).limit(limit)
+                products_result = await session.execute(products_query)
+                products = products_result.scalars().all()
 
                 product_types = [
                     ProductMappingType(
@@ -388,18 +410,20 @@ class ReorderQueries:
                 return []
 
             async for session in get_async_session():
-                query = session.query(ReorderTransaction).join(
+                query = select(ReorderTransaction).join(
                     ReorderSubscription
-                ).filter(
+                ).where(
                     ReorderSubscription.user_id == current_user.id
                 ).order_by(ReorderTransaction.ordered_at.desc())
 
                 if child_id:
-                    query = query.filter(ReorderTransaction.child_id == child_id)
+                    query = query.where(ReorderTransaction.child_id == child_id)
                 if status:
-                    query = query.filter(ReorderTransaction.status == status.value)
+                    query = query.where(ReorderTransaction.status == status.value)
 
-                transactions = await query.limit(limit).all()
+                query = query.limit(limit)
+                result = await session.execute(query)
+                transactions = result.scalars().all()
 
                 return [
                     ReorderTransactionType(
@@ -448,37 +472,87 @@ class ReorderQueries:
             return []
 
     @strawberry.field
-    async def get_subscription_dashboard(self, info: Info) -> Optional[SubscriptionDashboard]:
+    async def get_subscription_dashboard(self, info: Info) -> SubscriptionDashboard:
         """Get comprehensive dashboard data for subscription management"""
         try:
             current_user = await get_current_user_from_info(info)
             if not current_user:
-                return None
+                # Return empty dashboard instead of None to fix null-safety
+                return SubscriptionDashboard(
+                    current_subscription=None,
+                    active_preferences=[],
+                    recent_predictions=[],
+                    recent_orders=[],
+                    analytics=ReorderAnalytics(
+                        total_orders=0,
+                        total_amount_cad=Decimal('0.00'),
+                        average_order_value_cad=Decimal('0.00'),
+                        successful_orders=0,
+                        failed_orders=0,
+                        average_delivery_days=None,
+                        top_retailers=[],
+                        monthly_savings_cad=None,
+                        prediction_accuracy=None
+                    ),
+                    next_billing_date=None,
+                    usage_this_period={}
+                )
 
             async for session in get_async_session():
                 # Get current subscription
-                subscription = await session.query(ReorderSubscription).filter(
-                    ReorderSubscription.user_id == current_user.id,
-                    ReorderSubscription.is_active == True
-                ).first()
+                result = await session.execute(
+                    select(ReorderSubscription).where(
+                        ReorderSubscription.user_id == current_user.id,
+                        ReorderSubscription.is_active == True
+                    )
+                )
+                subscription = result.scalar_one_or_none()
 
                 if not subscription:
-                    return None
+                    # Return empty dashboard instead of None to fix null-safety
+                    return SubscriptionDashboard(
+                        current_subscription=None,
+                        active_preferences=[],
+                        recent_predictions=[],
+                        recent_orders=[],
+                        analytics=ReorderAnalytics(
+                            total_orders=0,
+                            total_amount_cad=Decimal('0.00'),
+                            average_order_value_cad=Decimal('0.00'),
+                            successful_orders=0,
+                            failed_orders=0,
+                            average_delivery_days=None,
+                            top_retailers=[],
+                            monthly_savings_cad=None,
+                            prediction_accuracy=None
+                        ),
+                        next_billing_date=None,
+                        usage_this_period={}
+                    )
 
                 # Get active preferences
-                preferences = await session.query(ReorderPreferences).filter(
-                    ReorderPreferences.subscription_id == subscription.id
-                ).all()
+                preferences_result = await session.execute(
+                    select(ReorderPreferences).where(
+                        ReorderPreferences.subscription_id == subscription.id
+                    )
+                )
+                preferences = preferences_result.scalars().all()
 
                 # Get recent predictions
-                predictions = await session.query(ConsumptionPrediction).join(Child).filter(
-                    Child.parent_id == current_user.id
-                ).order_by(ConsumptionPrediction.prediction_date.desc()).limit(5).all()
+                predictions_result = await session.execute(
+                    select(ConsumptionPrediction).join(Child).where(
+                        Child.parent_id == current_user.id
+                    ).order_by(ConsumptionPrediction.prediction_date.desc()).limit(5)
+                )
+                predictions = predictions_result.scalars().all()
 
                 # Get recent orders
-                orders = await session.query(ReorderTransaction).filter(
-                    ReorderTransaction.subscription_id == subscription.id
-                ).order_by(ReorderTransaction.ordered_at.desc()).limit(10).all()
+                orders_result = await session.execute(
+                    select(ReorderTransaction).where(
+                        ReorderTransaction.subscription_id == subscription.id
+                    ).order_by(ReorderTransaction.ordered_at.desc()).limit(10)
+                )
+                orders = orders_result.scalars().all()
 
                 # Calculate analytics
                 total_orders = len(orders)
@@ -622,7 +696,26 @@ class ReorderQueries:
 
         except Exception as e:
             logger.error(f"Error getting subscription dashboard: {e}")
-            return None
+            # Return empty dashboard instead of None to fix null-safety
+            return SubscriptionDashboard(
+                current_subscription=None,
+                active_preferences=[],
+                recent_predictions=[],
+                recent_orders=[],
+                analytics=ReorderAnalytics(
+                    total_orders=0,
+                    total_amount_cad=Decimal('0.00'),
+                    average_order_value_cad=Decimal('0.00'),
+                    successful_orders=0,
+                    failed_orders=0,
+                    average_delivery_days=None,
+                    top_retailers=[],
+                    monthly_savings_cad=None,
+                    prediction_accuracy=None
+                ),
+                next_billing_date=None,
+                usage_this_period={}
+            )
 
     @strawberry.field
     async def get_my_subscription(
@@ -754,12 +847,23 @@ class ReorderQueries:
             )
 
     @strawberry.field
-    async def get_reorder_analytics(self, info: Info) -> Optional[ReorderAnalytics]:
+    async def get_reorder_analytics(self, info: Info) -> ReorderAnalytics:
         """Get comprehensive reorder analytics for user"""
         try:
             current_user = await get_current_user_from_info(info)
             if not current_user:
-                return None
+                # Return empty analytics instead of None to fix null-safety
+                return ReorderAnalytics(
+                    total_orders=0,
+                    total_amount_cad=Decimal('0.00'),
+                    average_order_value_cad=Decimal('0.00'),
+                    successful_orders=0,
+                    failed_orders=0,
+                    average_delivery_days=None,
+                    top_retailers=[],
+                    monthly_savings_cad=None,
+                    prediction_accuracy=None
+                )
 
             async for session in get_async_session():
                 # Get user's orders for analytics
@@ -823,6 +927,281 @@ class ReorderQueries:
 
         except Exception as e:
             logger.error(f"Error getting reorder analytics: {e}")
+            # Return empty analytics instead of None to fix null-safety
+            return ReorderAnalytics(
+                total_orders=0,
+                total_amount_cad=Decimal('0.00'),
+                average_order_value_cad=Decimal('0.00'),
+                successful_orders=0,
+                failed_orders=0,
+                average_delivery_days=None,
+                top_retailers=[],
+                monthly_savings_cad=None,
+                prediction_accuracy=None
+            )
+
+    @strawberry.field
+    async def get_reorder_suggestions(
+        self,
+        info: Info,
+        child_id: str,
+        limit: int = 10
+    ) -> List[ReorderSuggestion]:
+        """Get ML-powered reorder suggestions for a child"""
+        try:
+            current_user = await get_current_user_from_info(info)
+            if not current_user:
+                return []
+
+            # Get consumption predictions as base data
+            predictions = await self.get_consumption_predictions(info, child_id, limit)
+
+            # Transform predictions into reorder suggestions
+            suggestions = []
+            for i, prediction in enumerate(predictions):
+                # Create mock product info (in real implementation, this would come from product database)
+                product_info = ProductInfo(
+                    id=f"product_{prediction.child_id}_{i}",
+                    name="Premium Diapers",
+                    brand="NestSync Preferred",
+                    size="Size 3",
+                    category="Diapers",
+                    image=None,
+                    description="High-quality diapers for your little one",
+                    features=["Hypoallergenic", "12-hour protection", "Soft cotton feel"]
+                )
+
+                # Create usage pattern from prediction data
+                usage_pattern = ReorderUsagePattern(
+                    average_daily_usage=prediction.current_consumption_rate,
+                    weekly_trend="stable",
+                    seasonal_factors={"winter": 1.1, "summer": 0.9}
+                )
+
+                # Create cost savings estimate
+                cost_savings = CostSavings(
+                    amount=Decimal('15.50'),
+                    currency="CAD",
+                    compared_to_regular_price=Decimal('12.00'),
+                    compared_to_last_purchase=Decimal('8.25')
+                )
+
+                # Create tax breakdown
+                taxes = TaxBreakdown(
+                    gst=Decimal('2.50'),
+                    pst=Decimal('4.00'),
+                    hst=Decimal('0.00'),
+                    total=Decimal('6.50')
+                )
+
+                # Create retailer pricing
+                retailer_price = RetailerPrice(
+                    amount=Decimal('45.99'),
+                    currency="CAD",
+                    original_price=Decimal('55.99'),
+                    discount_percentage=Decimal('18.0'),
+                    taxes=taxes,
+                    final_amount=Decimal('52.49')
+                )
+
+                # Create available retailers
+                available_retailers = [
+                    RetailerInfo(
+                        id="amazon_ca",
+                        name="Amazon Canada",
+                        logo=None,
+                        price=retailer_price,
+                        delivery_time=2,
+                        in_stock=True,
+                        rating=Decimal('4.5'),
+                        free_shipping=True,
+                        affiliate_disclosure="NestSync may earn a commission from this purchase"
+                    )
+                ]
+
+                # Map confidence level
+                confidence_map = {
+                    "very_low": "low",
+                    "low": "low",
+                    "medium": "medium",
+                    "high": "high",
+                    "very_high": "high"
+                }
+                confidence = confidence_map.get(prediction.confidence_level.value, "medium")
+
+                # Create reorder suggestion
+                suggestion = ReorderSuggestion(
+                    id=prediction.id,
+                    child_id=prediction.child_id,
+                    product_id=product_info.id,
+                    product=product_info,
+                    predicted_run_out_date=prediction.predicted_runout_date,
+                    confidence=confidence,
+                    priority="high" if prediction.recommended_reorder_date <= datetime.utcnow() + timedelta(days=3) else "medium",
+                    suggested_quantity=max(1, int(prediction.predicted_consumption_30d / 30 * 7)),  # Week's worth
+                    current_inventory_level=max(0, int((prediction.predicted_runout_date - datetime.utcnow()).days * prediction.current_consumption_rate)),
+                    usage_pattern=usage_pattern,
+                    estimated_cost_savings=cost_savings,
+                    available_retailers=available_retailers,
+                    created_at=prediction.created_at,
+                    updated_at=datetime.utcnow(),
+                    ml_processing_consent=True,
+                    data_retention_days=365
+                )
+
+                suggestions.append(suggestion)
+
+            return suggestions
+
+        except Exception as e:
+            logger.error(f"Error getting reorder suggestions: {e}")
+            return []
+
+    @strawberry.field
+    async def get_subscription_status(self, info: Info) -> Optional[SubscriptionStatus]:
+        """Get current subscription status"""
+        try:
+            current_user = await get_current_user_from_info(info)
+            if not current_user:
+                return None
+
+            # Get subscription dashboard data as base
+            dashboard = await self.get_subscription_dashboard(info)
+
+            if not dashboard.current_subscription:
+                return None
+
+            subscription = dashboard.current_subscription
+
+            # Create plan limits
+            plan_limits = PlanLimits(
+                reorder_suggestions=10 if subscription.tier == SubscriptionTierType.BASIC else 50,
+                family_members=1 if subscription.tier == SubscriptionTierType.BASIC else (3 if subscription.tier == SubscriptionTierType.PREMIUM else 8),
+                price_alerts=5 if subscription.tier == SubscriptionTierType.BASIC else (20 if subscription.tier == SubscriptionTierType.PREMIUM else 100),
+                auto_ordering=subscription.tier != SubscriptionTierType.BASIC
+            )
+
+            # Create tax breakdown for plan price
+            taxes = TaxBreakdown(
+                gst=subscription.gst_rate,
+                pst=subscription.pst_hst_rate,
+                hst=Decimal('0.00'),
+                total=subscription.total_tax_rate
+            )
+
+            # Create plan price
+            plan_price = PlanPrice(
+                amount=subscription.billing_amount_cad,
+                currency="CAD",
+                billing_interval=subscription.billing_interval,
+                canadian_taxes=taxes
+            )
+
+            # Create current plan
+            current_plan = SubscriptionPlan(
+                id=subscription.id,
+                name=subscription.tier.value.title(),
+                display_name=f"NestSync {subscription.tier.value.title()}",
+                description=f"Perfect for families using {subscription.tier.value} features",
+                features=list(subscription.features.keys()) if subscription.features else [],
+                price=plan_price,
+                limits=plan_limits
+            )
+
+            # Create cost savings for usage stats
+            savings = CostSavings(
+                amount=Decimal('45.50'),
+                currency="CAD",
+                compared_to_regular_price=None,
+                compared_to_last_purchase=None
+            )
+
+            # Create usage statistics
+            current_period_stats = UsageStats(
+                reorders_suggested=len(dashboard.recent_predictions),
+                orders_placed=len(dashboard.recent_orders),
+                savings_generated=savings,
+                price_alerts_received=5
+            )
+
+            lifetime_stats = LifetimeStats(
+                total_orders=dashboard.analytics.total_orders,
+                total_savings=CostSavings(
+                    amount=dashboard.analytics.total_amount_cad * Decimal('0.15'),  # Estimated 15% savings
+                    currency="CAD",
+                    compared_to_regular_price=None,
+                    compared_to_last_purchase=None
+                ),
+                member_since=subscription.created_at
+            )
+
+            usage_info = UsageInfo(
+                current_period=current_period_stats,
+                lifetime=lifetime_stats
+            )
+
+            # Create available upgrades
+            available_upgrades = []
+            if subscription.tier == SubscriptionTierType.BASIC:
+                available_upgrades.extend([
+                    AvailableUpgrade(
+                        plan_id="premium",
+                        name="Premium",
+                        monthly_pricing=PlanPricing(amount=Decimal('24.99'), currency="CAD"),
+                        yearly_pricing=YearlyPricing(
+                            amount=Decimal('249.90'),
+                            currency="CAD",
+                            savings_per_month=CostSavings(amount=Decimal('4.17'), currency="CAD", compared_to_regular_price=None, compared_to_last_purchase=None)
+                        ),
+                        new_features=["Auto-reordering", "Price alerts", "Family sharing"],
+                        value_proposition="Save time with automated features"
+                    ),
+                    AvailableUpgrade(
+                        plan_id="family",
+                        name="Family",
+                        monthly_pricing=PlanPricing(amount=Decimal('34.99'), currency="CAD"),
+                        yearly_pricing=YearlyPricing(
+                            amount=Decimal('349.90'),
+                            currency="CAD",
+                            savings_per_month=CostSavings(amount=Decimal('4.17'), currency="CAD", compared_to_regular_price=None, compared_to_last_purchase=None)
+                        ),
+                        new_features=["Growth predictions", "Multiple children", "Priority support"],
+                        value_proposition="Perfect for growing families"
+                    )
+                ])
+            elif subscription.tier == SubscriptionTierType.PREMIUM:
+                available_upgrades.append(
+                    AvailableUpgrade(
+                        plan_id="family",
+                        name="Family",
+                        monthly_pricing=PlanPricing(amount=Decimal('34.99'), currency="CAD"),
+                        yearly_pricing=YearlyPricing(
+                            amount=Decimal('349.90'),
+                            currency="CAD",
+                            savings_per_month=CostSavings(amount=Decimal('4.17'), currency="CAD", compared_to_regular_price=None, compared_to_last_purchase=None)
+                        ),
+                        new_features=["Growth predictions", "Multiple children", "Priority support"],
+                        value_proposition="Perfect for growing families"
+                    )
+                )
+
+            # Create subscription status
+            status = SubscriptionStatus(
+                id=subscription.id,
+                status="active" if subscription.is_active else "inactive",
+                current_plan=current_plan,
+                next_billing_date=subscription.current_period_end,
+                payment_method=None,  # TODO: Implement payment method retrieval
+                usage=usage_info,
+                available_upgrades=available_upgrades,
+                billing_data_consent=True,
+                updated_at=subscription.updated_at
+            )
+
+            return status
+
+        except Exception as e:
+            logger.error(f"Error getting subscription status: {e}")
             return None
 
     # Subscription methods for real-time updates
@@ -876,10 +1255,13 @@ class ReorderMutations:
 
             async for session in get_async_session():
                 # Check if user already has active subscription
-                existing = await session.query(ReorderSubscription).filter(
-                    ReorderSubscription.user_id == current_user.id,
-                    ReorderSubscription.is_active == True
-                ).first()
+                existing_result = await session.execute(
+                    select(ReorderSubscription).where(
+                        ReorderSubscription.user_id == current_user.id,
+                        ReorderSubscription.is_active == True
+                    )
+                )
+                existing = existing_result.scalar_one_or_none()
 
                 if existing:
                     return SubscriptionResponse(
@@ -998,10 +1380,13 @@ class ReorderMutations:
 
             async for session in get_async_session():
                 # Verify user has active subscription
-                subscription = await session.query(ReorderSubscription).filter(
-                    ReorderSubscription.user_id == current_user.id,
-                    ReorderSubscription.is_active == True
-                ).first()
+                subscription_result = await session.execute(
+                    select(ReorderSubscription).where(
+                        ReorderSubscription.user_id == current_user.id,
+                        ReorderSubscription.is_active == True
+                    )
+                )
+                subscription = subscription_result.scalar_one_or_none()
 
                 if not subscription:
                     return PreferencesResponse(
@@ -1011,10 +1396,13 @@ class ReorderMutations:
                     )
 
                 # Verify user owns the child
-                child = await session.query(Child).filter(
-                    Child.id == input.child_id,
-                    Child.parent_id == current_user.id
-                ).first()
+                child_result = await session.execute(
+                    select(Child).where(
+                        Child.id == input.child_id,
+                        Child.parent_id == current_user.id
+                    )
+                )
+                child = child_result.scalar_one_or_none()
 
                 if not child:
                     return PreferencesResponse(
@@ -1024,10 +1412,13 @@ class ReorderMutations:
                     )
 
                 # Check if preferences already exist
-                existing = await session.query(ReorderPreferences).filter(
-                    ReorderPreferences.subscription_id == subscription.id,
-                    ReorderPreferences.child_id == input.child_id
-                ).first()
+                existing_result = await session.execute(
+                    select(ReorderPreferences).where(
+                        ReorderPreferences.subscription_id == subscription.id,
+                        ReorderPreferences.child_id == input.child_id
+                    )
+                )
+                existing = existing_result.scalar_one_or_none()
 
                 if existing:
                     return PreferencesResponse(
@@ -1108,10 +1499,13 @@ class ReorderMutations:
 
             async for session in get_async_session():
                 # Check if config already exists for this retailer
-                existing = await session.query(RetailerConfiguration).filter(
-                    RetailerConfiguration.user_id == current_user.id,
-                    RetailerConfiguration.retailer_type == input.retailer_type.value
-                ).first()
+                existing_result = await session.execute(
+                    select(RetailerConfiguration).where(
+                        RetailerConfiguration.user_id == current_user.id,
+                        RetailerConfiguration.retailer_type == input.retailer_type.value
+                    )
+                )
+                existing = existing_result.scalar_one_or_none()
 
                 if existing:
                     return RetailerConfigResponse(

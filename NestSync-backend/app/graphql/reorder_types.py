@@ -598,6 +598,201 @@ class SubscriptionDashboard:
 
 
 # =============================================================================
+# New Types for Frontend Compatibility
+# =============================================================================
+
+@strawberry.type
+class ProductInfo:
+    """Product information for reorder suggestions"""
+    id: str
+    name: str
+    brand: str
+    size: str
+    category: str
+    image: Optional[str]
+    description: Optional[str]
+    features: List[str]
+
+
+@strawberry.type
+class ReorderUsagePattern:
+    """Usage pattern analysis for reorder suggestions"""
+    average_daily_usage: Decimal
+    weekly_trend: str
+    seasonal_factors: strawberry.scalars.JSON
+
+
+@strawberry.type
+class CostSavings:
+    """Estimated cost savings for reorder suggestions"""
+    amount: Decimal
+    currency: str
+    compared_to_regular_price: Optional[Decimal]
+    compared_to_last_purchase: Optional[Decimal]
+
+
+@strawberry.type
+class TaxBreakdown:
+    """Canadian tax breakdown"""
+    gst: Decimal
+    pst: Decimal
+    hst: Decimal
+    total: Decimal
+
+
+@strawberry.type
+class RetailerPrice:
+    """Retailer pricing information"""
+    amount: Decimal
+    currency: str
+    original_price: Optional[Decimal]
+    discount_percentage: Optional[Decimal]
+    taxes: TaxBreakdown
+    final_amount: Decimal
+
+
+@strawberry.type
+class RetailerInfo:
+    """Retailer information for reorder suggestions"""
+    id: str
+    name: str
+    logo: Optional[str]
+    price: RetailerPrice
+    delivery_time: int
+    in_stock: bool
+    rating: Optional[Decimal]
+    free_shipping: bool
+    affiliate_disclosure: Optional[str]
+
+
+@strawberry.type
+class ReorderSuggestion:
+    """ML-powered reorder suggestion matching frontend schema"""
+    id: str
+    child_id: str
+    product_id: str
+    product: ProductInfo
+    predicted_run_out_date: datetime
+    confidence: str
+    priority: str
+    suggested_quantity: int
+    current_inventory_level: int
+    usage_pattern: ReorderUsagePattern
+    estimated_cost_savings: CostSavings
+    available_retailers: List[RetailerInfo]
+    created_at: datetime
+    updated_at: datetime
+    ml_processing_consent: bool
+    data_retention_days: int
+
+
+@strawberry.type
+class PlanLimits:
+    """Subscription plan limits"""
+    reorder_suggestions: Optional[int]
+    family_members: Optional[int]
+    price_alerts: Optional[int]
+    auto_ordering: bool
+
+
+@strawberry.type
+class PlanPrice:
+    """Subscription plan pricing"""
+    amount: Decimal
+    currency: str
+    billing_interval: str
+    canadian_taxes: TaxBreakdown
+
+
+@strawberry.type
+class SubscriptionPlan:
+    """Subscription plan information"""
+    id: str
+    name: str
+    display_name: str
+    description: str
+    features: List[str]
+    price: PlanPrice
+    limits: PlanLimits
+
+
+@strawberry.type
+class PaymentMethodInfo:
+    """Payment method information"""
+    id: str
+    type: str
+    brand: str
+    last4: str
+    expiry_month: int
+    expiry_year: int
+    is_default: bool
+
+
+@strawberry.type
+class UsageStats:
+    """Usage statistics for current period"""
+    reorders_suggested: int
+    orders_placed: int
+    savings_generated: CostSavings
+    price_alerts_received: int
+
+
+@strawberry.type
+class LifetimeStats:
+    """Lifetime usage statistics"""
+    total_orders: int
+    total_savings: CostSavings
+    member_since: datetime
+
+
+@strawberry.type
+class UsageInfo:
+    """Combined usage information"""
+    current_period: UsageStats
+    lifetime: LifetimeStats
+
+
+@strawberry.type
+class PlanPricing:
+    """Plan pricing options"""
+    amount: Decimal
+    currency: str
+
+
+@strawberry.type
+class YearlyPricing:
+    """Yearly pricing with savings"""
+    amount: Decimal
+    currency: str
+    savings_per_month: CostSavings
+
+
+@strawberry.type
+class AvailableUpgrade:
+    """Available subscription upgrade"""
+    plan_id: str
+    name: str
+    monthly_pricing: PlanPricing
+    yearly_pricing: YearlyPricing
+    new_features: List[str]
+    value_proposition: str
+
+
+@strawberry.type
+class SubscriptionStatus:
+    """Subscription status matching frontend schema"""
+    id: str
+    status: str
+    current_plan: SubscriptionPlan
+    next_billing_date: Optional[datetime]
+    payment_method: Optional[PaymentMethodInfo]
+    usage: UsageInfo
+    available_upgrades: List[AvailableUpgrade]
+    billing_data_consent: bool
+    updated_at: datetime
+
+
+# =============================================================================
 # WebSocket Subscription Types
 # =============================================================================
 

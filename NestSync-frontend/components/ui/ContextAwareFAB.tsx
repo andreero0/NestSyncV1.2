@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Platform, View, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSegments, useLocalSearchParams } from 'expo-router';
+import { useSegments, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@apollo/client';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withRepeat,
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -20,15 +21,65 @@ import { AddInventoryModal } from '../modals/AddInventoryModal';
 import { LegalModal } from '../consent/LegalModals';
 import { useChildren } from '@/hooks/useChildren';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
+import { GET_REORDER_SUGGESTIONS } from '@/lib/graphql/reorder-queries';
 
 interface FABConfig {
   icon: string;
   accessibilityLabel: string;
   action: () => void;
+  backgroundColor?: string;
+  pulseAnimation?: boolean;
 }
 
 interface FABContextMap {
   [key: string]: FABConfig;
+}
+
+interface ReorderState {
+  hasCriticalReorders: boolean;
+  hasModerateReorders: boolean;
+  totalSuggestions: number;
+  topSuggestion?: any;
+  loading: boolean;
+}
+
+/**
+ * Custom hook for intelligent reorder detection
+ * Analyzes ML-powered reorder suggestions to determine FAB context priority
+ */
+function useReorderDetection(childId: string): ReorderState {
+  // Query reorder suggestions with optimized polling
+  const { data: reorderData, loading } = useQuery(GET_REORDER_SUGGESTIONS, {
+    variables: { childId, limit: 5 },
+    skip: !childId,
+    pollInterval: 60000, // Check every minute for fresh suggestions
+    fetchPolicy: 'cache-first', // Optimize performance
+    errorPolicy: 'ignore', // Don't break FAB for reorder errors
+  });
+
+  // Analyze suggestions for intelligent priority classification
+  const suggestions = reorderData?.getReorderSuggestions || [];
+
+  // Critical: High confidence + High priority + Low inventory
+  const criticalSuggestions = suggestions.filter((s: any) =>
+    s.confidence > 0.8 &&
+    s.priority === 'HIGH' &&
+    s.currentInventoryLevel < 3 // Less than 3 days of inventory
+  );
+
+  // Moderate: Good confidence + Medium priority OR moderate inventory
+  const moderateSuggestions = suggestions.filter((s: any) =>
+    (s.confidence > 0.6 && s.priority === 'MEDIUM') ||
+    (s.confidence > 0.7 && s.currentInventoryLevel < 7) // Less than a week
+  );
+
+  return {
+    hasCriticalReorders: criticalSuggestions.length > 0,
+    hasModerateReorders: moderateSuggestions.length > 0,
+    totalSuggestions: suggestions.length,
+    topSuggestion: suggestions[0],
+    loading,
+  };
 }
 
 export function ContextAwareFAB() {
@@ -36,6 +87,7 @@ export function ContextAwareFAB() {
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
   const segments = useSegments();
+  const router = useRouter();
   
   // Modal states
   const [quickLogModalVisible, setQuickLogModalVisible] = useState(false);
@@ -69,6 +121,10 @@ export function ContextAwareFAB() {
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
   const opacity = useSharedValue(1);
+  const reorderPulse = useSharedValue(1);
+
+  // Intelligent reorder detection for selected child
+  const reorderState = useReorderDetection(selectedChildId);
   
   // Get current route context and view state
   const currentRoute = segments[1] || 'index'; // Get the tab route (index, planner, settings)
@@ -78,7 +134,7 @@ export function ContextAwareFAB() {
   // Hide FAB when in analytics view - analytics should be passive viewing only
   const shouldHideFAB = currentRoute === 'planner' && currentView === 'analytics';
   
-  // Context-aware FAB configurations with enhanced logic for new users
+  // Enhanced reorder-aware FAB configurations with intelligent priority system
   const fabContexts: FABContextMap = {
     index: {
       icon: showAddFirstChild ? 'person.badge.plus' : 'plus.circle.fill',
@@ -92,7 +148,7 @@ export function ContextAwareFAB() {
           );
           return;
         }
-        
+
         if (showAddFirstChild) {
           // Navigate to child creation - using console for now, TODO: implement navigation
           console.log('Navigate to add first child onboarding');
@@ -106,7 +162,7 @@ export function ContextAwareFAB() {
           );
           return;
         }
-        
+
         if (!selectedChildId) {
           Alert.alert(
             'Please Select a Child',
@@ -115,13 +171,22 @@ export function ContextAwareFAB() {
           );
           return;
         }
-        
+
         setQuickLogModalVisible(true);
       },
     },
     planner: {
-      icon: showAddFirstChild ? 'person.badge.plus' : 'calendar.badge.plus',
-      accessibilityLabel: showAddFirstChild ? 'Add your first child' : 'Add to planner',
+      // Intelligent reorder-aware icon selection
+      icon: showAddFirstChild ? 'person.badge.plus' :
+            reorderState.hasCriticalReorders ? 'brain.head.profile' :
+            reorderState.hasModerateReorders ? 'lightbulb.fill' :
+            'calendar.badge.plus',
+      // Context-aware accessibility labels for stress-reduction UX
+      accessibilityLabel: showAddFirstChild ? 'Add your first child' :
+                         reorderState.hasCriticalReorders ? 'Smart reorder suggestions available' :
+                         reorderState.hasModerateReorders ? 'Reorder suggestions available' :
+                         'Add to planner',
+      // Intelligent action prioritization with reorder detection
       action: () => {
         if (actionsDisabled) {
           Alert.alert(
@@ -131,7 +196,7 @@ export function ContextAwareFAB() {
           );
           return;
         }
-        
+
         if (showAddFirstChild) {
           Alert.alert(
             'Welcome to NestSync!',
@@ -143,7 +208,7 @@ export function ContextAwareFAB() {
           );
           return;
         }
-        
+
         if (!selectedChildId) {
           Alert.alert(
             'Please Select a Child',
@@ -152,9 +217,53 @@ export function ContextAwareFAB() {
           );
           return;
         }
-        
+
+        // Priority 1: Critical reorder suggestions (immediate navigation)
+        if (reorderState.hasCriticalReorders) {
+          // Provide context with stress-reduction messaging
+          Alert.alert(
+            'Smart Reorder Suggestions',
+            'We found some helpful reorder suggestions based on your usage patterns. Would you like to review them?',
+            [
+              { text: 'Later', style: 'cancel' },
+              {
+                text: 'View Suggestions',
+                onPress: () => {
+                  // Navigate to reorder suggestions with critical context
+                  router.push('/reorder-suggestions?priority=critical');
+                }
+              }
+            ]
+          );
+          return;
+        }
+
+        // Priority 2: Moderate reorder suggestions (optional navigation)
+        if (reorderState.hasModerateReorders) {
+          Alert.alert(
+            'Reorder Suggestions Available',
+            `We have ${reorderState.totalSuggestions} reorder suggestion${reorderState.totalSuggestions > 1 ? 's' : ''} that might help you stay prepared.`,
+            [
+              { text: 'Add Inventory', onPress: () => setAddInventoryModalVisible(true) },
+              {
+                text: 'View Suggestions',
+                onPress: () => {
+                  router.push('/reorder-suggestions?priority=moderate');
+                }
+              }
+            ]
+          );
+          return;
+        }
+
+        // Priority 3: Default inventory management
         setAddInventoryModalVisible(true);
       },
+      // Enhanced styling for reorder states
+      backgroundColor: reorderState.hasCriticalReorders ? colors.error :
+                      reorderState.hasModerateReorders ? '#0891B2' : // NestSync premium blue
+                      colors.tint,
+      pulseAnimation: reorderState.hasCriticalReorders,
     },
     settings: {
       icon: 'questionmark.circle.fill',
@@ -179,11 +288,20 @@ export function ContextAwareFAB() {
   // Get current FAB configuration
   const currentFABConfig = fabContexts[currentRoute] || fabContexts.index;
   
-  // Handle FAB press with psychology-driven animations
+  // Enhanced FAB press handler with reorder-aware haptic feedback
   const handlePress = () => {
-    // Haptic feedback for reassurance
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
+    // Intelligent haptic feedback based on urgency (stress-reduction UX)
+    if (reorderState.hasCriticalReorders && currentRoute.includes('planner')) {
+      // Medium haptic for critical reorders (not heavy - avoid stress)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } else if (reorderState.hasModerateReorders && currentRoute.includes('planner')) {
+      // Light haptic for moderate reorders
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else {
+      // Default medium haptic for regular actions
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
     // Execute context-aware action
     currentFABConfig.action();
   };
@@ -216,7 +334,7 @@ export function ContextAwareFAB() {
       runOnJS(handlePress)();
     });
   
-  // Context change animation
+  // Enhanced context change animation with reorder state awareness
   useEffect(() => {
     // Animate icon transition when context changes
     opacity.value = withSpring(0, {
@@ -229,13 +347,28 @@ export function ContextAwareFAB() {
         stiffness: 200,
       });
     });
-  }, [currentRoute]);
+  }, [currentRoute, reorderState.hasCriticalReorders, reorderState.hasModerateReorders]);
+
+  // Intelligent reorder pulse animation for critical states
+  useEffect(() => {
+    if (reorderState.hasCriticalReorders && currentRoute.includes('planner')) {
+      // Gentle pulsing for critical reorders (stress-reduction UX)
+      reorderPulse.value = withRepeat(
+        withSpring(1.05, { damping: 15, stiffness: 100 }),
+        -1,
+        true
+      );
+    } else {
+      // Return to normal state
+      reorderPulse.value = withSpring(1, { damping: 15, stiffness: 100 });
+    }
+  }, [reorderState.hasCriticalReorders, currentRoute]);
   
-  // Animated styles
+  // Enhanced animated styles with reorder pulse integration
   const fabAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { scale: scale.value },
+        { scale: scale.value * reorderPulse.value }, // Combine user interaction + reorder pulse
         { rotate: `${rotation.value}deg` },
       ],
       opacity: opacity.value,
@@ -248,6 +381,10 @@ export function ContextAwareFAB() {
     default: 24 + 80, // 24px margin + 80px tab bar height
   });
   
+  // Dynamic styles with reorder-aware background colors
+  const fabBackgroundColor = isLoading ? colors.tabIconDefault :
+                           currentFABConfig.backgroundColor || colors.tint;
+
   const dynamicStyles = StyleSheet.create({
     fabContainer: {
       position: 'absolute',
@@ -256,19 +393,19 @@ export function ContextAwareFAB() {
       width: 56,
       height: 56,
       borderRadius: 28,
-      backgroundColor: colors.tint,
+      backgroundColor: fabBackgroundColor,
       justifyContent: 'center',
       alignItems: 'center',
-      // iOS shadow
-      shadowColor: '#000',
+      // Enhanced shadow for reorder states
+      shadowColor: reorderState.hasCriticalReorders ? colors.error : '#000',
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: reorderState.hasCriticalReorders ? 6 : 4,
       },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      // Android shadow
-      elevation: 8,
+      shadowOpacity: reorderState.hasCriticalReorders ? 0.4 : 0.3,
+      shadowRadius: reorderState.hasCriticalReorders ? 10 : 8,
+      // Enhanced Android shadow for reorder states
+      elevation: reorderState.hasCriticalReorders ? 12 : 8,
     },
   });
   
@@ -327,16 +464,24 @@ export function ContextAwareFAB() {
   return (
     <>
       <GestureDetector gesture={tapGesture}>
-        <Animated.View 
+        <Animated.View
           style={[
-            dynamicStyles.fabContainer, 
-            fabAnimatedStyle,
-            isLoading && { backgroundColor: colors.tabIconDefault }
+            dynamicStyles.fabContainer,
+            fabAnimatedStyle
           ]}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel={isLoading ? 'Loading...' : currentFABConfig.accessibilityLabel}
-          accessibilityHint={isLoading ? 'Please wait' : 'Double tap to activate'}
+          accessibilityLabel={
+            isLoading ? 'Loading...' :
+            reorderState.loading ? 'Checking for reorder suggestions...' :
+            currentFABConfig.accessibilityLabel
+          }
+          accessibilityHint={
+            isLoading ? 'Please wait' :
+            reorderState.hasCriticalReorders ? 'Critical reorder suggestions available, double tap to review' :
+            reorderState.hasModerateReorders ? 'Reorder suggestions available, double tap to review' :
+            'Double tap to activate'
+          }
         >
           {isLoading ? (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>

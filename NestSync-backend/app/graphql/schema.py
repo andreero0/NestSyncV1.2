@@ -64,7 +64,9 @@ from .reorder_types import (
     SubscriptionDashboard,
     ReorderAnalytics,
     ProductSearchResponse,
-    OrderResponse
+    OrderResponse,
+    ReorderSuggestion,
+    SubscriptionStatus
 )
 
 
@@ -124,6 +126,10 @@ class Query:
     get_order_history: ReorderTransactionConnection = strawberry.field(resolver=ReorderQueries.get_order_history)
     get_order_status_updates: OrderStatusUpdateConnection = strawberry.field(resolver=ReorderQueries.get_order_status_updates)
     get_reorder_analytics: ReorderAnalytics = strawberry.field(resolver=ReorderQueries.get_reorder_analytics)
+
+    # New resolvers for frontend compatibility
+    get_reorder_suggestions: List[ReorderSuggestion] = strawberry.field(resolver=ReorderQueries.get_reorder_suggestions)
+    get_subscription_status: Optional[SubscriptionStatus] = strawberry.field(resolver=ReorderQueries.get_subscription_status)
 
     # Observability queries - Real-time system monitoring
     # Temporarily disabled for testing
