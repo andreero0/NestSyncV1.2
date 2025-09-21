@@ -9,10 +9,14 @@ import {
   InMemoryCache,
   createHttpLink,
   from,
+  split,
 } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { ErrorLink } from '@apollo/client/link/error';
 import { RetryLink } from '@apollo/client/link/retry';
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
+import { createClient } from 'graphql-ws';
+import { getMainDefinition } from '@apollo/client/utilities';
 // Apollo Client 3.x compatible imports
 import { ApolloError } from '@apollo/client/errors';
 import { StorageHelpers } from '../../hooks/useUniversalStorage';
@@ -40,10 +44,48 @@ const GRAPHQL_ENDPOINT = __DEV__
   ? 'http://localhost:8001/graphql'  // Development backend - using localhost for testing
   : 'https://nestsync-api.railway.app/graphql'; // Production endpoint
 
-// Create HTTP link
+// WebSocket endpoint configuration for subscriptions
+const GRAPHQL_WS_ENDPOINT = __DEV__
+  ? 'ws://localhost:8001/subscriptions'  // Development WebSocket endpoint
+  : 'wss://nestsync-api.railway.app/subscriptions'; // Production WebSocket endpoint
+
+// React Native polyfills for text streaming (required for subscriptions)
+// TEMPORARILY DISABLED: Polyfill dependency issue with web-streams-polyfill
+/*
+if (typeof global !== 'undefined') {
+  // Polyfill fetch for text streaming support in React Native
+  if (!global.ReadableStream) {
+    try {
+      const { polyfill } = require('react-native-polyfill-globals/src/readable-stream');
+      polyfill();
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('ReadableStream polyfill not available:', error);
+      }
+    }
+  }
+
+  if (!global.TextEncoder) {
+    try {
+      const { polyfill } = require('react-native-polyfill-globals/src/encoding');
+      polyfill();
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('TextEncoder polyfill not available:', error);
+      }
+    }
+  }
+}
+*/
+
+// Create HTTP link with text streaming support
 const httpLink = createHttpLink({
   uri: GRAPHQL_ENDPOINT,
   credentials: 'include', // Include cookies for session management
+  fetchOptions: {
+    // Enable text streaming for @defer support
+    reactNative: { textStreaming: true },
+  },
 });
 
 // Global token refresh coordination to prevent race conditions
@@ -62,11 +104,64 @@ const clearTokens = async (): Promise<void> => {
   await StorageHelpers.clearUserSession();
 };
 
+// Create WebSocket link for subscriptions
+const wsLink = new GraphQLWsLink(
+  createClient({
+    url: GRAPHQL_WS_ENDPOINT,
+    connectionParams: async () => {
+      try {
+        const accessToken = await getAccessToken();
+        return {
+          authorization: accessToken ? `Bearer ${accessToken}` : undefined,
+          'x-client-name': 'NestSync-Mobile',
+          'x-client-version': '1.0.0',
+          'x-canadian-compliance': 'PIPEDA',
+        };
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Failed to get access token for WebSocket connection:', error);
+        }
+        return {};
+      }
+    },
+    shouldRetry: (closeEvent) => {
+      // Retry WebSocket connection for network issues but not auth failures
+      return closeEvent.code !== 4401; // Don't retry on authentication failure
+    },
+    retryAttempts: 5,
+    retryWait: async (attempt) => {
+      // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 16000);
+      if (__DEV__) {
+        console.log(`WebSocket retry attempt ${attempt}, waiting ${delay}ms`);
+      }
+      return new Promise(resolve => setTimeout(resolve, delay));
+    },
+    on: {
+      connected: () => {
+        if (__DEV__) {
+          console.log('WebSocket connected for GraphQL subscriptions');
+        }
+      },
+      closed: (event) => {
+        if (__DEV__) {
+          console.log('WebSocket connection closed:', event.code, event.reason);
+        }
+      },
+      error: (error) => {
+        if (__DEV__) {
+          console.error('WebSocket error:', error);
+        }
+      },
+    },
+  })
+);
+
 // Authentication link - adds authorization header
 const authLink = setContext(async (_, { headers }) => {
   try {
     const accessToken = await getAccessToken();
-    
+
     return {
       headers: {
         ...headers,
@@ -533,19 +628,28 @@ const rateLimitingRetryLink = new RetryLink({
   },
 });
 
-// Create Apollo Client with optimized link order
+// Split link to route operations: subscriptions to WebSocket, queries/mutations to HTTP
+const splitLink = split(
+  ({ operationType }) => {
+    return operationType === 'subscription';
+  },
+  wsLink, // Use WebSocket for subscriptions
+  from([
+    // HTTP link chain for queries and mutations
+    rateLimitingRetryLink,
+    tokenRefreshLink,
+    authLink,
+    httpLink,
+  ])
+);
+
+// Create Apollo Client with split link for HTTP and WebSocket support
 export const apolloClient = new ApolloClient({
   link: from([
     // Error logging should come first to catch all errors
     errorLoggingLink,
-    // Apollo Client's built-in RetryLink for rate limiting (prevents React re-render loops)
-    rateLimitingRetryLink,
-    // Token refresh must come before auth to handle expired tokens
-    tokenRefreshLink,
-    // Auth link adds tokens to requests
-    authLink,
-    // HTTP link executes the request
-    httpLink,
+    // Split link routes operations appropriately
+    splitLink,
   ]),
   cache: new InMemoryCache({
     typePolicies: {

@@ -149,6 +149,22 @@ class Settings(BaseSettings):
     consent_withdrawal_enabled: bool = Field(default=True, env="CONSENT_WITHDRAWAL_ENABLED")
     
     # =============================================================================
+    # Stripe Payment Configuration (Canadian Billing)
+    # =============================================================================
+    stripe_publishable_key: str = Field(..., env="STRIPE_PUBLISHABLE_KEY")
+    stripe_secret_key: str = Field(..., env="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: str = Field(..., env="STRIPE_WEBHOOK_SECRET")
+
+    # Stripe price IDs for Canadian subscription tiers
+    stripe_basic_price_id: str = Field(..., env="STRIPE_BASIC_PRICE_ID")
+    stripe_premium_price_id: str = Field(..., env="STRIPE_PREMIUM_PRICE_ID")
+    stripe_family_price_id: str = Field(..., env="STRIPE_FAMILY_PRICE_ID")
+
+    # Canadian marketplace affiliate IDs
+    amazon_ca_affiliate_id: Optional[str] = Field(default=None, env="AMAZON_CA_AFFILIATE_ID")
+    walmart_ca_partner_id: Optional[str] = Field(default=None, env="WALMART_CA_PARTNER_ID")
+
+    # =============================================================================
     # Monitoring and Logging
     # =============================================================================
     sentry_dsn: Optional[str] = Field(default=None, env="SENTRY_DSN")

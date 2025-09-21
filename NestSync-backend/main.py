@@ -24,6 +24,7 @@ from app.graphql.schema import schema
 from app.graphql.context import create_graphql_context
 from app.middleware import setup_security_middleware
 from app.api.health import include_health_routes
+from app.api.stripe_webhooks import router as stripe_webhook_router
 from app.services.continuous_monitoring import continuous_monitoring
 from health import get_health, get_simple_health
 from app.health import get_auth_health, get_auth_health_simple
@@ -424,6 +425,12 @@ app.include_router(
     graphql_app,
     prefix="/graphql",
     tags=["GraphQL API", "Authentication", "Onboarding"]
+)
+
+# Mount Stripe webhook endpoint for Canadian subscription billing
+app.include_router(
+    stripe_webhook_router,
+    tags=["Stripe", "Webhooks", "Canadian Billing"]
 )
 
 # Include observability and monitoring health routes

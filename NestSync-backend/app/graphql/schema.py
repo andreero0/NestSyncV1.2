@@ -14,6 +14,7 @@ from .notification_resolvers import NotificationMutations, NotificationQueries
 from .analytics_resolvers import AnalyticsQueries
 from .collaboration_resolvers import CollaborationMutations, CollaborationQueries
 from .emergency_resolvers import EmergencyMutations, EmergencyQueries
+from .reorder_resolvers import ReorderMutations, ReorderQueries
 # from .observability_resolvers import ObservabilityQuery, ObservabilityMutation  # Temporarily disabled for testing
 from .types import (
     UserProfile,
@@ -51,6 +52,19 @@ from .emergency_types import (
     EmergencyAccessConnection,
     MedicalInformation,
     HealthCardValidationResult
+)
+from .reorder_types import (
+    ReorderSubscriptionConnection,
+    ReorderPreferencesConnection,
+    ConsumptionPredictionConnection,
+    RetailerConfigurationConnection,
+    ProductMappingConnection,
+    ReorderTransactionConnection,
+    OrderStatusUpdateConnection,
+    SubscriptionDashboard,
+    ReorderAnalytics,
+    ProductSearchResponse,
+    OrderResponse
 )
 
 
@@ -99,6 +113,17 @@ class Query:
     get_healthcare_providers: HealthcareProviderConnection = strawberry.field(resolver=EmergencyQueries.get_healthcare_providers)
     get_emergency_information: EmergencyInformationResponse = strawberry.field(resolver=EmergencyQueries.get_emergency_information)
     get_emergency_access_tokens: EmergencyAccessConnection = strawberry.field(resolver=EmergencyQueries.get_emergency_access_tokens)
+
+    # Reorder system queries
+    get_subscription_dashboard: SubscriptionDashboard = strawberry.field(resolver=ReorderQueries.get_subscription_dashboard)
+    get_my_subscription: ReorderSubscriptionConnection = strawberry.field(resolver=ReorderQueries.get_my_subscription)
+    get_reorder_preferences: ReorderPreferencesConnection = strawberry.field(resolver=ReorderQueries.get_reorder_preferences)
+    get_consumption_predictions: ConsumptionPredictionConnection = strawberry.field(resolver=ReorderQueries.get_consumption_predictions)
+    get_retailer_configurations: RetailerConfigurationConnection = strawberry.field(resolver=ReorderQueries.get_retailer_configurations)
+    search_products: ProductSearchResponse = strawberry.field(resolver=ReorderQueries.search_products)
+    get_order_history: ReorderTransactionConnection = strawberry.field(resolver=ReorderQueries.get_order_history)
+    get_order_status_updates: OrderStatusUpdateConnection = strawberry.field(resolver=ReorderQueries.get_order_status_updates)
+    get_reorder_analytics: ReorderAnalytics = strawberry.field(resolver=ReorderQueries.get_reorder_analytics)
 
     # Observability queries - Real-time system monitoring
     # Temporarily disabled for testing
@@ -175,6 +200,19 @@ class Mutation:
     revoke_emergency_access_token = strawberry.field(resolver=EmergencyMutations.revoke_emergency_access_token)
     validate_health_card = strawberry.field(resolver=EmergencyMutations.validate_health_card)
 
+    # Reorder system mutations
+    create_subscription = strawberry.field(resolver=ReorderMutations.create_subscription)
+    update_subscription = strawberry.field(resolver=ReorderMutations.update_subscription)
+    cancel_subscription = strawberry.field(resolver=ReorderMutations.cancel_subscription)
+    create_reorder_preferences = strawberry.field(resolver=ReorderMutations.create_reorder_preferences)
+    update_reorder_preferences = strawberry.field(resolver=ReorderMutations.update_reorder_preferences)
+    create_retailer_config = strawberry.field(resolver=ReorderMutations.create_retailer_config)
+    update_retailer_config = strawberry.field(resolver=ReorderMutations.update_retailer_config)
+    delete_retailer_config = strawberry.field(resolver=ReorderMutations.delete_retailer_config)
+    create_manual_order = strawberry.field(resolver=ReorderMutations.create_manual_order)
+    cancel_order = strawberry.field(resolver=ReorderMutations.cancel_order)
+    trigger_prediction_update = strawberry.field(resolver=ReorderMutations.trigger_prediction_update)
+
     # Observability mutations - System monitoring control
     # Temporarily disabled for testing
     # run_health_check = strawberry.field(resolver=ObservabilityMutation.run_health_check)
@@ -185,13 +223,18 @@ class Mutation:
 @strawberry.type
 class Subscription:
     """Root GraphQL Subscription (for future real-time features)"""
-    
+
     @strawberry.subscription
     async def onboarding_progress(self, info: Info) -> str:
         """Subscribe to onboarding progress updates"""
         # Placeholder for future implementation
         # Will be used for real-time onboarding step updates
         yield "Onboarding progress subscription not yet implemented"
+
+    # Reorder system subscriptions
+    order_status_updates = strawberry.field(resolver=ReorderQueries.order_status_subscription)
+    prediction_updates = strawberry.field(resolver=ReorderQueries.prediction_updates_subscription)
+    subscription_billing_events = strawberry.field(resolver=ReorderQueries.subscription_billing_events)
 
 
 # =============================================================================

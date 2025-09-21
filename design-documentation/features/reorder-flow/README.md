@@ -1,8 +1,29 @@
-# Reorder Flow Feature Design
+---
+title: Reorder Flow - Complete UX Design Specification
+description: Comprehensive design for intelligent diaper reordering system with premium feature integration
+feature: reorder-flow
+last-updated: 2025-09-21
+version: 1.0
+status: active-development
+related-files:
+  - /design-documentation/features/reorder-flow/user-journey.md
+  - /design-documentation/features/reorder-flow/screen-states.md
+  - /design-documentation/features/reorder-flow/interactions.md
+  - /design-documentation/features/reorder-flow/implementation.md
+dependencies:
+  - React Navigation v7 nested modal patterns
+  - Stripe React Native subscription management
+  - NestSync backend ML prediction API
+  - Canadian retailer API integration
+---
 
-## Feature Overview
+# Reorder Flow - Complete UX Design Specification
 
-The reorder flow feature is the cornerstone of NestSync's value proposition, designed to eliminate supply anxiety in Canadian parents through intelligent, automated reordering systems. This feature transforms the reactive nature of traditional shopping into a proactive, predictive model that ensures families never run out of essential supplies while optimizing costs through bulk purchasing and affiliate partnerships.
+## Overview
+
+The Reorder Flow is an intelligent diaper reordering system that seamlessly integrates into NestSync's existing three-screen + FAB navigation architecture. It provides AI-powered consumption predictions, multi-retailer price optimization, and stress-reducing automation while maintaining NestSync's psychology-driven UX principles.
+
+This comprehensive design specification covers the complete user experience from discovery to purchase completion, with detailed wireframes, interaction patterns, and implementation guidance for the development team.
 
 ### Core Problem Statement
 

@@ -1,8 +1,25 @@
-# Reorder Flow User Journey Analysis
+---
+title: Reorder Flow - Complete User Journey Mapping
+description: Detailed user journey analysis for all personas across the reorder flow system
+feature: reorder-flow
+last-updated: 2025-09-21
+version: 1.0
+status: active-development
+related-files:
+  - /design-documentation/features/reorder-flow/README.md
+  - /design-documentation/features/reorder-flow/screen-states.md
+  - /design-documentation/features/reorder-flow/interactions.md
+dependencies:
+  - NestSync persona definitions
+  - Psychology-driven UX principles
+  - Canadian compliance requirements
+---
+
+# Reorder Flow - Complete User Journey Mapping
 
 ## Overview
 
-This document provides comprehensive user journey mapping for the reorder flow feature, analyzing how different user personas interact with automated and manual reordering systems. The analysis covers primary use cases, edge cases, emotional states, and optimization opportunities to create seamless experiences that reduce supply anxiety for Canadian parents.
+This document provides comprehensive user journey analysis for the reorder flow feature across all NestSync personas. Each journey is designed to reduce stress, minimize cognitive load, and provide appropriate value propositions for premium features while maintaining Canadian compliance requirements.
 
 ## User Personas
 

@@ -1,16 +1,18 @@
 ---
-title: NestSync Parent-Focused Design Documentation
-description: Comprehensive design system and UX specifications for stressed parent caregivers
-last-updated: 2025-01-15
-version: 1.0.0
-status: approved
+title: NestSync Design Documentation - Reorder Flow Integration
+description: Complete UX design specifications for intelligent diaper reordering system with premium feature integration
+last-updated: 2025-09-21
+version: 1.2 (Reorder Flow Integration)
+status: active-development
 ---
 
-# NestSync Parent-Focused Design Documentation
+# NestSync Design Documentation
 
-## Overview
+## Project Overview
 
-This documentation provides comprehensive design specifications for NestSync, a Canadian diaper planning application specifically designed for "sleep-deprived parents with reduced decision-making capacity." Every design decision prioritizes emotional reassurance, cognitive load reduction, and stress-reducing interactions over traditional data-driven analytics.
+NestSync is a Canadian healthcare diaper planning application designed with psychology-driven UX principles to reduce stress for overwhelmed parents. This documentation system provides comprehensive design specifications, wireframes, and implementation guidance for all features, with special focus on the new **Reorder Flow Integration**.
+
+This documentation now includes complete UX design for the intelligent diaper reordering system that seamlessly integrates into NestSync's existing three-screen + FAB navigation architecture while maintaining the psychology-driven approach to reducing parental stress.
 
 ## Target User Persona
 
