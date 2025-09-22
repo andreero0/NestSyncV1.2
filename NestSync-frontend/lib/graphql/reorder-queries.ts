@@ -179,7 +179,18 @@ export const GET_RETAILER_COMPARISON = gql`
   }
 `;
 
-// Get current subscription status and features
+// Simplified subscription status query to eliminate Apollo Client invariant violations
+// This minimal version prevents type checking issues for users without subscriptions
+export const GET_SUBSCRIPTION_STATUS_SIMPLE = gql`
+  query GetSubscriptionStatusSimple {
+    getSubscriptionStatus {
+      id
+      status
+    }
+  }
+`;
+
+// Get current subscription status and features (COMPLEX - USE SIMPLE VERSION IF ISSUES OCCUR)
 export const GET_SUBSCRIPTION_STATUS = gql`
   query GetSubscriptionStatus {
     getSubscriptionStatus {

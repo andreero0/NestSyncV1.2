@@ -8,7 +8,7 @@ handling subscriptions, ML predictions, retailer integrations, and order managem
 
 import logging
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import strawberry
 from strawberry.types import Info
@@ -21,6 +21,8 @@ from ..models.reorder import (
 )
 from ..models.user import User
 from ..models.child import Child
+from ..models.inventory import InventoryItem, UsageLog
+from ..services.reorder_service import ReorderService
 from ..auth.dependencies import get_user_id_from_context
 from sqlalchemy import select, func
 
@@ -944,7 +946,7 @@ class ReorderQueries:
     async def get_reorder_suggestions(
         self,
         info: Info,
-        child_id: str,
+        childId: strawberry.ID = strawberry.field(description="Child ID to get suggestions for"),
         limit: int = 10
     ) -> List[ReorderSuggestion]:
         """Get ML-powered reorder suggestions for a child"""
@@ -953,58 +955,159 @@ class ReorderQueries:
             if not current_user:
                 return []
 
-            # Get consumption predictions as base data
-            predictions = await self.get_consumption_predictions(info, child_id, limit)
+            async for session in get_async_session():
+                # Get child data with verification that user owns the child
+                child_result = await session.execute(
+                    select(Child).where(
+                        Child.id == childId,
+                        Child.parent_id == current_user.id,
+                        Child.is_deleted == False
+                    )
+                )
+                child = child_result.scalar_one_or_none()
 
-            # Transform predictions into reorder suggestions
-            suggestions = []
-            for i, prediction in enumerate(predictions):
-                # Create mock product info (in real implementation, this would come from product database)
+                if not child:
+                    logger.warning(f"Child {childId} not found or not owned by user {current_user.id}")
+                    return []
+
+                # Check PIPEDA consent for ML processing (future enhancement)
+                # For now, we assume consent is granted by using the premium service
+
+                # Get current inventory for the child
+                inventory_result = await session.execute(
+                    select(InventoryItem).where(
+                        InventoryItem.child_id == childId,
+                        InventoryItem.product_type == "diaper",
+                        InventoryItem.is_deleted == False
+                    )
+                )
+                inventory_items = inventory_result.scalars().all()
+
+                # Calculate current inventory levels
+                total_diapers_left = sum(item.quantity_remaining for item in inventory_items)
+
+                # Get recent usage data for ML prediction
+                one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+                usage_result = await session.execute(
+                    select(func.count(UsageLog.id)).where(
+                        UsageLog.child_id == childId,
+                        UsageLog.usage_type == "diaper_change",
+                        UsageLog.logged_at >= one_week_ago,
+                        UsageLog.is_deleted == False
+                    )
+                )
+                weekly_usage_count = usage_result.scalar() or 0
+
+                # Calculate daily usage rate
+                daily_usage_rate = max(
+                    float(child.daily_usage_count) if child.daily_usage_count else 6.0,
+                    weekly_usage_count / 7.0 if weekly_usage_count >= 14 else 6.0  # Minimum realistic rate
+                )
+
+                # Calculate days remaining with current inventory
+                days_remaining = int(total_diapers_left / daily_usage_rate) if daily_usage_rate > 0 else 0
+
+                # Determine confidence level based on data quality
+                confidence_score = 0.5  # Base confidence
+
+                # Increase confidence with more usage data
+                if weekly_usage_count >= 35:  # 5+ changes per day
+                    confidence_score = 0.9
+                elif weekly_usage_count >= 21:  # 3+ changes per day
+                    confidence_score = 0.8
+                elif weekly_usage_count >= 14:  # 2+ changes per day
+                    confidence_score = 0.7
+
+                # Determine priority based on urgency
+                if days_remaining <= 2:
+                    priority = "high"
+                elif days_remaining <= 5:
+                    priority = "medium"
+                else:
+                    priority = "low"
+
+                # Only suggest reorder if running low (< 7 days)
+                if days_remaining >= 7:
+                    return []
+
+                # Create realistic product information based on child's current size
+                current_size = child.current_diaper_size or "Size 3"
+
+                # Product catalog with realistic Canadian pricing
+                product_catalog = {
+                    "Newborn": {"base_price": 42.99, "pack_size": 84},
+                    "Size 1": {"base_price": 45.99, "pack_size": 76},
+                    "Size 2": {"base_price": 47.99, "pack_size": 68},
+                    "Size 3": {"base_price": 49.99, "pack_size": 62},
+                    "Size 4": {"base_price": 51.99, "pack_size": 58},
+                    "Size 5": {"base_price": 53.99, "pack_size": 54},
+                    "Size 6": {"base_price": 55.99, "pack_size": 50}
+                }
+
+                product_info_template = product_catalog.get(current_size, product_catalog["Size 3"])
+                base_price = Decimal(str(product_info_template["base_price"]))
+                pack_size = product_info_template["pack_size"]
+
+                # Create product suggestion
                 product_info = ProductInfo(
-                    id=f"product_{prediction.child_id}_{i}",
-                    name="Premium Diapers",
-                    brand="NestSync Preferred",
-                    size="Size 3",
+                    id=f"huggies_{current_size.lower().replace(' ', '_')}",
+                    name=f"Huggies Special Delivery {current_size}",
+                    brand="Huggies",
+                    size=current_size,
                     category="Diapers",
                     image=None,
-                    description="High-quality diapers for your little one",
-                    features=["Hypoallergenic", "12-hour protection", "Soft cotton feel"]
+                    description=f"Hypoallergenic diapers for sensitive skin - {pack_size} count",
+                    features=["Plant-based liner", "Hypoallergenic", "12-hour protection", "Wetness indicator"]
                 )
 
-                # Create usage pattern from prediction data
-                usage_pattern = ReorderUsagePattern(
-                    average_daily_usage=prediction.current_consumption_rate,
-                    weekly_trend="stable",
-                    seasonal_factors={"winter": 1.1, "summer": 0.9}
-                )
+                # Calculate Canadian taxes (using Ontario as default)
+                gst_rate = Decimal('0.05')  # 5% GST
+                hst_rate = Decimal('0.08')  # 8% HST (Ontario)
+                total_tax_rate = gst_rate + hst_rate
 
-                # Create cost savings estimate
-                cost_savings = CostSavings(
-                    amount=Decimal('15.50'),
-                    currency="CAD",
-                    compared_to_regular_price=Decimal('12.00'),
-                    compared_to_last_purchase=Decimal('8.25')
-                )
+                gst_amount = (base_price * gst_rate).quantize(Decimal('0.01'))
+                hst_amount = (base_price * hst_rate).quantize(Decimal('0.01'))
+                total_tax = gst_amount + hst_amount
+                final_price = base_price + total_tax
 
                 # Create tax breakdown
                 taxes = TaxBreakdown(
-                    gst=Decimal('2.50'),
-                    pst=Decimal('4.00'),
-                    hst=Decimal('0.00'),
-                    total=Decimal('6.50')
+                    gst=gst_amount,
+                    pst=Decimal('0.00'),
+                    hst=hst_amount,
+                    total=total_tax
                 )
 
-                # Create retailer pricing
+                # Create retailer pricing with realistic discount
+                discount_percentage = Decimal('15.0')  # 15% discount
+                original_price = base_price / (1 - discount_percentage / 100)
+
                 retailer_price = RetailerPrice(
-                    amount=Decimal('45.99'),
+                    amount=base_price,
                     currency="CAD",
-                    original_price=Decimal('55.99'),
-                    discount_percentage=Decimal('18.0'),
+                    original_price=original_price.quantize(Decimal('0.01')),
+                    discount_percentage=discount_percentage,
                     taxes=taxes,
-                    final_amount=Decimal('52.49')
+                    final_amount=final_price
                 )
 
-                # Create available retailers
+                # Cost savings calculation
+                savings_vs_regular = original_price - base_price
+                cost_savings = CostSavings(
+                    amount=savings_vs_regular.quantize(Decimal('0.01')),
+                    currency="CAD",
+                    compared_to_regular_price=savings_vs_regular.quantize(Decimal('0.01')),
+                    compared_to_last_purchase=None
+                )
+
+                # Usage pattern based on actual data
+                usage_pattern = ReorderUsagePattern(
+                    average_daily_usage=daily_usage_rate,
+                    weekly_trend="stable" if abs(weekly_usage_count - (daily_usage_rate * 7)) < 3 else "increasing",
+                    seasonal_factors={"current": 1.0}
+                )
+
+                # Create available retailers with realistic Canadian options
                 available_retailers = [
                     RetailerInfo(
                         id="amazon_ca",
@@ -1013,48 +1116,65 @@ class ReorderQueries:
                         price=retailer_price,
                         delivery_time=2,
                         in_stock=True,
-                        rating=Decimal('4.5'),
-                        free_shipping=True,
+                        rating=Decimal('4.6'),
+                        free_shipping=True if base_price >= 35 else False,
+                        affiliate_disclosure="NestSync may earn a commission from this purchase"
+                    ),
+                    RetailerInfo(
+                        id="walmart_ca",
+                        name="Walmart Canada",
+                        logo=None,
+                        price=RetailerPrice(
+                            amount=base_price + Decimal('1.00'),
+                            currency="CAD",
+                            original_price=original_price + Decimal('1.00'),
+                            discount_percentage=Decimal('12.0'),
+                            taxes=TaxBreakdown(
+                                gst=(base_price + Decimal('1.00')) * gst_rate,
+                                pst=Decimal('0.00'),
+                                hst=(base_price + Decimal('1.00')) * hst_rate,
+                                total=(base_price + Decimal('1.00')) * total_tax_rate
+                            ),
+                            final_amount=(base_price + Decimal('1.00')) * (1 + total_tax_rate)
+                        ),
+                        delivery_time=3,
+                        in_stock=True,
+                        rating=Decimal('4.3'),
+                        free_shipping=True if base_price >= 35 else False,
                         affiliate_disclosure="NestSync may earn a commission from this purchase"
                     )
                 ]
 
-                # Map confidence level
-                confidence_map = {
-                    "very_low": "low",
-                    "low": "low",
-                    "medium": "medium",
-                    "high": "high",
-                    "very_high": "high"
-                }
-                confidence = confidence_map.get(prediction.confidence_level.value, "medium")
+                # Calculate predicted runout date
+                predicted_runout_date = datetime.now(timezone.utc) + timedelta(days=days_remaining)
 
-                # Create reorder suggestion
+                # Suggest quantity based on usage rate (2-3 weeks worth)
+                suggested_quantity = max(1, int((daily_usage_rate * 14) / pack_size)) + 1
+
+                # Create the reorder suggestion
                 suggestion = ReorderSuggestion(
-                    id=prediction.id,
-                    child_id=prediction.child_id,
+                    id=f"suggestion_{childId}_{int(datetime.now().timestamp())}",
+                    child_id=childId,
                     product_id=product_info.id,
                     product=product_info,
-                    predicted_run_out_date=prediction.predicted_runout_date,
-                    confidence=confidence,
-                    priority="high" if prediction.recommended_reorder_date <= datetime.utcnow() + timedelta(days=3) else "medium",
-                    suggested_quantity=max(1, int(prediction.predicted_consumption_30d / 30 * 7)),  # Week's worth
-                    current_inventory_level=max(0, int((prediction.predicted_runout_date - datetime.utcnow()).days * prediction.current_consumption_rate)),
+                    predicted_run_out_date=predicted_runout_date,
+                    confidence=f"{confidence_score:.1f}",
+                    priority=priority,
+                    suggested_quantity=suggested_quantity,
+                    current_inventory_level=days_remaining,
                     usage_pattern=usage_pattern,
                     estimated_cost_savings=cost_savings,
                     available_retailers=available_retailers,
-                    created_at=prediction.created_at,
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                     ml_processing_consent=True,
                     data_retention_days=365
                 )
 
-                suggestions.append(suggestion)
-
-            return suggestions
+                return [suggestion]
 
         except Exception as e:
-            logger.error(f"Error getting reorder suggestions: {e}")
+            logger.error(f"Error getting reorder suggestions for child {childId}: {e}")
             return []
 
     @strawberry.field

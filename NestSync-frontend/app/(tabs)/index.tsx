@@ -203,8 +203,8 @@ export default function HomeScreen() {
   // Determine if actions should be disabled
   const actionsDisabled = !selectedChildId || childrenLoading || dashboardLoading;
 
-  // Quick Actions with better state handling
-  const quickActions: QuickAction[] = [
+  // Quick Actions with clean 2-row layout
+  const topRowActions: QuickAction[] = [
     {
       id: 'log-change',
       title: 'Log Change',
@@ -245,24 +245,27 @@ export default function HomeScreen() {
       icon: 'clock.fill',
       color: actionsDisabled ? colors.textSecondary : colors.accent,
       onPress: () => {
-        if (actionsDisabled) return;
-        Alert.alert('Coming Soon', 'Timeline view will be available in a future update!');
+        if (actionsDisabled) {
+          Alert.alert(
+            'Please Wait',
+            selectedChildId ? 'Loading child data...' : 'Please select a child first',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        router.push({
+          pathname: '/timeline',
+          params: { childId: selectedChildId }
+        });
       }
-    },
+    }
+  ];
+
+  const bottomRowActions: QuickAction[] = [
     {
       id: 'size-check',
       title: 'Size Guide',
       icon: 'ruler.fill',
-      color: actionsDisabled ? colors.textSecondary : colors.premium,
-      onPress: () => {
-        if (actionsDisabled) return;
-        Alert.alert('Coming Soon', 'Diaper size guide will be available in a future update!');
-      }
-    },
-    {
-      id: 'smart-reorder',
-      title: 'Smart Reorder',
-      icon: 'brain.head.profile',
       color: actionsDisabled ? colors.textSecondary : colors.premium,
       onPress: () => {
         if (actionsDisabled) {
@@ -273,11 +276,39 @@ export default function HomeScreen() {
           );
           return;
         }
-        // Navigate to reorder suggestions screen with selected child
+        router.push({
+          pathname: '/size-guide',
+          params: { childId: selectedChildId }
+        });
+      }
+    },
+    {
+      id: 'reorder',
+      title: 'Reorder',
+      icon: 'arrow.triangle.2.circlepath',
+      color: actionsDisabled ? colors.textSecondary : colors.success,
+      onPress: () => {
+        if (actionsDisabled) {
+          Alert.alert(
+            'Please Wait',
+            selectedChildId ? 'Loading child data...' : 'Please select a child first',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
         router.push({
           pathname: '/reorder-suggestions',
           params: { childId: selectedChildId }
         });
+      }
+    },
+    {
+      id: 'more',
+      title: 'More',
+      icon: 'ellipsis.circle',
+      color: actionsDisabled ? colors.textSecondary : colors.textSecondary,
+      onPress: () => {
+        Alert.alert('Coming Soon', 'More features will be available in future updates!');
       }
     }
   ];
@@ -495,8 +526,28 @@ export default function HomeScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Quick Actions
             </ThemedText>
-            <View style={styles.quickActionsGrid}>
-              {quickActions.map((action) => (
+
+            {/* Top Row - 3 buttons */}
+            <View style={styles.quickActionsRow}>
+              {topRowActions.map((action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  style={[styles.quickActionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={action.onPress}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.title}
+                >
+                  <IconSymbol name={action.icon} size={24} color={action.color} />
+                  <ThemedText style={[styles.quickActionText, { color: colors.text }]}>
+                    {action.title}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Bottom Row - 3 buttons */}
+            <View style={styles.quickActionsRow}>
+              {bottomRowActions.map((action) => (
                 <TouchableOpacity
                   key={action.id}
                   style={[styles.quickActionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -729,13 +780,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
   },
-  quickActionsGrid: {
+  quickActionsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
+    marginBottom: 12,
   },
   quickActionButton: {
-    width: (width - 64) / 3, // Responsive width for 3 columns accounting for padding and gap
+    width: (width - 64) / 3, // 3 buttons per row, consistent sizing
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,

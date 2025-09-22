@@ -28,7 +28,7 @@ import { IconSymbol } from '../ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { LOG_DIAPER_CHANGE_MUTATION } from '@/lib/graphql/mutations';
-import { GET_DASHBOARD_STATS_QUERY } from '@/lib/graphql/queries';
+import { GET_DASHBOARD_STATS_QUERY, ME_QUERY } from '@/lib/graphql/queries';
 import { useChildren } from '@/hooks/useChildren';
 import {
   GET_USAGE_ANALYTICS_QUERY,
@@ -102,6 +102,11 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
   // GraphQL queries and mutations - using centralized hook
   const { children, loading: childrenLoading } = useChildren({
     first: 10,
+    skip: !visible
+  });
+
+  // Get current user information for caregiver attribution
+  const { data: userData } = useQuery(ME_QUERY, {
     skip: !visible
   });
 
@@ -213,7 +218,15 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
       const loggedAt = selectedTimeOption?.value || new Date();
 
       const changeType = CHANGE_TYPES.find(type => type.id === selectedChangeType);
-      
+
+      // Get caregiver name from current user data
+      const caregiverName = userData?.me?.displayName ||
+                           userData?.me?.firstName ||
+                           (userData?.me?.firstName && userData?.me?.lastName ?
+                            `${userData.me.firstName} ${userData.me.lastName}` : null) ||
+                           userData?.me?.email ||
+                           null;
+
       const input = {
         childId: selectedChildId,
         wasWet: changeType?.id === 'wet' || changeType?.id === 'both',
@@ -221,6 +234,7 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
         loggedAt: loggedAt.toISOString(),
         notes: notes.trim() || null,
         usageType: 'DIAPER_CHANGE' as const,
+        caregiverName: caregiverName,
       };
 
       const result = await logDiaperChange({

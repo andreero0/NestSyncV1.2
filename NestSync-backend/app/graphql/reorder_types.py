@@ -700,8 +700,8 @@ class PlanPrice:
     """Subscription plan pricing"""
     amount: Decimal
     currency: str
-    billing_interval: str
-    canadian_taxes: TaxBreakdown
+    billing_interval: str = strawberry.field(name="billingInterval")
+    canadian_taxes: TaxBreakdown = strawberry.field(name="canadianTaxes")
 
 
 @strawberry.type
@@ -709,7 +709,7 @@ class SubscriptionPlan:
     """Subscription plan information"""
     id: str
     name: str
-    display_name: str
+    display_name: str = strawberry.field(name="displayName")
     description: str
     features: List[str]
     price: PlanPrice
@@ -723,32 +723,32 @@ class PaymentMethodInfo:
     type: str
     brand: str
     last4: str
-    expiry_month: int
-    expiry_year: int
-    is_default: bool
+    expiry_month: int = strawberry.field(name="expiryMonth")
+    expiry_year: int = strawberry.field(name="expiryYear")
+    is_default: bool = strawberry.field(name="isDefault")
 
 
 @strawberry.type
 class UsageStats:
     """Usage statistics for current period"""
-    reorders_suggested: int
-    orders_placed: int
-    savings_generated: CostSavings
-    price_alerts_received: int
+    reorders_suggested: int = strawberry.field(name="reordersSuggested")
+    orders_placed: int = strawberry.field(name="ordersPlaced")
+    savings_generated: CostSavings = strawberry.field(name="savingsGenerated")
+    price_alerts_received: int = strawberry.field(name="priceAlertsReceived")
 
 
 @strawberry.type
 class LifetimeStats:
     """Lifetime usage statistics"""
-    total_orders: int
-    total_savings: CostSavings
-    member_since: datetime
+    total_orders: int = strawberry.field(name="totalOrders")
+    total_savings: CostSavings = strawberry.field(name="totalSavings")
+    member_since: datetime = strawberry.field(name="memberSince")
 
 
 @strawberry.type
 class UsageInfo:
     """Combined usage information"""
-    current_period: UsageStats
+    current_period: UsageStats = strawberry.field(name="currentPeriod")
     lifetime: LifetimeStats
 
 
@@ -764,18 +764,18 @@ class YearlyPricing:
     """Yearly pricing with savings"""
     amount: Decimal
     currency: str
-    savings_per_month: CostSavings
+    savings_per_month: CostSavings = strawberry.field(name="savingsPerMonth")
 
 
 @strawberry.type
 class AvailableUpgrade:
     """Available subscription upgrade"""
-    plan_id: str
+    plan_id: str = strawberry.field(name="planId")
     name: str
-    monthly_pricing: PlanPricing
-    yearly_pricing: YearlyPricing
-    new_features: List[str]
-    value_proposition: str
+    monthly_pricing: PlanPricing = strawberry.field(name="monthlyPricing")
+    yearly_pricing: YearlyPricing = strawberry.field(name="yearlyPricing")
+    new_features: List[str] = strawberry.field(name="newFeatures")
+    value_proposition: str = strawberry.field(name="valueProposition")
 
 
 @strawberry.type
@@ -783,13 +783,13 @@ class SubscriptionStatus:
     """Subscription status matching frontend schema"""
     id: str
     status: str
-    current_plan: SubscriptionPlan
-    next_billing_date: Optional[datetime]
-    payment_method: Optional[PaymentMethodInfo]
+    current_plan: SubscriptionPlan = strawberry.field(name="currentPlan")
+    next_billing_date: Optional[datetime] = strawberry.field(name="nextBillingDate")
+    payment_method: Optional[PaymentMethodInfo] = strawberry.field(name="paymentMethod")
     usage: UsageInfo
-    available_upgrades: List[AvailableUpgrade]
-    billing_data_consent: bool
-    updated_at: datetime
+    available_upgrades: List[AvailableUpgrade] = strawberry.field(name="availableUpgrades")
+    billing_data_consent: bool = strawberry.field(name="billingDataConsent")
+    updated_at: datetime = strawberry.field(name="updatedAt")
 
 
 # =============================================================================
