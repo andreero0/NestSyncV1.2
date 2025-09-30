@@ -37,7 +37,7 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { resetPassword, isLoading, error, clearError } = useAuthStore();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
   const [isEmailSent, setIsEmailSent] = useState(false);
 
   const {

@@ -46,7 +46,7 @@ export default function OnboardingScreen() {
   const { persona, preferences, updatePreferences } = useUserPersona();
   const { step, setStep, complete } = useOnboarding();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
 
   // GraphQL mutations with cache updates
   const [createChild, { loading: createChildLoading, error: createChildError }] = useMutation(CREATE_CHILD_MUTATION, {
@@ -55,11 +55,11 @@ export default function OnboardingScreen() {
       if (data?.createChild?.success && data.createChild.child) {
         try {
           // Read the current MY_CHILDREN_QUERY from cache
-          const existingData = cache.readQuery({
+          const existingData = cache.readQuery<any>({
             query: MY_CHILDREN_QUERY,
             variables: { first: 10 }
           });
-          
+
           if (existingData?.myChildren) {
             // Add the new child to the existing children list
             cache.writeQuery({
@@ -338,7 +338,8 @@ export default function OnboardingScreen() {
             if (inventoryError instanceof ApolloError) {
               throw new Error(`Failed to set initial inventory: ${inventoryError.message}`);
             } else {
-              throw new Error(`Failed to set initial inventory: ${inventoryError?.message || 'Unknown error'}`);
+              const errorMessage = inventoryError instanceof Error ? inventoryError.message : 'Unknown error';
+              throw new Error(`Failed to set initial inventory: ${errorMessage}`);
             }
           }
         }
@@ -387,7 +388,8 @@ export default function OnboardingScreen() {
         if (childError instanceof ApolloError) {
           throw new Error(`Failed to create child profile: ${childError.message}`);
         } else {
-          throw new Error(`Failed to create child profile: ${childError?.message || 'Unknown error'}`);
+          const errorMessage = childError instanceof Error ? childError.message : 'Unknown error';
+          throw new Error(`Failed to create child profile: ${errorMessage}`);
         }
       }
       
@@ -395,32 +397,33 @@ export default function OnboardingScreen() {
       if (__DEV__) {
         console.error('Error completing onboarding:', error);
       }
-      
+
       // Enhanced error handling with specific messaging for token issues
-      const isTokenError = error.message?.includes('Authentication') || error.message?.includes('token');
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const isTokenError = errorMsg.includes('Authentication') || errorMsg.includes('token');
       const errorTitle = isTokenError ? 'Session Expired' : 'Onboarding Error';
-      const errorMessage = isTokenError 
+      const errorMessage = isTokenError
         ? 'Your session has expired. Please sign in again to complete your setup.'
-        : `Failed to save your information: ${error.message || 'Unknown error'}. Please try again or contact support if the problem persists.`;
-      
-      const buttons = isTokenError 
+        : `Failed to save your information: ${errorMsg}. Please try again or contact support if the problem persists.`;
+
+      const buttons = isTokenError
         ? [
-            { text: 'Sign In Again', style: 'default', onPress: () => {
-              router.replace('/(auth)');
+            { text: 'Sign In Again', style: 'default' as const, onPress: () => {
+              router.replace('/(auth)' as any);
             }},
-            { text: 'Skip for Now', style: 'destructive', onPress: async () => {
+            { text: 'Skip for Now', style: 'destructive' as const, onPress: async () => {
               await complete();
               router.replace('/(tabs)');
             }}
           ]
         : [
-            { text: 'Try Again', style: 'default' },
-            { text: 'Skip for Now', style: 'destructive', onPress: async () => {
+            { text: 'Try Again', style: 'default' as const },
+            { text: 'Skip for Now', style: 'destructive' as const, onPress: async () => {
               await complete();
               router.replace('/(tabs)');
             }}
           ];
-      
+
       Alert.alert(errorTitle, errorMessage, buttons);
     } finally {
       setIsCompleting(false);
@@ -549,7 +552,7 @@ export default function OnboardingScreen() {
                     fontSize: 16,
                     padding: 8,
                     width: '100%',
-                  }}
+                  } as React.CSSProperties}
                 />
               </View>
             ) : (
@@ -570,7 +573,7 @@ export default function OnboardingScreen() {
           <Text style={[styles.label, { color: colors.textEmphasis }]}>Gender</Text>
           <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Dropdown
-              style={[styles.picker, { color: colors.text }]}
+              style={styles.picker}
               placeholderStyle={{ color: colors.placeholder }}
               selectedTextStyle={{ color: colors.text }}
               itemTextStyle={{ color: colors.text }}
@@ -663,7 +666,7 @@ export default function OnboardingScreen() {
             <Text style={[styles.label, { color: colors.textEmphasis }]}>Size</Text>
             <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Dropdown
-                style={[styles.picker, { color: colors.text }]}
+                style={styles.picker}
                 placeholderStyle={{ color: colors.placeholder }}
                 selectedTextStyle={{ color: colors.text }}
                 itemTextStyle={{ color: colors.text }}
@@ -703,7 +706,7 @@ export default function OnboardingScreen() {
             <Text style={[styles.label, { color: colors.textEmphasis }]}>Type</Text>
             <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Dropdown
-                style={[styles.picker, { color: colors.text }]}
+                style={styles.picker}
                 placeholderStyle={{ color: colors.placeholder }}
                 selectedTextStyle={{ color: colors.text }}
                 itemTextStyle={{ color: colors.text }}
@@ -725,7 +728,7 @@ export default function OnboardingScreen() {
             <Text style={[styles.label, { color: colors.textEmphasis }]}>Absorbency</Text>
             <View style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Dropdown
-                style={[styles.picker, { color: colors.text }]}
+                style={styles.picker}
                 placeholderStyle={{ color: colors.placeholder }}
                 selectedTextStyle={{ color: colors.text }}
                 itemTextStyle={{ color: colors.text }}
@@ -817,13 +820,13 @@ export default function OnboardingScreen() {
         <NestSyncCard
           variant={selectedPersona === UserPersona.OVERWHELMED_NEW_MOM ? "outlined" : "elevated"}
           padding="large"
-          style={[
+          style={StyleSheet.flatten([
             styles.personaCard,
-            selectedPersona === UserPersona.OVERWHELMED_NEW_MOM && {
+            selectedPersona === UserPersona.OVERWHELMED_NEW_MOM ? {
               borderColor: colors.tint,
               backgroundColor: colors.surface,
-            }
-          ]}
+            } : undefined
+          ])}
           onPress={() => handlePersonaSelection(UserPersona.OVERWHELMED_NEW_MOM)}
           testID="persona-overwhelmed-mom"
         >
@@ -843,13 +846,13 @@ export default function OnboardingScreen() {
         <NestSyncCard
           variant={selectedPersona === UserPersona.EFFICIENCY_DAD ? "outlined" : "elevated"}
           padding="large"
-          style={[
+          style={StyleSheet.flatten([
             styles.personaCard,
-            selectedPersona === UserPersona.EFFICIENCY_DAD && {
+            selectedPersona === UserPersona.EFFICIENCY_DAD ? {
               borderColor: colors.tint,
               backgroundColor: colors.surface,
-            }
-          ]}
+            } : undefined
+          ])}
           onPress={() => handlePersonaSelection(UserPersona.EFFICIENCY_DAD)}
           testID="persona-efficiency-dad"
         >

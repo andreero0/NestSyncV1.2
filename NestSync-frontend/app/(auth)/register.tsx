@@ -85,7 +85,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { signUp, isLoading, error, clearError } = useAuthStore();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -309,7 +309,7 @@ export default function RegisterScreen() {
                 textContentType="givenName"
                 editable={!isLoading}
                 error={errors.firstName?.message}
-                containerStyle={[styles.inputContainer, styles.nameInput]}
+                containerStyle={StyleSheet.flatten([styles.inputContainer, styles.nameInput])}
               />
             )}
           />
@@ -328,7 +328,7 @@ export default function RegisterScreen() {
                 textContentType="familyName"
                 editable={!isLoading}
                 error={errors.lastName?.message}
-                containerStyle={[styles.inputContainer, styles.nameInput]}
+                containerStyle={StyleSheet.flatten([styles.inputContainer, styles.nameInput])}
               />
             )}
           />

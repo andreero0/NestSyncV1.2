@@ -46,7 +46,7 @@ export default function LoginScreen() {
   const { signIn, isLoading, error, clearError } = useAuthStore();
   const { available: biometricsAvailable, enabled: biometricsEnabled, signIn: signInWithBiometrics } = useBiometrics();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
 
   const [showPassword, setShowPassword] = useState(false);
   const [biometricAttempted, setBiometricAttempted] = useState(false);
