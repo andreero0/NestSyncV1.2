@@ -31,7 +31,7 @@ interface SettingItem {
 
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
   const router = useRouter();
   
   // Privacy settings state

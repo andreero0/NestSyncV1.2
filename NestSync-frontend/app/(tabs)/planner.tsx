@@ -80,7 +80,7 @@ interface InventoryItem {
 
 export default function PlannerScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
   const params = useLocalSearchParams<{ filter?: FilterType; childId?: string; view?: PlannerView }>();
   
   const [currentView, setCurrentView] = useState<PlannerView>(params.view || 'planner');
@@ -336,10 +336,10 @@ export default function PlannerScreen() {
   };
   
   const getDaysColor = (item: InventoryItem) => {
-    if (item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry <= 3)) {
+    if (item.isExpired || (item.daysUntilExpiry != null && item.daysUntilExpiry <= 3)) {
       return NestSyncColors.trafficLight.critical;
     }
-    if (item.daysUntilExpiry !== null && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7) {
+    if (item.daysUntilExpiry != null && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7) {
       return NestSyncColors.trafficLight.low;
     }
     return NestSyncColors.trafficLight.stocked;

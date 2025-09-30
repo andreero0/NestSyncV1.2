@@ -54,7 +54,7 @@ interface QuickAction {
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
   const router = useRouter();
   
   // State for selected child with persistence
@@ -177,7 +177,7 @@ export default function HomeScreen() {
 
   // Process recent activity from usage logs with limit
   const recentActivity: RecentActivity[] = useMemo(() => {
-    const activities = usageLogsData?.getUsageLogs?.edges?.map((edge, index) => {
+    const activities = usageLogsData?.getUsageLogs?.edges?.map((edge: any, index: number) => {
       const log = edge.node;
       // Generate safe ID with better fallback
       const safeId = log.id || `activity-${Date.now()}-${index}`;
@@ -498,7 +498,8 @@ export default function HomeScreen() {
 
           {/* Traffic Light Dashboard - only show when children exist */}
           {!noChildrenState && (
-            <ThemedView style={styles.trafficLightSection} ref={trafficLightRef}>
+            <View ref={trafficLightRef}>
+            <ThemedView style={styles.trafficLightSection}>
               {/* Section Header */}
               <ThemedText type="subtitle" style={styles.sectionTitle}>
                 Inventory Status
@@ -561,6 +562,7 @@ export default function HomeScreen() {
                 </View>
               )}
             </ThemedView>
+            </View>
           )}
 
           <ThemedView style={styles.section}>
@@ -579,7 +581,7 @@ export default function HomeScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={action.title}
                 >
-                  <IconSymbol name={action.icon} size={24} color={action.color} />
+                  <IconSymbol name={action.icon as any} size={24} color={action.color} />
                   <ThemedText style={[styles.quickActionText, { color: colors.text }]}>
                     {action.title}
                   </ThemedText>
@@ -598,7 +600,7 @@ export default function HomeScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={action.title}
                 >
-                  <IconSymbol name={action.icon} size={24} color={action.color} />
+                  <IconSymbol name={action.icon as any} size={24} color={action.color} />
                   <ThemedText style={[styles.quickActionText, { color: colors.text }]}>
                     {action.title}
                   </ThemedText>
@@ -683,7 +685,6 @@ export default function HomeScreen() {
           visible={quickLogModalVisible}
           onClose={() => setQuickLogModalVisible(false)}
           onSuccess={handleModalSuccess}
-          childId={selectedChildId}
         />
         
         <AddInventoryModal
