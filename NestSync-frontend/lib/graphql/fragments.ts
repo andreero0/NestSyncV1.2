@@ -164,7 +164,10 @@ export const NOTIFICATION_PREFERENCES_FRAGMENT = gql`
     expiryWarningDays
     healthTipsEnabled
     marketingEnabled
-    deviceTokens
+    deviceTokens {
+      deviceToken
+      platform
+    }
     userTimezone
     dailyNotificationLimit
     notificationConsentGranted
