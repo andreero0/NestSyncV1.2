@@ -9,6 +9,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { apolloClient } from '../lib/graphql/client';
 import {
   GET_REORDER_SUGGESTIONS,
+  GET_REORDER_SUGGESTIONS_SIMPLE,
   GET_RETAILER_COMPARISON,
   GET_SUBSCRIPTION_STATUS,
   GET_SUBSCRIPTION_STATUS_SIMPLE,
@@ -33,6 +34,7 @@ import {
   type EmergencyReorderAlert,
 } from '../lib/graphql/reorder-subscriptions';
 import { StorageHelpers } from '../hooks/useUniversalStorage';
+import { cacheUtils } from '../lib/graphql/cacheUtils';
 
 // Core interfaces
 export interface ReorderSuggestion {
@@ -461,34 +463,117 @@ export const useReorderStore = create<ReorderState>()(
       deliveryPreference: 'STANDARD',
     },
 
-    // Load ML-powered reorder suggestions
+    // Load ML-powered reorder suggestions with enhanced error handling
     loadReorderSuggestions: async (childId: string) => {
       set({ isLoadingSuggestions: true, error: null });
 
-      try {
-        const { data } = await apolloClient.query({
-          query: GET_REORDER_SUGGESTIONS,
-          variables: { childId, limit: 10 },
-          fetchPolicy: 'cache-and-network',
-        });
+      // Create a timeout promise to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 8000); // 8 second timeout
+      });
 
+      try {
+        // Try simplified query first to prevent Apollo Client invariant violations
+        let result: any;
+        try {
+          const simpleQueryPromise = apolloClient.query({
+            query: GET_REORDER_SUGGESTIONS_SIMPLE,
+            variables: { childId, limit: 10 },
+            fetchPolicy: 'network-only',
+            errorPolicy: 'all',
+          });
+
+          result = await Promise.race([simpleQueryPromise, timeoutPromise]);
+          console.log('Successfully used simplified reorder suggestions query');
+        } catch (simpleError) {
+          console.warn('Simplified query failed, trying complex query:', simpleError);
+
+          // Fallback to complex query if simple query fails
+          const complexQueryPromise = apolloClient.query({
+            query: GET_REORDER_SUGGESTIONS,
+            variables: { childId, limit: 10 },
+            fetchPolicy: 'network-only',
+            errorPolicy: 'all',
+          });
+
+          result = await Promise.race([complexQueryPromise, timeoutPromise]);
+        }
+
+        const { data, errors } = result as any;
+
+        // Log any GraphQL errors but don't fail completely
+        if (errors && errors.length > 0) {
+          console.warn('GraphQL errors in reorder suggestions:', errors);
+        }
+
+        // Handle successful response with data
         if (data?.getReorderSuggestions) {
+          // Ensure the data is an array and has valid structure
+          const suggestions = Array.isArray(data.getReorderSuggestions)
+            ? data.getReorderSuggestions
+            : [];
+
+          // Cache the suggestions for offline use
+          try {
+            await StorageHelpers.setItem(
+              `reorder_suggestions_${childId}`,
+              JSON.stringify({
+                suggestions,
+                timestamp: Date.now()
+              }),
+              false
+            );
+          } catch (cacheError) {
+            console.warn('Failed to cache suggestions:', cacheError);
+          }
+
           set({
-            suggestions: data.getReorderSuggestions,
+            suggestions,
             isLoadingSuggestions: false,
+            error: null,
           });
         } else {
+          // Handle null/undefined response (no suggestions available)
           set({
             suggestions: [],
             isLoadingSuggestions: false,
+            error: null,
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to load reorder suggestions:', error);
+
+        // Provide specific error messages based on error type
+        let userMessage = 'Failed to load reorder suggestions. Please try again.';
+
+        if (error.message === 'Request timeout') {
+          userMessage = 'Request timed out. Please check your connection and try again.';
+        } else if (error.networkError) {
+          userMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message?.includes('Invariant Violation')) {
+          userMessage = 'Data loading issue. Please refresh the app and try again.';
+        }
+
         set({
-          error: 'Failed to load reorder suggestions. Please try again.',
+          error: userMessage,
           isLoadingSuggestions: false,
+          suggestions: [], // Ensure we always have an empty array instead of undefined
         });
+
+        // Try to use cached data if available
+        try {
+          const cachedSuggestions = await StorageHelpers.getItem(`reorder_suggestions_${childId}`, false);
+          if (cachedSuggestions) {
+            const parsed = JSON.parse(cachedSuggestions);
+            const isExpired = Date.now() - parsed.timestamp > 30 * 60 * 1000; // 30 minutes
+            if (!isExpired && parsed.suggestions) {
+              set({ suggestions: parsed.suggestions, error: null });
+              console.log('Using cached reorder suggestions');
+            }
+          }
+        } catch (cacheError) {
+          console.warn('Failed to load cached suggestions:', cacheError);
+        }
       }
     },
 
@@ -496,12 +581,21 @@ export const useReorderStore = create<ReorderState>()(
     loadRetailerComparison: async (productId: string, quantity = 1) => {
       set({ isLoadingComparison: true, error: null });
 
+      // Create timeout for retailer comparison
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Retailer comparison timeout')), 6000);
+      });
+
       try {
-        const { data } = await apolloClient.query({
+        const queryPromise = apolloClient.query({
           query: GET_RETAILER_COMPARISON,
           variables: { productId, quantity },
-          fetchPolicy: 'cache-and-network',
+          fetchPolicy: 'cache-first',
+          errorPolicy: 'all',
         });
+
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+        const { data } = result;
 
         if (data?.getRetailerComparison) {
           set({
@@ -527,9 +621,14 @@ export const useReorderStore = create<ReorderState>()(
     loadSubscriptionStatus: async () => {
       set({ isLoadingSubscription: true, error: null });
 
+      // Create a timeout promise to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Subscription request timeout')), 6000); // 6 second timeout
+      });
+
       try {
         // Try simplified query first to prevent invariant violations
-        const result = await apolloClient.query({
+        const queryPromise = apolloClient.query({
           query: GET_SUBSCRIPTION_STATUS_SIMPLE,
           fetchPolicy: 'network-only',
           errorPolicy: 'all', // Allow all responses including null/undefined
@@ -546,6 +645,8 @@ export const useReorderStore = create<ReorderState>()(
           };
         });
 
+        // Race between query and timeout
+        const result = await Promise.race([queryPromise, timeoutPromise]);
         const { data } = result;
 
         if (data?.getSubscriptionStatus) {
@@ -590,8 +691,13 @@ export const useReorderStore = create<ReorderState>()(
             error: null,
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to load subscription status:', error);
+
+        // Handle timeout specifically without blocking UI
+        if (error.message?.includes('timeout')) {
+          console.warn('Subscription status request timed out, using default state');
+        }
 
         // Set safe default state instead of error to allow page to load
         set({
@@ -621,12 +727,15 @@ export const useReorderStore = create<ReorderState>()(
         const { data } = await apolloClient.mutate({
           mutation: CREATE_ORDER,
           variables: { input },
+          context: { timeout: 12000 }, // 12 second timeout for order creation
         });
 
         if (data?.createOrder?.success) {
           const result = data.createOrder;
           if (result.order) {
             set({ activeOrder: result.order });
+            // Invalidate relevant caches after successful order
+            await cacheUtils.smartCacheRefresh('CREATE_ORDER', input);
           }
           set({ isCreatingOrder: false });
           return {

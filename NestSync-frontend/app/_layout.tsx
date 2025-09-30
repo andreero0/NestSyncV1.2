@@ -5,6 +5,18 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ApolloProvider } from '@apollo/client';
+import { Platform } from 'react-native';
+
+// Platform-specific Stripe import
+let StripeProvider: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    const { StripeProvider: StripeProviderImport } = require('@stripe/stripe-react-native');
+    StripeProvider = StripeProviderImport;
+  } catch (error) {
+    console.warn('Stripe React Native not available:', error);
+  }
+}
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
@@ -218,6 +230,11 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
+  // Stripe configuration for Canadian users
+  const stripePublishableKey = __DEV__
+    ? 'pk_test_51H...' // TODO: Replace with actual test key
+    : 'pk_live_51H...'; // TODO: Replace with actual live key
+
   useEffect(() => {
     if (error) {
       // Critical font loading error - should be logged in production
@@ -235,7 +252,8 @@ export default function RootLayout() {
     return null; // The splash screen will continue to be shown
   }
 
-  return (
+  // Wrapper component for platform-specific Stripe setup
+  const AppContent = () => (
     <ApolloProvider client={apolloClient}>
       <NestSyncThemeProvider defaultTheme="system">
         <UnitPreferenceProvider>
@@ -246,6 +264,22 @@ export default function RootLayout() {
       </NestSyncThemeProvider>
     </ApolloProvider>
   );
+
+  // Only wrap with StripeProvider on native platforms
+  if (Platform.OS !== 'web' && StripeProvider) {
+    return (
+      <StripeProvider
+        publishableKey={stripePublishableKey}
+        merchantIdentifier="merchant.com.nestsync" // Required for Apple Pay
+        urlScheme="nestsync" // Required for 3D Secure and bank redirects
+      >
+        <AppContent />
+      </StripeProvider>
+    );
+  }
+
+  // Web fallback without Stripe
+  return <AppContent />;
 }
 
 const styles = StyleSheet.create({

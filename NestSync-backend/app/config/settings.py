@@ -39,8 +39,8 @@ class Settings(BaseSettings):
     # Supabase Configuration
     # =============================================================================
     supabase_url: str = Field(..., env="SUPABASE_URL")
-    supabase_key: str = Field(..., env="SUPABASE_KEY")
-    supabase_service_key: str = Field(..., env="SUPABASE_SERVICE_KEY")
+    supabase_key: str = Field(..., env="SUPABASE_ANON_KEY")
+    supabase_service_key: str = Field(..., env="SUPABASE_SERVICE_ROLE_KEY")
     supabase_jwt_secret: str = Field(..., env="SUPABASE_JWT_SECRET")
     
     # =============================================================================

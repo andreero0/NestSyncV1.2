@@ -123,6 +123,20 @@ export default function ReorderSuggestionsScreen({}: ReorderSuggestionsScreenPro
     );
   };
 
+  // Handle navigation to diaper logging (main app functionality)
+  const handleLogDiaperChange = () => {
+    router.push('/(tabs)/');
+  };
+
+  // Handle ML learning explanation
+  const handleLearnMore = () => {
+    Alert.alert(
+      'How Smart Reordering Works',
+      'Our AI analyzes your baby\'s diaper usage patterns to predict when you\'ll run out of supplies. The more you log, the more accurate our predictions become.\n\n• Tracks daily usage patterns\n• Predicts run-out dates\n• Finds best Canadian prices\n• Suggests optimal ordering times\n\nAll data is processed in Canada and PIPEDA compliant.',
+      [{ text: 'Got It', style: 'default' }]
+    );
+  };
+
   // Handle child switch (if needed in future)
   const handleChildSwitch = (childId: string) => {
     setSelectedChildId(childId);
@@ -330,6 +344,8 @@ export default function ReorderSuggestionsScreen({}: ReorderSuggestionsScreenPro
           initialFilter="all"
           context="home"
           onUpgradeRequired={handleUpgradeRequired}
+          onLogDiaperChange={handleLogDiaperChange}
+          onLearnMore={handleLearnMore}
         />
       </SafeAreaView>
     </SafeAreaProvider>

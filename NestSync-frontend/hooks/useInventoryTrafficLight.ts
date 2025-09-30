@@ -1,11 +1,13 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@apollo/client';
 import { useRouter } from 'expo-router';
 import { GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/queries';
 import { NestSyncColors } from '@/constants/Colors';
 import { StatusOverviewCardProps } from '@/components/cards/StatusOverviewCard';
+import { apolloClient } from '@/lib/graphql/client';
 
 // Interface for processed traffic light data
+// Numbers represent total quantities (diapers) not item counts
 export interface TrafficLightData {
   critical: number;
   low: number;
@@ -30,22 +32,29 @@ export interface UseInventoryTrafficLightResult {
   trafficLightData: TrafficLightData;
   loading: boolean;
   error: any;
+  applyOptimisticUpdate: (itemId: string, quantityChange: number) => void;
+  forceRefresh: () => void;
 }
 
 /**
  * Custom hook to process inventory data into traffic light categories
  * Transforms raw inventory data into 4-card status system following psychology-driven design
+ * Counts actual diaper quantities, not inventory records
  */
 export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLightResult {
   const router = useRouter();
 
-  // Fetch inventory data from GraphQL
+  // Optimistic update ref to track pending changes
+  const optimisticUpdatesRef = useRef<Map<string, number>>(new Map());
+
+  // Fetch inventory data from GraphQL with optimized settings
   const {
     data: inventoryData,
     loading,
     error,
     startPolling,
-    stopPolling
+    stopPolling,
+    refetch
   } = useQuery(GET_INVENTORY_ITEMS_QUERY, {
     variables: {
       childId,
@@ -53,22 +62,47 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
       limit: 500 // Increased from 100 to 500 for development
     },
     skip: !childId,
-    pollInterval: 60000, // Poll every 60 seconds by default
-    errorPolicy: 'none', // Fail fast on network errors to prevent infinite loops
+    pollInterval: 15000, // Poll every 15 seconds for faster updates
+    errorPolicy: 'all', // Allow partial data to prevent blank states
     notifyOnNetworkStatusChange: true, // Update loading state on network changes
-    fetchPolicy: 'cache-first', // Use cache when network is unavailable
+    fetchPolicy: 'cache-and-network', // Get fresh data while showing cache
+    context: { timeout: 6000 }, // 6 second timeout for inventory queries
   });
 
-  // Handle polling behavior based on error state
+  // Optimistic update function for immediate inventory changes
+  const applyOptimisticUpdate = useCallback((itemId: string, quantityChange: number) => {
+    optimisticUpdatesRef.current.set(itemId, quantityChange);
+
+    // Trigger a refetch after a short delay to get real data
+    setTimeout(() => {
+      refetch();
+      optimisticUpdatesRef.current.delete(itemId);
+    }, 2000);
+  }, [refetch]);
+
+  // Handle polling behavior based on error state with smarter retry logic
   useEffect(() => {
-    if (error) {
-      // Stop polling when there's an error to prevent infinite retry loops
-      stopPolling();
-    } else if (!loading && childId) {
-      // Resume polling when error is resolved and we have a valid childId
-      startPolling(60000);
+    if (error && error.networkError) {
+      // For network errors, use exponential backoff
+      const retryDelay = Math.min(15000 * Math.pow(2, 0), 60000); // Start with 15s, max 60s
+      const timeoutId = setTimeout(() => {
+        if (childId) {
+          startPolling(15000);
+        }
+      }, retryDelay);
+
+      return () => clearTimeout(timeoutId);
+    } else if (!loading && childId && !error) {
+      // Resume normal polling when error is resolved
+      startPolling(15000);
     }
   }, [error, loading, childId, startPolling, stopPolling]);
+
+  // Force refresh function for manual updates
+  const forceRefresh = useCallback(() => {
+    optimisticUpdatesRef.current.clear();
+    refetch();
+  }, [refetch]);
 
   // Debug logging for development
   useEffect(() => {
@@ -92,36 +126,37 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
     }
   }, [childId, loading, error, inventoryData]);
 
-  // Process inventory data into traffic light categories
+  // Process inventory data into traffic light categories with optimistic updates
   const trafficLightData = useMemo((): TrafficLightData => {
     if (!inventoryData?.getInventoryItems?.edges) {
       return { critical: 0, low: 0, wellStocked: 0, pending: 0 };
     }
 
     const items: InventoryItem[] = inventoryData.getInventoryItems.edges.map((edge: any) => edge.node);
-    
-    // Filter out items with no remaining quantity (empty items)
-    const activeItems = items.filter(item => item.quantityRemaining > 0);
-    
-    const processed = activeItems.reduce(
+
+    const processed = items.reduce(
       (acc, item) => {
-        // Critical items: ≤3 days remaining OR expired
-        if (item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry <= 3)) {
-          acc.critical += 1;
+        // Apply optimistic updates if available
+        const optimisticChange = optimisticUpdatesRef.current.get(item.id) || 0;
+        const quantity = Math.max(0, (item.quantityRemaining || 0) + optimisticChange);
+
+        // Critical items: 0 quantity OR ≤3 days remaining OR expired
+        if (quantity === 0 || item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry <= 3)) {
+          acc.critical += quantity;
         }
-        // Low stock items: 4-7 days remaining
-        else if (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7) {
-          acc.low += 1;
+        // Low stock items: 4-7 days remaining (only if quantity > 0)
+        else if (quantity > 0 && item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7) {
+          acc.low += quantity;
         }
-        // Well stocked items: >7 days remaining
-        else if (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry > 7) {
-          acc.wellStocked += 1;
+        // Well stocked items: >7 days remaining (only if quantity > 0)
+        else if (quantity > 0 && item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry > 7) {
+          acc.wellStocked += quantity;
         }
-        // Items without expiry data are considered well stocked if they have quantity
-        else if (item.daysUntilExpiry === null || item.daysUntilExpiry === undefined) {
-          acc.wellStocked += 1;
+        // Items without expiry data are considered well stocked if they have quantity > 0
+        else if (quantity > 0 && (item.daysUntilExpiry === null || item.daysUntilExpiry === undefined)) {
+          acc.wellStocked += quantity;
         }
-        
+
         return acc;
       },
       { critical: 0, low: 0, wellStocked: 0, pending: 0 }
@@ -141,7 +176,7 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
         statusType: 'critical',
         title: 'Critical Items',
         count: trafficLightData.critical,
-        description: 'Items need attention soon',
+        description: 'Diapers need attention soon',
         iconName: 'exclamationmark.triangle.fill', // SF Symbol name
         borderColor: NestSyncColors.trafficLight.critical, // Critical Red from traffic light system
         onPress: () => {
@@ -153,15 +188,15 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
             }
           });
         },
-        accessibilityLabel: `Critical items: ${trafficLightData.critical} items need attention soon`,
-        accessibilityHint: 'Tap to view items that expire within 3 days',
+        accessibilityLabel: `Critical items: ${trafficLightData.critical} diapers need attention soon`,
+        accessibilityHint: 'Tap to view diapers that expire within 3 days',
         testID: 'critical-items-card',
       },
       {
         statusType: 'low',
         title: 'Low Stock',
         count: trafficLightData.low,
-        description: 'Plan to restock these items',
+        description: 'Plan to restock these diapers',
         iconName: 'clock.fill', // SF Symbol name
         borderColor: NestSyncColors.trafficLight.low, // Low Stock Amber from traffic light system
         onPress: () => {
@@ -173,8 +208,8 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
             }
           });
         },
-        accessibilityLabel: `Low stock: ${trafficLightData.low} items need restocking`,
-        accessibilityHint: 'Tap to view items that expire in 4 to 7 days',
+        accessibilityLabel: `Low stock: ${trafficLightData.low} diapers need restocking`,
+        accessibilityHint: 'Tap to view diapers that expire in 4 to 7 days',
         testID: 'low-stock-card',
       },
       {
@@ -193,8 +228,8 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
             }
           });
         },
-        accessibilityLabel: `Well stocked: ${trafficLightData.wellStocked} items are well prepared`,
-        accessibilityHint: 'Tap to view items with more than 7 days remaining',
+        accessibilityLabel: `Well stocked: ${trafficLightData.wellStocked} diapers are well prepared`,
+        accessibilityHint: 'Tap to view diapers with more than 7 days remaining',
         testID: 'well-stocked-card',
       },
       {
@@ -213,7 +248,7 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
             }
           });
         },
-        accessibilityLabel: `Pending orders: ${trafficLightData.pending} items on the way`,
+        accessibilityLabel: `Pending orders: ${trafficLightData.pending} diapers on the way`,
         accessibilityHint: 'Tap to view incoming inventory orders',
         testID: 'pending-orders-card',
       },
@@ -234,6 +269,9 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
     loading,
     // Only report error if we have no data at all
     error: error && !inventoryData?.getInventoryItems ? error : null,
+    // Expose optimistic update functions for components to use
+    applyOptimisticUpdate,
+    forceRefresh,
   };
 }
 
@@ -245,14 +283,14 @@ export function getTrafficLightSummary(data: TrafficLightData): string {
   const total = data.critical + data.low + data.wellStocked + data.pending;
   
   if (total === 0) {
-    return 'No inventory items found';
+    return 'No diapers in inventory';
   }
   
   const parts = [];
-  if (data.critical > 0) parts.push(`${data.critical} critical`);
-  if (data.low > 0) parts.push(`${data.low} low stock`);
-  if (data.wellStocked > 0) parts.push(`${data.wellStocked} well stocked`);
-  if (data.pending > 0) parts.push(`${data.pending} pending`);
+  if (data.critical > 0) parts.push(`${data.critical} critical diapers`);
+  if (data.low > 0) parts.push(`${data.low} low stock diapers`);
+  if (data.wellStocked > 0) parts.push(`${data.wellStocked} well stocked diapers`);
+  if (data.pending > 0) parts.push(`${data.pending} pending diapers`);
   
   return parts.join(', ');
 }

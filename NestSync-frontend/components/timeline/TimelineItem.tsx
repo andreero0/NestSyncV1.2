@@ -145,15 +145,15 @@ export function TimelineItem({
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {activityColors.displayName}
+            {activityColors.displayName || 'Activity'}
           </Text>
-          {item.details && (
+          {item.details && typeof item.details === 'string' && item.details.trim().length > 0 && (
             <Text
               style={[styles.secondaryText, { color: colors.textSecondary }]}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {item.details}
+              {item.details.trim().length > 50 ? `${item.details.trim().substring(0, 50)}...` : item.details.trim()}
             </Text>
           )}
         </View>

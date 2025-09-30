@@ -29,6 +29,7 @@ import { IconSymbol } from '../ui/IconSymbol';
 import { NestSyncButton } from '../ui/NestSyncButton';
 import { PremiumFeatureGate } from './PremiumFeatureGate';
 import { ReorderSuggestionCard } from './ReorderSuggestionCard';
+import { EducationalEmptyState } from './EducationalEmptyState';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Colors, NestSyncColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -53,6 +54,8 @@ export interface ReorderSuggestionsContainerProps {
   limit?: number;
   showPagination?: boolean;
   footer?: React.ReactNode;
+  onLogDiaperChange?: () => void;
+  onLearnMore?: () => void;
 }
 
 type FilterType = 'all' | 'critical' | 'low' | 'pending';
@@ -193,6 +196,8 @@ export function ReorderSuggestionsContainer({
   limit,
   showPagination = true,
   footer,
+  onLogDiaperChange,
+  onLearnMore,
 }: ReorderSuggestionsContainerProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -368,47 +373,61 @@ export function ReorderSuggestionsContainer({
   }
 
   // =============================================================================
-  // EMPTY STATE
+  // EMPTY STATE - Enhanced Educational Experience
   // =============================================================================
 
   const allSuggestions = suggestions.length > 0 ? suggestions : (suggestionsData?.getReorderSuggestions || []);
 
   if (allSuggestions.length === 0) {
+    // Simulate progressive enhancement data (in real implementation, this would come from usage analytics)
+    const daysOfData = 0; // Could be calculated from actual usage data
+    const hasUsageData = false; // Could check if user has logged any diaper changes
+    const confidenceLevel = 0; // Could be calculated from ML model confidence
+
+    // Default handlers for educational actions
+    const handleLogDiaperChange = onLogDiaperChange || (() => {
+      console.log('Navigate to diaper logging screen');
+      // In real implementation: router.push('/(tabs)/index') or similar
+    });
+
+    const handleLearnMore = onLearnMore || (() => {
+      console.log('Show ML learning modal or help screen');
+      // In real implementation: show modal with detailed explanation
+    });
+
+    const handleTryDemo = () => {
+      console.log('Enable demo mode with interactive examples');
+      // Demo mode is handled within EducationalEmptyState component
+    };
+
     return (
       <ThemedView style={styles.container}>
-        <View style={styles.header}>
-          <ThemedText type="subtitle" style={[styles.title, { color: colors.text }]}>
-            Smart Reorder Suggestions
-          </ThemedText>
-          <View style={styles.mlBadge}>
-            <IconSymbol name="brain.head.profile" size={16} color={NestSyncColors.accent.purple} />
-            <ThemedText style={[styles.mlText, { color: NestSyncColors.accent.purple }]}>
-              ML-Powered
+        {/* Header - Keep for consistency when not in compact mode */}
+        {!compact && (
+          <View style={styles.header}>
+            <ThemedText type="subtitle" style={[styles.title, { color: colors.text }]}>
+              Smart Reorder Suggestions
             </ThemedText>
+            <View style={styles.mlBadge}>
+              <IconSymbol name="brain.head.profile" size={16} color={NestSyncColors.accent.purple} />
+              <ThemedText style={[styles.mlText, { color: NestSyncColors.accent.purple }]}>
+                ML-Powered
+              </ThemedText>
+            </View>
           </View>
-        </View>
+        )}
 
-        <View style={styles.emptyContainer}>
-          <IconSymbol
-            name="sparkles"
-            size={64}
-            color={colors.textSecondary}
-          />
-          <ThemedText type="defaultSemiBold" style={[styles.emptyTitle, { color: colors.text }]}>
-            No Suggestions Yet
-          </ThemedText>
-          <ThemedText style={[styles.emptyMessage, { color: colors.textSecondary }]}>
-            Our ML system is learning your usage patterns.{'\n'}
-            Log a few diaper changes to get personalized suggestions.
-          </ThemedText>
-          <NestSyncButton
-            title="Refresh"
-            onPress={handleRefresh}
-            variant="outline"
-            size="medium"
-            style={styles.refreshButton}
-          />
-        </View>
+        {/* Enhanced Educational Empty State */}
+        <EducationalEmptyState
+          childId={childId}
+          daysOfData={daysOfData}
+          hasUsageData={hasUsageData}
+          confidenceLevel={confidenceLevel}
+          onLogDiaperChange={handleLogDiaperChange}
+          onLearnMore={handleLearnMore}
+          onTryDemo={handleTryDemo}
+          onRefresh={handleRefresh}
+        />
       </ThemedView>
     );
   }

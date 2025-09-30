@@ -444,9 +444,9 @@ Key test fixtures available:
 #### Development (.env.example)
 ```bash
 # Stripe Test Keys
-STRIPE_PUBLISHABLE_KEY=pk_test_XXXXXXXXXXXXXXXXXXXXXXXX
+STRIPE_PUBLISHABLE_KEY=pk_test_[your-test-publishable-key]
 STRIPE_SECRET_KEY=sk_test_EXAMPLE_REPLACE_WITH_YOUR_TEST_KEY
-STRIPE_WEBHOOK_SECRET=whsec_XXXXXXXXXXXXXXXXXXXXXXXX
+STRIPE_WEBHOOK_SECRET=whsec_[your-webhook-secret]
 
 # Subscription Price IDs
 STRIPE_BASIC_PRICE_ID=price_test_basic
@@ -461,9 +461,9 @@ WALMART_CA_PARTNER_ID=your-partner-id
 #### Production (.env.production.template)
 ```bash
 # Stripe Live Keys
-STRIPE_PUBLISHABLE_KEY=pk_live_XXXXXXXXXXXXXXXXXXXXXXXX
+STRIPE_PUBLISHABLE_KEY=pk_live_[your-live-publishable-key]
 STRIPE_SECRET_KEY=sk_live_EXAMPLE_REPLACE_WITH_YOUR_LIVE_KEY
-STRIPE_WEBHOOK_SECRET=whsec_XXXXXXXXXXXXXXXXXXXXXXXX
+STRIPE_WEBHOOK_SECRET=whsec_[your-live-webhook-secret]
 
 # Production Price IDs
 STRIPE_BASIC_PRICE_ID=price_live_basic

@@ -10,6 +10,8 @@ import {
   createHttpLink,
   from,
   split,
+  ApolloLink,
+  Observable,
 } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { ErrorLink } from '@apollo/client/link/error';
@@ -40,13 +42,17 @@ if (__DEV__) {
 }
 
 // GraphQL endpoint configuration
+// In development, use environment variable for mobile devices, fallback to localhost for web
 const GRAPHQL_ENDPOINT = __DEV__
-  ? 'http://localhost:8001/graphql'  // Development backend - using localhost for testing
+  ? (process.env.EXPO_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/graphql')  // Development backend - env var for iOS/Android, localhost for web
   : 'https://nestsync-api.railway.app/graphql'; // Production endpoint
 
 // WebSocket endpoint configuration for subscriptions
+// In development, derive from GraphQL URL or use localhost
 const GRAPHQL_WS_ENDPOINT = __DEV__
-  ? 'ws://localhost:8001/subscriptions'  // Development WebSocket endpoint
+  ? (process.env.EXPO_PUBLIC_GRAPHQL_URL
+      ? process.env.EXPO_PUBLIC_GRAPHQL_URL.replace('http://', 'ws://').replace('/graphql', '/subscriptions')
+      : 'ws://localhost:8001/subscriptions')  // Development WebSocket endpoint
   : 'wss://nestsync-api.railway.app/subscriptions'; // Production WebSocket endpoint
 
 // React Native polyfills for text streaming (required for subscriptions)
@@ -643,11 +649,62 @@ const splitLink = split(
   ])
 );
 
+// Create timeout link for global query timeout handling
+const timeoutLink = new ApolloLink((operation, forward) => {
+  // Default timeout of 8 seconds for all operations
+  const timeout = operation.getContext().timeout || 8000;
+
+  return new Observable(observer => {
+    let handle: NodeJS.Timeout;
+    let cancelled = false;
+
+    const timeoutHandler = () => {
+      if (!cancelled) {
+        cancelled = true;
+        observer.error(new Error(
+          `Query timeout: ${operation.operationName || 'Unknown'} took longer than ${timeout}ms`
+        ));
+      }
+    };
+
+    handle = setTimeout(timeoutHandler, timeout);
+
+    const subscription = forward(operation).subscribe({
+      next: (result) => {
+        if (!cancelled) {
+          clearTimeout(handle);
+          observer.next(result);
+        }
+      },
+      error: (error) => {
+        if (!cancelled) {
+          clearTimeout(handle);
+          observer.error(error);
+        }
+      },
+      complete: () => {
+        if (!cancelled) {
+          clearTimeout(handle);
+          observer.complete();
+        }
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+      subscription.unsubscribe();
+    };
+  });
+});
+
 // Create Apollo Client with split link for HTTP and WebSocket support
 export const apolloClient = new ApolloClient({
   link: from([
     // Error logging should come first to catch all errors
     errorLoggingLink,
+    // Global timeout handling
+    timeoutLink,
     // Split link routes operations appropriately
     splitLink,
   ]),
@@ -771,17 +828,20 @@ export const apolloClient = new ApolloClient({
   }),
   defaultOptions: {
     watchQuery: {
-      errorPolicy: 'none', // Fail fast on errors for better error detection
+      errorPolicy: 'all', // Allow partial data and handle errors gracefully
       notifyOnNetworkStatusChange: true,
-      fetchPolicy: 'cache-and-network', // Fetch fresh data while using cache
+      fetchPolicy: 'cache-first', // Prioritize cache for better performance
+      context: { timeout: 8000 }, // 8 second timeout for watch queries
     },
     query: {
-      errorPolicy: 'none', // Clean error handling
-      fetchPolicy: 'cache-and-network', // Always get fresh data for MY_CHILDREN_QUERY
+      errorPolicy: 'all', // Handle GraphQL errors gracefully, allow partial data
+      fetchPolicy: 'cache-first', // Use cache when available for better performance
+      context: { timeout: 8000 }, // 8 second timeout for queries
     },
     mutate: {
-      errorPolicy: 'none', // Clean error handling for mutations - critical for onboarding
+      errorPolicy: 'none', // Keep strict error handling for mutations - critical for onboarding
       fetchPolicy: 'no-cache', // Always execute mutations fresh
+      context: { timeout: 10000 }, // 10 second timeout for mutations
     },
   },
   devtools: {

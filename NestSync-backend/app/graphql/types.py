@@ -763,6 +763,13 @@ class NotificationStatusEnum(Enum):
 
 
 @strawberry.type
+class DeviceToken:
+    """Device token for push notifications"""
+    device_token: str
+    platform: str  # "ios", "android", "web"
+
+
+@strawberry.type
 class NotificationPreferences:
     """User notification preferences"""
     id: strawberry.ID
@@ -785,7 +792,7 @@ class NotificationPreferences:
     expiry_warning_days: Optional[int] = None
     health_tips_enabled: bool
     marketing_enabled: bool
-    device_tokens: List[str]
+    device_tokens: List[DeviceToken]
     user_timezone: str
     daily_notification_limit: int
     notification_consent_granted: bool
@@ -1034,6 +1041,7 @@ __all__ = [
     "DashboardStats",
 
     # Notification Types
+    "DeviceToken",
     "NotificationPreferences",
     "NotificationQueue",
     "NotificationDeliveryLog",

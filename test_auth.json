@@ -1,0 +1,9 @@
+{
+  "query": "mutation SignIn($input: SignInInput!) { signIn(input: $input) { __typename ... on AuthResponse { success message error user { id email firstName lastName } session { accessToken refreshToken expiresIn } } } }",
+  "variables": {
+    "input": {
+      "email": "parents@nestsync.com",
+      "password": "Shazam11#"
+    }
+  }
+}

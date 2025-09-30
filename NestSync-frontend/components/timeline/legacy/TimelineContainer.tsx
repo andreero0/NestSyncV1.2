@@ -14,10 +14,9 @@ import Animated, {
   useAnimatedStyle,
   withDecay,
   withSpring,
-  runOnJS,
   interpolate,
 } from 'react-native-reanimated';
-import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -25,16 +24,14 @@ import { Colors } from '@/constants/Colors';
 import type {
   TimelineEvent,
   TimePeriod,
-  TimelineRange,
   TimelineContainerProps,
 } from '@/types/timeline';
 
-import { TimelineAxis } from './TimelineAxis';
+// import { TimelineAxis } from './TimelineAxis'; // File missing
 import { TimelineEvent as TimelineEventComponent } from './TimelineEvent';
 import { TimePeriodHeader } from './TimePeriodHeader';
-import { 
-  calculateTimelineLayout, 
-  findNearestEventPosition, 
+import {
+  findNearestEventPosition,
   calculateTimePosition,
   TIMELINE_CONSTANTS,
 } from '@/utils/timelineHelpers';
@@ -285,4 +282,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { TimelineContainer };
+// Export already defined above

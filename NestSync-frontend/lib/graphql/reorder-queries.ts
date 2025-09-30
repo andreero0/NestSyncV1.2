@@ -6,7 +6,30 @@
 
 import { gql } from '@apollo/client';
 
-// Get ML-powered reorder suggestions for a child
+// Simplified version to prevent Apollo Client invariant violations
+export const GET_REORDER_SUGGESTIONS_SIMPLE = gql`
+  query GetReorderSuggestionsSimple($childId: ID!, $limit: Int = 10) {
+    getReorderSuggestions(childId: $childId, limit: $limit) {
+      id
+      childId
+      productId
+      product {
+        id
+        name
+        brand
+        size
+        category
+        image
+      }
+      predictedRunOutDate
+      confidence
+      priority
+      suggestedQuantity
+    }
+  }
+`;
+
+// Get ML-powered reorder suggestions for a child (COMPLEX - USE SIMPLE VERSION IF ISSUES OCCUR)
 export const GET_REORDER_SUGGESTIONS = gql`
   query GetReorderSuggestions($childId: ID!, $limit: Int = 10) {
     getReorderSuggestions(childId: $childId, limit: $limit) {

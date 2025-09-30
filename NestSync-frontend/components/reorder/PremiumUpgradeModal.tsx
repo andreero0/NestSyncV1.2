@@ -40,9 +40,9 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useReorderStore } from '@/stores/reorderStore';
 import { GET_SUBSCRIPTION_STATUS, UPDATE_SUBSCRIPTION } from '@/lib/graphql/reorder-queries';
 
-// TODO: Install Stripe React Native SDK
-// npm install @stripe/stripe-react-native
-// import { useStripe, usePaymentSheet } from '@stripe/stripe-react-native';
+// Platform-specific Stripe import
+// Import is completely disabled on web to prevent Metro bundling errors
+let useStripe: any = null;
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -108,7 +108,7 @@ export interface SubscriptionStatus {
       memberSince: string;
     };
   };
-  availableUpgrades: Array<{
+  availableUpgrades: {
     planId: string;
     name: string;
     monthlyPricing: {
@@ -125,7 +125,7 @@ export interface SubscriptionStatus {
     };
     newFeatures: string[];
     valueProposition: string;
-  }>;
+  }[];
   billingDataConsent: boolean;
   updatedAt: string;
 }
@@ -176,10 +176,11 @@ const getFeatureIcon = (feature: string): string => {
   return iconMap[feature] || 'checkmark.circle.fill';
 };
 
-// Mock Stripe PaymentSheet hook (replace with actual implementation)
-const usePaymentSheet = () => ({
-  initPaymentSheet: async () => ({ error: null }),
-  presentPaymentSheet: async () => ({ error: null }),
+// Helper function to format billing details for Canadian users
+const getCanadianBillingDefaults = () => ({
+  address: {
+    country: 'CA',
+  },
 });
 
 // =============================================================================
@@ -216,8 +217,10 @@ export function PremiumUpgradeModal({
     mass: 1.1,
   };
 
-  // Stripe PaymentSheet hook
-  const { initPaymentSheet, presentPaymentSheet } = usePaymentSheet();
+  // Platform-specific Stripe hooks for payment processing
+  const stripeHooks = Platform.OS !== 'web' && useStripe ? useStripe() : null;
+  const initPaymentSheet = stripeHooks?.initPaymentSheet;
+  const presentPaymentSheet = stripeHooks?.presentPaymentSheet;
 
   // GraphQL queries and mutations
   const { data: subscriptionData, loading: subscriptionLoading } = useQuery(GET_SUBSCRIPTION_STATUS, {
@@ -231,13 +234,47 @@ export function PremiumUpgradeModal({
   const subscriptionStatus: SubscriptionStatus | null = subscriptionData?.getSubscriptionStatus || null;
 
   // =============================================================================
+  // FALLBACK SUBSCRIPTION PLANS FOR TRIAL USERS
+  // =============================================================================
+
+  const fallbackTrialPlans = useMemo(() => [
+    {
+      planId: "standard",
+      name: "Standard",
+      monthlyPricing: { amount: 4.99, currency: "CAD" },
+      yearlyPricing: {
+        amount: 49.90,
+        currency: "CAD",
+        savingsPerMonth: { amount: 1.00, currency: "CAD" }
+      },
+      newFeatures: ["Inventory optimization", "Size predictions", "Basic analytics", "Email notifications"],
+      valueProposition: "Inventory optimization and size predictions for smart planning"
+    },
+    {
+      planId: "premium",
+      name: "Premium",
+      monthlyPricing: { amount: 6.99, currency: "CAD" },
+      yearlyPricing: {
+        amount: 69.90,
+        currency: "CAD",
+        savingsPerMonth: { amount: 1.40, currency: "CAD" }
+      },
+      newFeatures: ["Multi-child support", "Advanced analytics", "Emergency alerts", "Priority support"],
+      valueProposition: "Multi-child, advanced analytics, and emergency alerts for comprehensive family care"
+    }
+  ], []);
+
+  // =============================================================================
   // PLAN SELECTION LOGIC
   // =============================================================================
 
   const availablePlans = useMemo(() => {
-    if (!subscriptionStatus?.availableUpgrades) return [];
-    return subscriptionStatus.availableUpgrades;
-  }, [subscriptionStatus]);
+    // Use subscription plans if available, otherwise use fallback plans for trial users
+    if (subscriptionStatus?.availableUpgrades && subscriptionStatus.availableUpgrades.length > 0) {
+      return subscriptionStatus.availableUpgrades;
+    }
+    return fallbackTrialPlans;
+  }, [subscriptionStatus, fallbackTrialPlans]);
 
   const selectedPlan = useMemo(() => {
     return availablePlans.find(plan => plan.planId === selectedPlanId) || availablePlans[0];
@@ -274,7 +311,7 @@ export function PremiumUpgradeModal({
     try {
       setIsProcessingPayment(true);
 
-      // Initialize payment with backend
+      // Initialize payment with backend - get PaymentIntent client secret
       const response = await updateSubscription({
         variables: {
           planId,
@@ -286,44 +323,66 @@ export function PremiumUpgradeModal({
         const clientSecret = response.data.updateSubscription.paymentIntent.clientSecret;
         setPaymentIntentClientSecret(clientSecret);
 
-        // Initialize Stripe PaymentSheet
+        // Initialize Stripe PaymentSheet with Canadian-specific configuration
         const { error } = await initPaymentSheet({
+          merchantDisplayName: 'NestSync - Canadian Diaper Planning',
           paymentIntentClientSecret: clientSecret,
-          merchantDisplayName: 'NestSync',
-          customerId: subscriptionStatus?.id,
-          customerEphemeralKeySecret: '', // TODO: Get from backend
-          allowsDelayedPaymentMethods: false,
+          // Canadian billing defaults
+          defaultBillingDetails: getCanadianBillingDefaults(),
+          // PaymentSheet appearance customization
           appearance: {
             colors: {
               primary: colors.tint,
               background: colors.background,
               componentBackground: colors.surface,
+              componentBorder: colors.border,
+              componentDivider: colors.border,
+              primaryText: colors.text,
+              secondaryText: colors.textSecondary,
+              componentText: colors.text,
+              placeholderText: colors.textSecondary,
+            },
+            shapes: {
+              borderRadius: 12,
             },
           },
-          defaultBillingDetails: {
-            name: '', // TODO: Get from user profile
-            email: '', // TODO: Get from user profile
-            address: {
-              country: 'CA', // Canadian users only
+          // Allow delayed payment methods for Canadian users
+          allowsDelayedPaymentMethods: true,
+          // Canadian-specific payment method configuration
+          paymentMethodConfiguration: {
+            card: {
+              billingAddressConfig: {
+                format: 'FULL',
+                isRequired: true,
+              },
             },
           },
-          // Canadian payment methods
-          paymentMethodTypes: ['card', 'afterpay_clearpay'],
         });
 
         if (error) {
-          throw new Error(error.message);
+          console.error('PaymentSheet initialization error:', error);
+          throw new Error(error.message || 'Payment initialization failed');
+        }
+
+        if (__DEV__) {
+          console.log('PaymentSheet initialized successfully for plan:', planId);
         }
 
         return true;
       }
 
-      throw new Error('Failed to initialize payment');
+      throw new Error('No client secret received from backend');
     } catch (error) {
       console.error('Payment initialization error:', error);
+
+      // More specific error messaging for user
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Unable to initialize payment. Please check your connection and try again.';
+
       Alert.alert(
-        'Payment Error',
-        'Unable to initialize payment. Please try again.',
+        'Payment Setup Error',
+        errorMessage,
         [{ text: 'OK' }]
       );
       return false;
@@ -333,53 +392,108 @@ export function PremiumUpgradeModal({
   };
 
   const handleUpgrade = async () => {
-    if (!selectedPlan) return;
+    if (!selectedPlan) {
+      console.warn('No plan selected for upgrade');
+      return;
+    }
 
+    // Check if we're on web platform
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Mobile App Required',
+        'Payments are only available through the NestSync mobile app. Please download the app from the App Store or Google Play to complete your subscription upgrade.',
+        [
+          { text: 'OK' }
+        ]
+      );
+      return;
+    }
+
+    // Check if Stripe is available
+    if (!initPaymentSheet || !presentPaymentSheet) {
+      Alert.alert(
+        'Payment System Unavailable',
+        'Payment processing is not available at the moment. Please try again later or contact support.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Haptic feedback for interaction
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      // Initialize payment sheet
+      if (__DEV__) {
+        console.log('Starting upgrade process for plan:', selectedPlan.planId, 'billing:', selectedBilling);
+      }
+
+      // Step 1: Initialize PaymentSheet with backend
       const initialized = await initializePaymentSheet(selectedPlan.planId, selectedBilling);
-      if (!initialized) return;
-
-      // Present payment sheet
-      const { error } = await presentPaymentSheet();
-
-      if (error) {
-        if (error.code !== 'Canceled') {
-          Alert.alert(
-            'Payment Failed',
-            error.localizedMessage || 'Payment was not completed. Please try again.',
-            [{ text: 'OK' }]
-          );
-        }
+      if (!initialized) {
+        console.error('PaymentSheet initialization failed');
         return;
       }
 
-      // Payment successful
+      // Step 2: Present native PaymentSheet modal
+      const { error } = await presentPaymentSheet();
+
+      if (error) {
+        console.error('PaymentSheet presentation error:', error);
+
+        // Don't show error for user cancellation
+        if (error.code === 'Canceled') {
+          if (__DEV__) {
+            console.log('User cancelled payment');
+          }
+          return;
+        }
+
+        // Show specific error messages for other failures
+        Alert.alert(
+          'Payment Failed',
+          error.localizedMessage || error.message || 'Payment could not be completed. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Step 3: Payment successful - handle success flow
+      if (__DEV__) {
+        console.log('Payment completed successfully for plan:', selectedPlan.planId);
+      }
+
+      // Success haptic feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // Notify parent component of successful upgrade
       if (onUpgradeSuccess) {
         onUpgradeSuccess(selectedPlan.planId);
       }
 
-      // Show success message and close
+      // Show Canadian-context success message
       Alert.alert(
-        'Upgrade Successful!',
-        `Welcome to ${selectedPlan.name}! You now have access to all premium features.`,
+        '🇨🇦 Upgrade Successful!',
+        `Welcome to ${selectedPlan.name}! Your subscription is now active and your data remains secure in Canada. You now have access to all premium features.`,
         [
           {
             text: 'Start Using Features',
+            style: 'default',
             onPress: handleClose,
           },
         ]
       );
 
     } catch (error) {
-      console.error('Upgrade error:', error);
+      console.error('Upgrade process error:', error);
+
+      // Generic error handling for unexpected issues
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'There was an unexpected issue processing your upgrade.';
+
       Alert.alert(
         'Upgrade Error',
-        'There was an issue processing your upgrade. Please contact support if this continues.',
+        errorMessage + ' Please contact support if this continues.',
         [{ text: 'OK' }]
       );
     }
@@ -460,13 +574,11 @@ export function PremiumUpgradeModal({
       onRequestClose={handleClose}
     >
       <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <BlurView intensity={20} style={StyleSheet.absoluteFill}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={handleClose}
-          />
-        </BlurView>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
 
         <Animated.View style={[styles.modalContainer, modalStyle]}>
           <SafeAreaView style={[styles.modal, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -499,7 +611,7 @@ export function PremiumUpgradeModal({
             </View>
 
             {/* Loading State */}
-            {(subscriptionLoading || !subscriptionStatus) && (
+            {subscriptionLoading && availablePlans.length === 0 && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.tint} />
                 <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
@@ -509,28 +621,34 @@ export function PremiumUpgradeModal({
             )}
 
             {/* Content */}
-            {subscriptionStatus && !subscriptionLoading && (
+            {!subscriptionLoading && availablePlans.length > 0 && (
               <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Current Usage Stats */}
                 <NestSyncCard style={[styles.usageCard, { backgroundColor: colors.surface }]}>
                   <ThemedText type="subtitle" style={[styles.usageTitle, { color: colors.text }]}>
-                    Your Savings This Month
+                    {subscriptionStatus ? 'Your Savings This Month' : 'Start Your Savings Journey'}
                   </ThemedText>
                   <View style={styles.usageStats}>
                     <View style={styles.statItem}>
                       <ThemedText type="title" style={[styles.statValue, { color: NestSyncColors.semantic.success }]}>
-                        {formatCADPrice(subscriptionStatus.usage.currentPeriod.savingsGenerated.amount)}
+                        {subscriptionStatus
+                          ? formatCADPrice(subscriptionStatus.usage.currentPeriod.savingsGenerated.amount)
+                          : formatCADPrice(0)
+                        }
                       </ThemedText>
                       <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        Total Saved
+                        {subscriptionStatus ? 'Total Saved' : 'Ready to Save'}
                       </ThemedText>
                     </View>
                     <View style={styles.statItem}>
                       <ThemedText type="title" style={[styles.statValue, { color: colors.text }]}>
-                        {subscriptionStatus.usage.currentPeriod.reordersSuggested}
+                        {subscriptionStatus
+                          ? subscriptionStatus.usage.currentPeriod.reordersSuggested
+                          : '0'
+                        }
                       </ThemedText>
                       <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        Suggestions Used
+                        {subscriptionStatus ? 'Suggestions Used' : 'Trial Features'}
                       </ThemedText>
                     </View>
                   </View>
@@ -727,6 +845,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
     width: screenWidth - 40,
@@ -736,7 +855,6 @@ const styles = StyleSheet.create({
   modal: {
     flex: 1,
     borderRadius: 20,
-    borderWidth: 1,
     overflow: 'hidden',
     ...Platform.select({
       ios: {

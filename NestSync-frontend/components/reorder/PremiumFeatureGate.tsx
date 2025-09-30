@@ -73,7 +73,7 @@ const FEATURE_CONFIGS: Record<string, FeatureConfig> = {
     icon: 'sparkles',
     gradientColors: [NestSyncColors.accent.purple, NestSyncColors.primary.blue],
     premiumPlan: 'Premium',
-    canadianPrice: '$19.99 CAD/month',
+    canadianPrice: '$6.99 CAD/month',
   },
   analytics: {
     title: 'Detailed Analytics & Insights',
@@ -82,7 +82,7 @@ const FEATURE_CONFIGS: Record<string, FeatureConfig> = {
     icon: 'chart.bar',
     gradientColors: [NestSyncColors.primary.blue, NestSyncColors.secondary.green],
     premiumPlan: 'Premium',
-    canadianPrice: '$19.99 CAD/month',
+    canadianPrice: '$6.99 CAD/month',
   },
   automation: {
     title: 'Automated Reordering',
@@ -91,7 +91,7 @@ const FEATURE_CONFIGS: Record<string, FeatureConfig> = {
     icon: 'arrow.triangle.2.circlepath',
     gradientColors: [NestSyncColors.accent.amber, NestSyncColors.accent.orange],
     premiumPlan: 'Premium',
-    canadianPrice: '$19.99 CAD/month',
+    canadianPrice: '$6.99 CAD/month',
   },
   collaboration: {
     title: 'Family Collaboration',
@@ -99,8 +99,8 @@ const FEATURE_CONFIGS: Record<string, FeatureConfig> = {
     benefit: 'Keep everyone in sync without the stress',
     icon: 'person.2',
     gradientColors: [NestSyncColors.secondary.green, NestSyncColors.primary.blue],
-    premiumPlan: 'Family',
-    canadianPrice: '$34.99 CAD/month',
+    premiumPlan: 'Premium',
+    canadianPrice: '$6.99 CAD/month',
   },
 };
 

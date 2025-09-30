@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Switch, Alert, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,6 +16,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 import { useCurrentFamily, useCollaborationAvailable } from '@/lib/graphql/collaboration-hooks';
 import { usePendingInvitationsCount } from '@/stores/collaborationStore';
+import { useTrialOnboarding } from '@/hooks/useTrialOnboarding';
 
 interface SettingItem {
   id: string;
@@ -45,6 +46,17 @@ export default function SettingsScreen() {
   const { currentFamily, isCollaborationEnabled } = useCollaborationAvailable();
   const pendingInvitationsCount = usePendingInvitationsCount();
   const [showFamilyManagement, setShowFamilyManagement] = useState(false);
+
+  // Trial onboarding tooltips for Canadian data privacy
+  const {
+    showCanadianDataTooltip,
+    canShowTooltips,
+    TooltipComponent
+  } = useTrialOnboarding();
+
+  // Refs for tooltip positioning
+  const canadianNoticeRef = useRef(null);
+  const dataExportRef = useRef(null);
 
   // Emergency system state
   const {
@@ -89,6 +101,16 @@ export default function SettingsScreen() {
       console.error('Failed to load emergency mode state:', error);
     }
   }, []);
+
+  // Show Canadian data privacy tooltip for trial users after screen loads
+  useEffect(() => {
+    if (canShowTooltips && canadianNoticeRef.current) {
+      const timer = setTimeout(() => {
+        showCanadianDataTooltip(canadianNoticeRef.current);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [canShowTooltips, showCanadianDataTooltip]);
 
   // Save inventory preferences
   const saveInventoryPreferences = async (newPrefs: Partial<{
@@ -260,7 +282,7 @@ export default function SettingsScreen() {
       description: 'Update your personal details',
       icon: 'person.circle',
       type: 'navigation',
-      onPress: () => console.log('Navigate to profile')
+      onPress: () => router.push('/profile-settings')
     },
     {
       id: 'children',
@@ -268,7 +290,7 @@ export default function SettingsScreen() {
       description: 'Manage your children\'s information',
       icon: 'figure.2.and.child.holdinghands',
       type: 'navigation',
-      onPress: () => console.log('Navigate to children')
+      onPress: () => router.push('/children-management')
     },
     {
       id: 'notifications',
@@ -560,7 +582,7 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Your Data Rights
             </ThemedText>
-            <ThemedView style={[styles.canadianNotice, { backgroundColor: colors.surface, borderColor: colors.info }]}>
+            <ThemedView ref={canadianNoticeRef} style={[styles.canadianNotice, { backgroundColor: colors.surface, borderColor: colors.info }]}>
               <IconSymbol name="checkmark.shield.fill" size={24} color={colors.info} />
               <View style={styles.canadianNoticeContent}>
                 <ThemedText type="defaultSemiBold" style={[styles.canadianTitle, { color: colors.info }]}>
@@ -722,6 +744,9 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </Modal>
+
+        {/* Trial Onboarding Tooltips */}
+        {TooltipComponent}
       </SafeAreaView>
     </SafeAreaProvider>
   );

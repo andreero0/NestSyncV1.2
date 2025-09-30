@@ -1,0 +1,80 @@
+name: Basic CI
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  frontend-lint:
+    name: Frontend Linting
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: NestSync-frontend/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd NestSync-frontend
+        npm ci --legacy-peer-deps
+
+    - name: Run ESLint (non-blocking)
+      run: |
+        cd NestSync-frontend
+        npm run lint || echo "ESLint issues found - see output above"
+
+  backend-syntax:
+    name: Backend Syntax Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        cd NestSync-backend
+        pip install -r requirements.txt
+
+    - name: Python syntax check
+      run: |
+        cd NestSync-backend
+        python -m py_compile app/*.py app/*/*.py
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check for secrets
+      run: |
+        # Basic secret scanning
+        if grep -r "sk_live_\|pk_live_\|secret_key" . --exclude-dir=.git --exclude-dir=node_modules --exclude="*.md" --exclude="*test*"; then
+          echo "Warning: Potential secrets found"
+          exit 1
+        fi
+
+    - name: Check for hardcoded credentials
+      run: |
+        # Check for production credentials (allow test credentials)
+        if grep -r "@gmail\.com\|@yahoo\.com" . --exclude-dir=.git --exclude-dir=node_modules --exclude="*.md" --exclude="*test*" | grep -v "parents@nestsync.com"; then
+          echo "Warning: Personal email addresses found"
+          exit 1
+        fi

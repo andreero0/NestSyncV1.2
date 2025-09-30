@@ -68,8 +68,8 @@ export const UPDATE_CHILD_MUTATION = gql`
 `;
 
 export const DELETE_CHILD_MUTATION = gql`
-  mutation DeleteChild($childId: ID!) {
-    deleteChild(childId: $childId) {
+  mutation DeleteChild($childId: ID!, $input: DeleteChildInput!) {
+    deleteChild(childId: $childId, input: $input) {
       success
       message
       error

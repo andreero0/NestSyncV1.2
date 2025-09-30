@@ -12,7 +12,7 @@
  * - Cross-platform accessibility support
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -33,12 +33,12 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { ActivityTimeline } from '@/components/timeline/ActivityTimeline';
 import { ChildSelector } from '@/components/ui/ChildSelector';
-import { Colors } from '@/constants/Colors';
-import { NestSyncColors } from '@/constants/Colors';
+import { Colors , NestSyncColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTimelineData } from '@/hooks/useTimelineData';
 import { useChildren } from '@/hooks/useChildren';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
+import { useTrialOnboarding } from '@/hooks/useTrialOnboarding';
 import type { TimelineEvent } from '@/types/timeline';
 
 // Time filter options for psychology-driven UX (simple, clear choices)
@@ -94,6 +94,19 @@ export default function TimelineScreen() {
   const [activeFilter, setActiveFilter] = useState<TimeFilter>(params.filter || 'today');
   const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
 
+  // Refs for tooltip positioning
+  const filtersRef = useRef(null);
+  const timelineRef = useRef(null);
+  const privacyRef = useRef(null);
+
+  // Trial onboarding tooltips
+  const {
+    showTimelineTooltip,
+    showCanadianDataTooltip,
+    canShowTooltips,
+    TooltipComponent
+  } = useTrialOnboarding();
+
   // Fetch children data using centralized hook
   const { children, loading: childrenLoading } = useChildren({ first: 10 });
 
@@ -137,6 +150,18 @@ export default function TimelineScreen() {
       }
     }
   }, [children, params.childId, storedChildId, setStoredChildId]);
+
+  // Show timeline discovery tooltip for trial users
+  useEffect(() => {
+    if (canShowTooltips && !isLoading && events.length > 0) {
+      // Delay to ensure UI is rendered
+      const timer = setTimeout(() => {
+        showTimelineTooltip(filtersRef.current);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [canShowTooltips, isLoading, events.length, showTimelineTooltip]);
 
   // Handle child selection with URL param updates
   const handleChildSelect = useCallback(async (newChildId: string) => {
@@ -257,7 +282,7 @@ export default function TimelineScreen() {
         </ThemedView>
 
         {/* Time Filters */}
-        <ThemedView style={styles.filtersSection}>
+        <ThemedView style={styles.filtersSection} ref={filtersRef}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -411,12 +436,25 @@ export default function TimelineScreen() {
         )}
 
         {/* Canadian Privacy Indicator */}
-        <ThemedView style={[styles.trustIndicator, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <TouchableOpacity
+          style={[styles.trustIndicator, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          ref={privacyRef}
+          onPress={() => {
+            if (canShowTooltips) {
+              showCanadianDataTooltip(privacyRef.current);
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Learn about Canadian data privacy"
+        >
           <IconSymbol name="checkmark.shield.fill" size={16} color={colors.info} />
           <ThemedText style={[styles.trustText, { color: colors.textSecondary }]}>
             Timeline data stored securely in Canada
           </ThemedText>
-        </ThemedView>
+        </TouchableOpacity>
+
+        {/* Trial Onboarding Tooltips */}
+        {TooltipComponent}
       </SafeAreaView>
     </SafeAreaProvider>
   );

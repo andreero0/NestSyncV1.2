@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TimelineItem } from './TimelineItem';
 import { TimelinePeriodHeader } from './TimelinePeriodHeader';
+import { TimelineErrorBoundary } from './TimelineErrorBoundary';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -169,33 +170,38 @@ export function ActivityTimeline({
   }, []);
 
   return (
-    <FlatList
-      data={flattenedData}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      ItemSeparatorComponent={ItemSeparator}
-      ListEmptyComponent={EmptyListComponent}
-      ListHeaderComponent={ListHeaderComponent}
-      ListFooterComponent={ListFooterComponent}
-      refreshControl={refreshControl}
-      onEndReached={onEndReached}
-      onEndReachedThreshold={onEndReachedThreshold}
-      getItemLayout={getItemLayout}
-      showsVerticalScrollIndicator={false}
-      removeClippedSubviews={true}
-      maxToRenderPerBatch={10}
-      initialNumToRender={15}
-      windowSize={10}
-      updateCellsBatchingPeriod={50}
-      disableVirtualization={false}
-      keyboardShouldPersistTaps="handled"
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.contentContainer}
-      testID={testID}
-      accessible={true}
-      accessibilityRole="list"
-      accessibilityLabel="Baby activities timeline"
-    />
+    <TimelineErrorBoundary
+      onRetry={onRefresh}
+      fallbackMessage="There was a problem displaying the activity timeline. This might be due to corrupted activity data or a 'chain diapers' error."
+    >
+      <FlatList
+        data={flattenedData}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ItemSeparatorComponent={ItemSeparator}
+        ListEmptyComponent={EmptyListComponent}
+        ListHeaderComponent={ListHeaderComponent}
+        ListFooterComponent={ListFooterComponent}
+        refreshControl={refreshControl}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={onEndReachedThreshold}
+        getItemLayout={getItemLayout}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        initialNumToRender={15}
+        windowSize={10}
+        updateCellsBatchingPeriod={50}
+        disableVirtualization={false}
+        keyboardShouldPersistTaps="handled"
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={styles.contentContainer}
+        testID={testID}
+        accessible={true}
+        accessibilityRole="list"
+        accessibilityLabel="Baby activities timeline"
+      />
+    </TimelineErrorBoundary>
   );
 }
 

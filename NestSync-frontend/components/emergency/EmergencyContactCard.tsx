@@ -11,8 +11,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { EmergencyContact } from '../../lib/storage/EmergencyStorageService';
-import { emergencyStorage } from '../../lib/storage/EmergencyStorageService';
+import { EmergencyContact , emergencyStorage } from '../../lib/storage/EmergencyStorageService';
 
 interface EmergencyContactCardProps {
   contact: EmergencyContact;

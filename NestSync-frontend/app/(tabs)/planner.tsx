@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
@@ -7,15 +7,19 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors } from '@/constants/Colors';
+import { Colors , NestSyncColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/queries';
 import { useChildren } from '@/hooks/useChildren';
-import { NestSyncColors } from '@/constants/Colors';
 import { formatDiaperSize } from '@/utils/formatters';
 import { EditInventoryModal } from '@/components/modals/EditInventoryModal';
 import { ReorderSuggestionsContainer } from '@/components/reorder/ReorderSuggestionsContainer';
+import { TrialProgressCard } from '@/components/reorder/TrialProgressCard';
+import { useTrialDaysRemaining } from '@/components/reorder/TrialCountdownBanner';
+import { PremiumUpgradeModal } from '@/components/reorder/PremiumUpgradeModal';
+import { useAnalyticsAccess } from '@/hooks/useFeatureAccess';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
+import { useTrialOnboarding } from '@/hooks/useTrialOnboarding';
 // Analytics imports temporarily disabled - preserved for future enhancement
 // import { useAnalyticsDashboard } from '@/hooks/useAnalytics';
 // import { useEnhancedAnalytics } from '@/hooks/useEnhancedAnalytics';
@@ -85,10 +89,28 @@ export default function PlannerScreen() {
   // Modal state for editing inventory items
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
+
+  // Premium upgrade modal state
+  const [premiumUpgradeModalVisible, setPremiumUpgradeModalVisible] = useState(false);
   
   // Use childId from params or default to first child
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
+
+  // Analytics access and trial management
+  const hasAnalyticsAccess = useAnalyticsAccess();
+  const trialDaysRemaining = useTrialDaysRemaining();
+
+  // Trial onboarding tooltips for analytics discovery
+  const {
+    showAnalyticsTooltip,
+    canShowTooltips,
+    TooltipComponent
+  } = useTrialOnboarding();
+
+  // Refs for tooltip positioning
+  const analyticsButtonRef = useRef(null);
+  const trialProgressCardRef = useRef(null);
   
   // Fetch children data using centralized hook
   const { children, loading: childrenLoading } = useChildren({ first: 10 });
@@ -148,30 +170,45 @@ export default function PlannerScreen() {
     }
   }, [params.filter]);
 
+  // Show analytics discovery tooltip for trial users when they switch to analytics view
+  useEffect(() => {
+    if (canShowTooltips && currentView === 'analytics' && !hasAnalyticsAccess && trialProgressCardRef.current) {
+      const timer = setTimeout(() => {
+        showAnalyticsTooltip(trialProgressCardRef.current);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [canShowTooltips, currentView, hasAnalyticsAccess, showAnalyticsTooltip]);
 
   // Process inventory items into categories
   const inventoryItems: InventoryItem[] = useMemo(() => {
     if (!inventoryData?.getInventoryItems?.edges) return [];
-    
+
     return inventoryData.getInventoryItems.edges
-      .map((edge: any) => edge.node)
-      .filter((item: InventoryItem) => item.quantityRemaining > 0);
+      .map((edge: any) => edge.node);
+      // Note: Don't filter by quantityRemaining > 0 here, as critical items can have 0 quantity
   }, [inventoryData]);
   
-  // Filter items by traffic light categories
+  // Filter items by traffic light categories - must match useInventoryTrafficLight.ts logic exactly
   const filteredItems = useMemo(() => {
     if (activeFilter === 'all') return inventoryItems;
-    
+
     return inventoryItems.filter((item) => {
+      const quantity = item.quantityRemaining || 0;
+
       switch (activeFilter) {
         case 'critical':
-          return item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry <= 3);
+          // Critical items: 0 quantity OR ≤3 days remaining OR expired
+          return quantity === 0 || item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry <= 3);
         case 'low':
-          return item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7;
+          // Low stock items: 4-7 days remaining (only if quantity > 0)
+          return quantity > 0 && item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7;
         case 'stocked':
-          return (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry > 7) || 
-                 item.daysUntilExpiry === null || 
-                 item.daysUntilExpiry === undefined;
+          // Well stocked items: >7 days remaining (only if quantity > 0) OR no expiry data with quantity > 0
+          return quantity > 0 && (
+            (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry > 7) ||
+            (item.daysUntilExpiry === null || item.daysUntilExpiry === undefined)
+          );
         case 'pending':
           return false; // Future functionality for pending orders
         default:
@@ -180,24 +217,28 @@ export default function PlannerScreen() {
     });
   }, [inventoryItems, activeFilter]);
   
-  // Generate filter summary
+  // Generate filter summary - must match useInventoryTrafficLight.ts logic exactly
   const filterSummary = useMemo(() => {
     const counts = {
       all: inventoryItems.length,
-      critical: inventoryItems.filter(item => 
-        item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry <= 3)
-      ).length,
-      low: inventoryItems.filter(item => 
-        item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7
-      ).length,
-      stocked: inventoryItems.filter(item => 
-        (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry > 7) ||
-        item.daysUntilExpiry === null || 
-        item.daysUntilExpiry === undefined
-      ).length,
+      critical: inventoryItems.filter(item => {
+        const quantity = item.quantityRemaining || 0;
+        return quantity === 0 || item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry <= 3);
+      }).length,
+      low: inventoryItems.filter(item => {
+        const quantity = item.quantityRemaining || 0;
+        return quantity > 0 && item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7;
+      }).length,
+      stocked: inventoryItems.filter(item => {
+        const quantity = item.quantityRemaining || 0;
+        return quantity > 0 && (
+          (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry > 7) ||
+          (item.daysUntilExpiry === null || item.daysUntilExpiry === undefined)
+        );
+      }).length,
       pending: 0
     };
-    
+
     return counts;
   }, [inventoryItems]);
   
@@ -325,9 +366,24 @@ export default function PlannerScreen() {
 
   // Handle premium upgrade requirement from reorder component
   const handleUpgradeRequired = () => {
-    // Navigate to premium subscription screen (future implementation)
-    console.log('Premium upgrade required for reorder suggestions');
-    // TODO: Navigate to premium upgrade screen when available
+    setPremiumUpgradeModalVisible(true);
+  };
+
+  // Handle analytics navigation from trial progress card
+  const handleAnalyticsNavigate = () => {
+    setCurrentView('analytics');
+    router.setParams({ view: 'analytics' });
+  };
+
+  // Handle premium upgrade modal close
+  const handleUpgradeModalClose = () => {
+    setPremiumUpgradeModalVisible(false);
+  };
+
+  // Handle successful premium upgrade
+  const handleUpgradeSuccess = () => {
+    setPremiumUpgradeModalVisible(false);
+    // TODO: Refresh subscription status or refetch data
   };
 
 
@@ -339,7 +395,9 @@ export default function PlannerScreen() {
         <ThemedView style={styles.header}>
           <ThemedText type="title" style={styles.headerTitle}>Dashboard</ThemedText>
           <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {currentView === 'planner' ? 'Upcoming tasks and insights' : 'Inventory management'}
+            {currentView === 'planner' ? 'Upcoming tasks and insights' :
+             currentView === 'analytics' ? 'Usage patterns and predictions' :
+             'Inventory management'}
           </ThemedText>
         </ThemedView>
 
@@ -411,8 +469,8 @@ export default function PlannerScreen() {
               Planner
             </Text>
           </TouchableOpacity>
-          {/* Analytics toggle temporarily hidden for UI/UX improvements
           <TouchableOpacity
+            ref={analyticsButtonRef}
             style={[
               styles.toggleButton,
               { backgroundColor: currentView === 'analytics' ? colors.tint : colors.surface },
@@ -432,7 +490,6 @@ export default function PlannerScreen() {
               Analytics
             </Text>
           </TouchableOpacity>
-          */}
           <TouchableOpacity
             style={[
               styles.toggleButton,
@@ -462,30 +519,43 @@ export default function PlannerScreen() {
           showsVerticalScrollIndicator={false}
         >
           {currentView === 'analytics' ? (
-            /* Analytics View - Coming Soon */
+            /* Analytics View - Trial Progress or Premium Content */
             <ThemedView style={styles.section}>
-              <View style={[styles.comingSoonContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <IconSymbol
-                  name="chart.line.uptrend.xyaxis"
-                  size={48}
-                  color={colors.tint}
-                  style={styles.comingSoonIcon}
-                />
-                <ThemedText type="title" style={[styles.comingSoonTitle, { color: colors.text }]}>
-                  Analytics Coming Soon!
-                </ThemedText>
-                <ThemedText style={[styles.comingSoonText, { color: colors.textSecondary }]}>
-                  We're working on making your analytics experience amazing.
-                </ThemedText>
-                <ThemedText style={[styles.comingSoonSubtext, { color: colors.textSecondary }]}>
-                  Track patterns, predict needs, and optimize your diaper planning - all coming in the next update.
-                </ThemedText>
-                <View style={[styles.comingSoonBadge, { backgroundColor: colors.tint }]}>
-                  <ThemedText style={[styles.comingSoonBadgeText, { color: '#FFFFFF' }]}>
-                    Under Development
-                  </ThemedText>
+              {!hasAnalyticsAccess ? (
+                <View ref={trialProgressCardRef}>
+                  <TrialProgressCard
+                    daysRemaining={trialDaysRemaining}
+                    totalTrialDays={14}
+                    onUpgradePress={handleUpgradeRequired}
+                    onAnalyticsNavigate={handleAnalyticsNavigate}
+                    style={{ marginHorizontal: 0 }}
+                  />
                 </View>
-              </View>
+              ) : (
+                /* Premium Analytics Dashboard */
+                <View style={[styles.comingSoonContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <IconSymbol
+                    name="chart.line.uptrend.xyaxis"
+                    size={48}
+                    color={colors.tint}
+                    style={styles.comingSoonIcon}
+                  />
+                  <ThemedText type="title" style={[styles.comingSoonTitle, { color: colors.text }]}>
+                    Premium Analytics Dashboard
+                  </ThemedText>
+                  <ThemedText style={[styles.comingSoonText, { color: colors.textSecondary }]}>
+                    Your premium analytics experience is being finalized.
+                  </ThemedText>
+                  <ThemedText style={[styles.comingSoonSubtext, { color: colors.textSecondary }]}>
+                    Advanced pattern tracking, predictive insights, and optimization recommendations coming soon.
+                  </ThemedText>
+                  <View style={[styles.comingSoonBadge, { backgroundColor: colors.success }]}>
+                    <ThemedText style={[styles.comingSoonBadgeText, { color: '#FFFFFF' }]}>
+                      Premium Active
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
             </ThemedView>
           ) : currentView === 'planner' ? (
             /* Planner View - Predictive Cards for Future Needs */
@@ -731,6 +801,17 @@ export default function PlannerScreen() {
             inventoryItem={selectedInventoryItem}
           />
         )}
+
+        {/* Premium Upgrade Modal */}
+        <PremiumUpgradeModal
+          visible={premiumUpgradeModalVisible}
+          onClose={handleUpgradeModalClose}
+          onSuccess={handleUpgradeSuccess}
+          feature="analytics"
+        />
+
+        {/* Trial Onboarding Tooltips */}
+        {TooltipComponent}
       </SafeAreaView>
     </SafeAreaProvider>
   );

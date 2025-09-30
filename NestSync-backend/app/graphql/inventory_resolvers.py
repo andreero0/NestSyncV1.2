@@ -468,11 +468,12 @@ class InventoryMutations:
     ) -> LogDiaperChangeResponse:
         """
         Log a diaper change and update inventory
+        CRITICAL BUSINESS RULE: Must have available inventory before logging diaper changes
         """
         try:
             async for session in get_async_session():
                 child_uuid = uuid.UUID(input.child_id)
-                
+
                 # Validate child exists
                 child_query = select(Child).where(
                     and_(
@@ -482,12 +483,72 @@ class InventoryMutations:
                 )
                 child_result = await session.execute(child_query)
                 child = child_result.scalar_one_or_none()
-                
+
                 if not child:
                     return LogDiaperChangeResponse(
                         success=False,
                         error="Child not found"
                     )
+
+                # CRITICAL BUSINESS RULE VALIDATION: Check inventory BEFORE allowing diaper change logging
+                if input.usage_type == UsageTypeEnum.DIAPER_CHANGE:
+                    logger.info(f"=== INVENTORY VALIDATION START ===")
+                    logger.info(f"Validating inventory for child {child_uuid}, size: {child.current_diaper_size}")
+
+                    # Find available diaper inventory for child's current size
+                    inventory_query = select(InventoryItem).where(
+                        and_(
+                            InventoryItem.child_id == child_uuid,
+                            InventoryItem.product_type == "diaper",
+                            func.lower(InventoryItem.size) == func.lower(child.current_diaper_size),
+                            InventoryItem.quantity_remaining > 0,
+                            InventoryItem.is_deleted == False
+                        )
+                    ).order_by(asc(InventoryItem.expiry_date), asc(InventoryItem.created_at))
+
+                    inventory_result = await session.execute(inventory_query)
+                    available_inventory = inventory_result.scalars().all()
+
+                    # Calculate total available diapers
+                    total_available = sum(item.quantity_available for item in available_inventory)
+
+                    logger.info(f"Total available diapers for size {child.current_diaper_size}: {total_available}")
+
+                    if total_available <= 0:
+                        logger.error(f"BUSINESS RULE VIOLATION PREVENTED: No diapers available for child {child_uuid}")
+
+                        # Check if there are diapers of different sizes
+                        all_diapers_query = select(InventoryItem).where(
+                            and_(
+                                InventoryItem.child_id == child_uuid,
+                                InventoryItem.product_type == "diaper",
+                                InventoryItem.quantity_remaining > 0,
+                                InventoryItem.is_deleted == False
+                            )
+                        )
+                        all_diapers_result = await session.execute(all_diapers_query)
+                        all_diapers = all_diapers_result.scalars().all()
+
+                        if all_diapers:
+                            other_sizes = [item.size for item in all_diapers if item.size.lower() != child.current_diaper_size.lower()]
+                            if other_sizes:
+                                return LogDiaperChangeResponse(
+                                    success=False,
+                                    error=f"No diapers available in size {child.current_diaper_size}. You have diapers in other sizes: {', '.join(set(other_sizes))}. Please add inventory for size {child.current_diaper_size} or update your child's current size.",
+                                    message="Cannot log diaper change without available inventory"
+                                )
+
+                        return LogDiaperChangeResponse(
+                            success=False,
+                            error="No diapers available to log. Please add diapers to your inventory first.",
+                            message="Cannot log diaper change without available inventory"
+                        )
+
+                    logger.info(f"VALIDATION PASSED: {total_available} diapers available for logging")
+                    logger.info(f"=== INVENTORY VALIDATION END ===")
+                else:
+                    # For non-diaper changes, we don't need inventory validation
+                    logger.info(f"Non-diaper usage type: {input.usage_type}, skipping inventory validation")
                 
                 # Calculate time since last change
                 last_change_query = select(UsageLog).where(
@@ -523,32 +584,57 @@ class InventoryMutations:
                 
                 session.add(usage_log)
                 
-                # Find and update diaper inventory
+                # Find and update diaper inventory (validation already passed above)
                 updated_items = []
                 if input.usage_type == UsageTypeEnum.DIAPER_CHANGE:
-                    # Find available diaper inventory for child's current size
+                    logger.info(f"=== INVENTORY DEDUCTION START ===")
+
+                    # Get the first available inventory item (FIFO - First In, First Out)
                     inventory_query = select(InventoryItem).where(
                         and_(
                             InventoryItem.child_id == child_uuid,
                             InventoryItem.product_type == "diaper",
-                            InventoryItem.size == child.current_diaper_size,
+                            func.lower(InventoryItem.size) == func.lower(child.current_diaper_size),
                             InventoryItem.quantity_remaining > 0,
                             InventoryItem.is_deleted == False
                         )
                     ).order_by(asc(InventoryItem.expiry_date), asc(InventoryItem.created_at)).limit(1)
-                    
+
                     inventory_result = await session.execute(inventory_query)
                     inventory_item = inventory_result.scalar_one_or_none()
-                    
+
+                    # At this point we know inventory exists (validated above), so this should never be None
                     if inventory_item:
+                        logger.info(f"Deducting 1 diaper from inventory item {inventory_item.id} ({inventory_item.brand} {inventory_item.size})")
+
+                        # Store original quantity for logging
+                        original_quantity = inventory_item.quantity_remaining
+
                         # Use one diaper from inventory
-                        if inventory_item.use_quantity(1, usage_log.logged_at):
+                        use_result = inventory_item.use_quantity(1, usage_log.logged_at)
+
+                        if use_result:
                             usage_log.inventory_item_id = inventory_item.id
                             updated_items.append(inventory_item_to_graphql(inventory_item))
+                            logger.info(f"SUCCESS: Deducted 1 diaper. Quantity: {original_quantity} -> {inventory_item.quantity_remaining}")
                         else:
-                            logger.warning(f"Could not use diaper from inventory item {inventory_item.id}")
+                            # This should never happen due to validation above, but handle gracefully
+                            logger.error(f"UNEXPECTED: use_quantity failed despite validation - this indicates a race condition")
+                            return LogDiaperChangeResponse(
+                                success=False,
+                                error="Unable to deduct inventory due to concurrent access. Please try again.",
+                                message="Inventory was modified by another process"
+                            )
                     else:
-                        logger.info(f"No diaper inventory available for child {child_uuid} size {child.current_diaper_size} - diaper change logged without inventory tracking")
+                        # This should never happen due to validation above
+                        logger.error(f"CRITICAL ERROR: Inventory validation passed but no inventory found during deduction")
+                        return LogDiaperChangeResponse(
+                            success=False,
+                            error="Inventory validation error. Please try again.",
+                            message="Unexpected inventory state"
+                        )
+
+                    logger.info(f"=== INVENTORY DEDUCTION END ===")
                 
                 await session.commit()
 

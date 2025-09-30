@@ -93,9 +93,23 @@ export function useTimelineData({
   }, []);
 
   // Transform GraphQL data to timeline events
+  // Fixed: Added comprehensive validation to prevent "chain diapers" and other corruption
   const transformUsageLogToTimelineEvent = useCallback((usageLog: any): TimelineEvent => {
-    // Use loggedAt instead of timestamp (from USAGE_LOG_FRAGMENT)
-    const timestamp = new Date(usageLog.loggedAt);
+    // Validate input data
+    if (!usageLog || typeof usageLog !== 'object') {
+      console.warn('Invalid usage log data received:', usageLog);
+      throw new Error('Invalid usage log data');
+    }
+
+    // Validate and parse timestamp
+    const rawTimestamp = usageLog.loggedAt;
+    const timestamp = rawTimestamp ? new Date(rawTimestamp) : new Date();
+
+    // Validate timestamp is valid
+    if (isNaN(timestamp.getTime())) {
+      console.warn('Invalid timestamp in usage log:', rawTimestamp);
+      throw new Error('Invalid timestamp in usage log');
+    }
     
     // Map usage types to timeline event types
     const eventTypeMap: Record<string, TimelineEventType> = {
@@ -138,11 +152,23 @@ export function useTimelineData({
   }, []);
 
   // Generate user-friendly event titles with caregiver attribution
+  // Fixed: Added defensive validation to prevent "chain diapers" errors
   const generateEventTitle = (type: TimelineEventType, usageLog: any): string => {
-    const caregiverName = usageLog.caregiverName;
-    const baseName = caregiverName || 'Someone';
+    // Defensive validation for caregiver name
+    const rawCaregiverName = usageLog?.caregiverName;
+    const caregiverName = typeof rawCaregiverName === 'string'
+      ? rawCaregiverName.trim().replace(/\s+/g, ' ') // Normalize whitespace
+      : null;
 
-    switch (type) {
+    // Prevent duplicate names or corrupted strings
+    const baseName = caregiverName && caregiverName.length > 0 && caregiverName.length < 50
+      ? caregiverName
+      : 'Someone';
+
+    // Validate event type to prevent undefined concatenation
+    const validType = type && typeof type === 'string' ? type : 'DIAPER_CHANGE';
+
+    switch (validType) {
       case 'DIAPER_CHANGE':
         return `${baseName} changed diaper`;
       case 'WIPE_USE':
@@ -161,19 +187,33 @@ export function useTimelineData({
   };
 
   // Generate event details
+  // Fixed: Added validation to prevent data corruption and chaining errors
   const generateEventDetails = (usageLog: any): string => {
-    const details = [];
-    
-    if (usageLog.quantityUsed) {
-      details.push(`Qty: ${usageLog.quantityUsed}`);
-    }
-    
-    if (usageLog.context) {
-      details.push(`${usageLog.context}`);
+    if (!usageLog || typeof usageLog !== 'object') {
+      return 'Activity completed';
     }
 
-    if (usageLog.caregiverName) {
-      details.push(`by ${usageLog.caregiverName}`);
+    const details = [];
+
+    // Validate quantity used
+    if (usageLog.quantityUsed && typeof usageLog.quantityUsed === 'number' && usageLog.quantityUsed > 0) {
+      details.push(`Qty: ${usageLog.quantityUsed}`);
+    }
+
+    // Validate context
+    if (usageLog.context && typeof usageLog.context === 'string' && usageLog.context.trim().length > 0) {
+      const cleanContext = usageLog.context.trim().replace(/\s+/g, ' ');
+      if (cleanContext.length < 100) { // Prevent overly long context strings
+        details.push(cleanContext);
+      }
+    }
+
+    // Validate caregiver name in details (prevent duplication)
+    if (usageLog.caregiverName && typeof usageLog.caregiverName === 'string') {
+      const cleanName = usageLog.caregiverName.trim().replace(/\s+/g, ' ');
+      if (cleanName.length > 0 && cleanName.length < 50) {
+        details.push(`by ${cleanName}`);
+      }
     }
 
     // Add diaper condition details for diaper changes

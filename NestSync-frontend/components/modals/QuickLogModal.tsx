@@ -28,7 +28,7 @@ import { IconSymbol } from '../ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { LOG_DIAPER_CHANGE_MUTATION } from '@/lib/graphql/mutations';
-import { GET_DASHBOARD_STATS_QUERY, ME_QUERY } from '@/lib/graphql/queries';
+import { GET_DASHBOARD_STATS_QUERY, ME_QUERY, GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/queries';
 import { useChildren } from '@/hooks/useChildren';
 import {
   GET_USAGE_ANALYTICS_QUERY,
@@ -108,6 +108,16 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
   // Get current user information for caregiver attribution
   const { data: userData } = useQuery(ME_QUERY, {
     skip: !visible
+  });
+
+  // Check inventory for selected child
+  const { data: inventoryData } = useQuery(GET_INVENTORY_ITEMS_QUERY, {
+    variables: {
+      childId: selectedChildId,
+      productType: 'DIAPER',
+      limit: 500
+    },
+    skip: !selectedChildId || !visible
   });
 
   const [logDiaperChange, { loading: submitLoading }] = useMutation(LOG_DIAPER_CHANGE_MUTATION, {
@@ -209,6 +219,26 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
       return;
     }
 
+    // CRITICAL BUSINESS RULE VALIDATION: Check inventory BEFORE allowing submission
+    const totalInventory = inventoryData?.getInventoryItems?.edges?.reduce(
+      (total: number, edge: any) => total + (edge.node.quantityRemaining || 0),
+      0
+    ) || 0;
+
+    // Block submission if no inventory available
+    if (totalInventory === 0) {
+      onSuccess?.('No diapers available to log. Please add diapers to your inventory first.');
+      return;
+    }
+
+    // Generate success message based on inventory status
+    let inventoryMessage = '';
+    if (totalInventory < 10) {
+      inventoryMessage = `Diaper change logged! Low inventory (${totalInventory} remaining) - consider restocking soon.`;
+    } else {
+      inventoryMessage = 'Diaper change logged successfully!';
+    }
+
     // Haptic feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -242,13 +272,22 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
       });
 
       if (result.data?.logDiaperChange?.success) {
-        onSuccess?.('Diaper change logged successfully!');
+        onSuccess?.(inventoryMessage);
         handleClose();
       } else {
-        console.error('Failed to log diaper change:', result.data?.logDiaperChange?.error);
+        const errorMessage = result.data?.logDiaperChange?.error;
+        console.error('Failed to log diaper change:', errorMessage);
+
+        // Display the specific error message from backend validation
+        if (errorMessage) {
+          onSuccess?.(errorMessage);
+        } else {
+          onSuccess?.('Failed to log diaper change. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Error logging diaper change:', error);
+      onSuccess?.('Failed to log diaper change. Please check your connection and try again.');
     }
   };
 
@@ -545,6 +584,37 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
                 </ThemedText>
               </View>
 
+              {/* Inventory Warning */}
+              {inventoryData && (
+                (() => {
+                  const totalInventory = inventoryData?.getInventoryItems?.edges?.reduce(
+                    (total: number, edge: any) => total + (edge.node.quantityRemaining || 0),
+                    0
+                  ) || 0;
+
+                  if (totalInventory === 0) {
+                    return (
+                      <View style={[styles.inventoryWarning, { backgroundColor: colors.errorBackground, borderColor: colors.error }]}>
+                        <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.error} />
+                        <ThemedText style={[styles.inventoryWarningText, { color: colors.error }]}>
+                          No diapers available. Please add inventory first.
+                        </ThemedText>
+                      </View>
+                    );
+                  } else if (totalInventory < 10) {
+                    return (
+                      <View style={[styles.inventoryWarning, { backgroundColor: colors.warningBackground, borderColor: colors.warning }]}>
+                        <IconSymbol name="exclamationmark.triangle" size={20} color={colors.warning} />
+                        <ThemedText style={[styles.inventoryWarningText, { color: colors.warning }]}>
+                          Low inventory: {totalInventory} diapers remaining
+                        </ThemedText>
+                      </View>
+                    );
+                  }
+                  return null;
+                })()
+              )}
+
               {/* Action Buttons */}
               <View style={[styles.actions, { borderTopColor: colors.border }]}>
                 <TouchableOpacity
@@ -557,31 +627,46 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
                     Cancel
                   </ThemedText>
                 </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    { 
-                      backgroundColor: colors.tint,
-                      opacity: (!selectedChildId || !selectedChangeType || submitLoading) ? 0.6 : 1,
-                    },
-                  ]}
-                  onPress={handleSubmit}
-                  disabled={!selectedChildId || !selectedChangeType || submitLoading}
-                  accessibilityRole="button"
-                  accessibilityLabel="Log diaper change"
-                >
-                  {submitLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <>
-                      <IconSymbol name="checkmark" size={18} color="#FFFFFF" />
-                      <ThemedText style={styles.primaryButtonText}>
-                        Log Change
-                      </ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
+
+                {(() => {
+                  const totalInventory = inventoryData?.getInventoryItems?.edges?.reduce(
+                    (total: number, edge: any) => total + (edge.node.quantityRemaining || 0),
+                    0
+                  ) || 0;
+
+                  const isDisabled = !selectedChildId || !selectedChangeType || submitLoading || totalInventory === 0;
+
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.primaryButton,
+                        {
+                          backgroundColor: totalInventory === 0 ? colors.error : colors.tint,
+                          opacity: isDisabled ? 0.6 : 1,
+                        },
+                      ]}
+                      onPress={handleSubmit}
+                      disabled={isDisabled}
+                      accessibilityRole="button"
+                      accessibilityLabel={totalInventory === 0 ? "Cannot log - no inventory" : "Log diaper change"}
+                    >
+                      {submitLoading ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <IconSymbol
+                            name={totalInventory === 0 ? "xmark" : "checkmark"}
+                            size={18}
+                            color="#FFFFFF"
+                          />
+                          <ThemedText style={styles.primaryButtonText}>
+                            {totalInventory === 0 ? "No Inventory" : "Log Change"}
+                          </ThemedText>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })()}
               </View>
             </ScrollView>
             </View>
@@ -797,5 +882,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     fontSize: 16,
     textAlign: 'center',
+  },
+  inventoryWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 12,
+  },
+  inventoryWarningText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
   },
 });

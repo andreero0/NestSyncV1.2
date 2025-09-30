@@ -25,6 +25,7 @@ from .types import (
     DashboardStats,
     InventoryConnection,
     UsageLogConnection,
+    DeviceToken,
     NotificationPreferences,
     NotificationQueueConnection,
     NotificationDeliveryLogConnection

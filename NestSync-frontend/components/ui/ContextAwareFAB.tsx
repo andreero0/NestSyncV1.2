@@ -126,19 +126,29 @@ export function ContextAwareFAB() {
   // Intelligent reorder detection for selected child
   const reorderState = useReorderDetection(selectedChildId);
   
-  // Get current route context and view state
+  // Enhanced route context detection with view state
   const currentRoute = segments[1] || 'index'; // Get the tab route (index, planner, settings)
   const params = useLocalSearchParams<{ view?: string }>();
   const currentView = params.view;
 
-  // Hide FAB when in analytics view - analytics should be passive viewing only
-  const shouldHideFAB = currentRoute === 'planner' && currentView === 'analytics';
+  // Create combined context key for more granular FAB behavior
+  const getContextKey = () => {
+    if (currentRoute === 'planner' && currentView) {
+      return `${currentRoute}-${currentView}`; // e.g., 'planner-analytics', 'planner-inventory'
+    }
+    return currentRoute; // Default to main route for other cases
+  };
+
+  const contextKey = getContextKey();
+
+  // Only hide FAB in specific contexts where no action is appropriate
+  const shouldHideFAB = false; // We now provide context-specific actions instead of hiding
   
-  // Enhanced reorder-aware FAB configurations with intelligent priority system
+  // Enhanced context-aware FAB configurations with granular view support
   const fabContexts: FABContextMap = {
     index: {
       icon: showAddFirstChild ? 'person.badge.plus' : 'plus.circle.fill',
-      accessibilityLabel: showAddFirstChild ? 'Add your first child' : 'Log diaper change',
+      accessibilityLabel: showAddFirstChild ? 'Add your first child' : 'Quick log diaper change',
       action: () => {
         if (actionsDisabled) {
           Alert.alert(
@@ -175,17 +185,98 @@ export function ContextAwareFAB() {
         setQuickLogModalVisible(true);
       },
     },
-    planner: {
+    'planner-analytics': {
+      icon: 'chart.bar.doc.horizontal',
+      accessibilityLabel: 'View analytics insights',
+      action: () => {
+        if (actionsDisabled) {
+          Alert.alert(
+            'Loading...',
+            'Please wait while we load your data',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+
+        if (showAddFirstChild) {
+          Alert.alert(
+            'Welcome to NestSync!',
+            'Add your first child to start tracking and get insights.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Add Child', onPress: () => console.log('Navigate to child creation') }
+            ]
+          );
+          return;
+        }
+
+        Alert.alert(
+          'Analytics Insights',
+          'View detailed patterns and export your data for deeper analysis.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Export Data',
+              onPress: () => {
+                console.log('Export analytics data');
+                // TODO: Implement data export functionality
+                Alert.alert('Export', 'Data export functionality coming soon!');
+              }
+            }
+          ]
+        );
+      },
+      backgroundColor: '#6366F1', // Indigo for analytics
+    },
+    'planner-inventory': {
+      icon: 'cube.box.fill',
+      accessibilityLabel: 'Add inventory item',
+      action: () => {
+        if (actionsDisabled) {
+          Alert.alert(
+            'Loading...',
+            'Please wait while we load your data',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+
+        if (showAddFirstChild) {
+          Alert.alert(
+            'Welcome to NestSync!',
+            'Add your first child to start tracking inventory.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Add Child', onPress: () => console.log('Navigate to child creation') }
+            ]
+          );
+          return;
+        }
+
+        if (!selectedChildId) {
+          Alert.alert(
+            'Please Select a Child',
+            'Choose which child you\'d like to add inventory for.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+
+        setAddInventoryModalVisible(true);
+      },
+      backgroundColor: '#10B981', // Green for inventory
+    },
+    'planner-planner': {
       // Intelligent reorder-aware icon selection
       icon: showAddFirstChild ? 'person.badge.plus' :
             reorderState.hasCriticalReorders ? 'brain.head.profile' :
             reorderState.hasModerateReorders ? 'lightbulb.fill' :
-            'calendar.badge.plus',
+            'wand.and.stars',
       // Context-aware accessibility labels for stress-reduction UX
       accessibilityLabel: showAddFirstChild ? 'Add your first child' :
-                         reorderState.hasCriticalReorders ? 'Smart reorder suggestions available' :
+                         reorderState.hasCriticalReorders ? 'Critical reorder suggestions available' :
                          reorderState.hasModerateReorders ? 'Reorder suggestions available' :
-                         'Add to planner',
+                         'Smart planning suggestions',
       // Intelligent action prioritization with reorder detection
       action: () => {
         if (actionsDisabled) {
@@ -212,7 +303,7 @@ export function ContextAwareFAB() {
         if (!selectedChildId) {
           Alert.alert(
             'Please Select a Child',
-            'Choose which child you\'d like to add inventory for.',
+            'Choose which child you\'d like to create planning suggestions for.',
             [{ text: 'OK' }]
           );
           return;
@@ -220,16 +311,14 @@ export function ContextAwareFAB() {
 
         // Priority 1: Critical reorder suggestions (immediate navigation)
         if (reorderState.hasCriticalReorders) {
-          // Provide context with stress-reduction messaging
           Alert.alert(
-            'Smart Reorder Suggestions',
-            'We found some helpful reorder suggestions based on your usage patterns. Would you like to review them?',
+            'Critical Reorder Suggestions',
+            'You have critical reorder suggestions that need immediate attention.',
             [
               { text: 'Later', style: 'cancel' },
               {
-                text: 'View Suggestions',
+                text: 'View Now',
                 onPress: () => {
-                  // Navigate to reorder suggestions with critical context
                   router.push('/reorder-suggestions?priority=critical');
                 }
               }
@@ -241,10 +330,10 @@ export function ContextAwareFAB() {
         // Priority 2: Moderate reorder suggestions (optional navigation)
         if (reorderState.hasModerateReorders) {
           Alert.alert(
-            'Reorder Suggestions Available',
-            `We have ${reorderState.totalSuggestions} reorder suggestion${reorderState.totalSuggestions > 1 ? 's' : ''} that might help you stay prepared.`,
+            'Smart Suggestions Available',
+            `We have ${reorderState.totalSuggestions} smart suggestion${reorderState.totalSuggestions > 1 ? 's' : ''} to help you stay prepared.`,
             [
-              { text: 'Add Inventory', onPress: () => setAddInventoryModalVisible(true) },
+              { text: 'Later', style: 'cancel' },
               {
                 text: 'View Suggestions',
                 onPress: () => {
@@ -256,14 +345,22 @@ export function ContextAwareFAB() {
           return;
         }
 
-        // Priority 3: Default inventory management
-        setAddInventoryModalVisible(true);
+        // Priority 3: Default to reorder suggestions page for planning
+        router.push('/reorder-suggestions');
       },
       // Enhanced styling for reorder states
       backgroundColor: reorderState.hasCriticalReorders ? colors.error :
                       reorderState.hasModerateReorders ? '#0891B2' : // NestSync premium blue
-                      colors.tint,
+                      '#8B5CF6', // Purple for planning
       pulseAnimation: reorderState.hasCriticalReorders,
+    },
+    planner: {
+      // Fallback for planner route without specific view (should rarely be used)
+      icon: 'calendar.badge.plus',
+      accessibilityLabel: 'Open planner',
+      action: () => {
+        router.push('/planner?view=planner');
+      },
     },
     settings: {
       icon: 'questionmark.circle.fill',
@@ -285,18 +382,24 @@ export function ContextAwareFAB() {
     },
   };
   
-  // Get current FAB configuration
-  const currentFABConfig = fabContexts[currentRoute] || fabContexts.index;
+  // Get current FAB configuration using the enhanced context key
+  const currentFABConfig = fabContexts[contextKey] || fabContexts[currentRoute] || fabContexts.index;
   
-  // Enhanced FAB press handler with reorder-aware haptic feedback
+  // Enhanced FAB press handler with context-aware haptic feedback
   const handlePress = () => {
-    // Intelligent haptic feedback based on urgency (stress-reduction UX)
-    if (reorderState.hasCriticalReorders && currentRoute.includes('planner')) {
+    // Context-aware haptic feedback based on urgency and context
+    if (reorderState.hasCriticalReorders && contextKey.includes('planner')) {
       // Medium haptic for critical reorders (not heavy - avoid stress)
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } else if (reorderState.hasModerateReorders && currentRoute.includes('planner')) {
+    } else if (reorderState.hasModerateReorders && contextKey.includes('planner')) {
       // Light haptic for moderate reorders
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else if (contextKey === 'planner-analytics') {
+      // Gentle haptic for analytics actions
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else if (contextKey === 'planner-inventory') {
+      // Medium haptic for inventory actions
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } else {
       // Default medium haptic for regular actions
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -334,7 +437,7 @@ export function ContextAwareFAB() {
       runOnJS(handlePress)();
     });
   
-  // Enhanced context change animation with reorder state awareness
+  // Enhanced context change animation with view state awareness
   useEffect(() => {
     // Animate icon transition when context changes
     opacity.value = withSpring(0, {
@@ -347,11 +450,11 @@ export function ContextAwareFAB() {
         stiffness: 200,
       });
     });
-  }, [currentRoute, reorderState.hasCriticalReorders, reorderState.hasModerateReorders]);
+  }, [contextKey, reorderState.hasCriticalReorders, reorderState.hasModerateReorders]);
 
   // Intelligent reorder pulse animation for critical states
   useEffect(() => {
-    if (reorderState.hasCriticalReorders && currentRoute.includes('planner')) {
+    if (reorderState.hasCriticalReorders && contextKey.includes('planner')) {
       // Gentle pulsing for critical reorders (stress-reduction UX)
       reorderPulse.value = withRepeat(
         withSpring(1.05, { damping: 15, stiffness: 100 }),
@@ -362,7 +465,7 @@ export function ContextAwareFAB() {
       // Return to normal state
       reorderPulse.value = withSpring(1, { damping: 15, stiffness: 100 });
     }
-  }, [reorderState.hasCriticalReorders, currentRoute]);
+  }, [reorderState.hasCriticalReorders, contextKey]);
   
   // Enhanced animated styles with reorder pulse integration
   const fabAnimatedStyle = useAnimatedStyle(() => {

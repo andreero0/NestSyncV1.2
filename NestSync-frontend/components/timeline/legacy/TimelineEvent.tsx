@@ -21,9 +21,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import type {
-  TimelineEvent as TimelineEventType,
   TimelineEventProps,
-  TimelinePosition,
 } from '@/types/timeline';
 
 import { 
@@ -312,4 +310,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { TimelineEvent };
+// Export already defined above

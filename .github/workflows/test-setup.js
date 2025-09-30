@@ -7,7 +7,7 @@ const path = require('path');
 
 async function globalSetup() {
   console.log('🚀 NestSync Critical Path Testing - Global Setup');
-  console.log('=' * 60);
+  console.log('='.repeat(60));
 
   const startTime = Date.now();
 
@@ -76,6 +76,7 @@ async function validateDockerEnvironment() {
       console.log(`Backend: ${hasBackend ? '✅' : '❌'}`);
       console.log(`Frontend: ${hasFrontend ? '✅' : '❌'}`);
       console.log(`Database: ${hasDatabase ? '✅' : '❌'}`);
+      console.log('Note: This is normal during CI setup phase, containers will be started by workflow');
     }
 
     console.log('✅ Docker environment validation passed');
@@ -89,21 +90,25 @@ async function validateDependencies() {
   console.log('📦 Validating critical dependencies...');
 
   try {
-    // Check gotrue version in backend container
-    const gotrueVersion = execSync(
-      'docker exec nestsync-backend pip show gotrue 2>/dev/null | grep Version',
-      { encoding: 'utf8' }
-    ).trim();
+    // Check gotrue version in backend container (only if container is running)
+    try {
+      const gotrueVersion = execSync(
+        'docker exec nestsync-backend pip show gotrue 2>/dev/null | grep Version',
+        { encoding: 'utf8', timeout: 5000 }
+      ).trim();
 
-    if (gotrueVersion.includes('2.9.1')) {
-      throw new Error('Gotrue 2.9.1 detected - this version has identity_id validation issues');
+      if (gotrueVersion.includes('2.9.1')) {
+        throw new Error('Gotrue 2.9.1 detected - this version has identity_id validation issues');
+      }
+
+      if (!gotrueVersion.includes('2.5.4')) {
+        console.log(`⚠️  Gotrue version: ${gotrueVersion} (expected 2.5.4)`);
+      }
+
+      console.log('✅ Critical dependencies validation passed');
+    } catch (dockerError) {
+      console.log(`⚠️  Could not check gotrue version (container may not be ready): ${dockerError.message}`);
     }
-
-    if (!gotrueVersion.includes('2.5.4')) {
-      console.log(`⚠️  Gotrue version: ${gotrueVersion} (expected 2.5.4)`);
-    }
-
-    console.log('✅ Critical dependencies validation passed');
 
   } catch (error) {
     // Non-fatal for setup, but log warning

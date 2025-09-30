@@ -322,3 +322,26 @@ export const INVENTORY_INSIGHT_FRAGMENT = gql`
   }
 `;
 
+export const ANALYTICS_OVERVIEW_FRAGMENT = gql`
+  fragment AnalyticsOverviewFragment on AnalyticsOverviewType {
+    totalChanges
+    averageChangesPerDay
+    efficiencyScore
+    costPerMonth
+    timeframe {
+      start
+      end
+    }
+    trends {
+      usage
+      quality
+      efficiency
+    }
+    recommendations {
+      type
+      message
+      priority
+    }
+  }
+`;
+

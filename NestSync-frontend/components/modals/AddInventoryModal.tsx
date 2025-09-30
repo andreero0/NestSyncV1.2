@@ -161,18 +161,32 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
   // Smart default expiry date suggestions based on product type
   const getDefaultExpiryDate = useCallback((productType: string): Date => {
     const today = new Date();
-    const currentDate = new Date(today.toLocaleString("en-US", {timeZone: 'America/Toronto'}));
-    
+
+    // Get timezone-aware date components for Canada/Toronto
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Toronto',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    const parts = formatter.formatToParts(today);
+    const year = parseInt(parts.find(p => p.type === 'year')!.value);
+    const month = parseInt(parts.find(p => p.type === 'month')!.value) - 1; // Month is 0-indexed
+    const day = parseInt(parts.find(p => p.type === 'day')!.value);
+
+    const currentDate = new Date(year, month, day);
+
     const monthsToAdd = {
       'DIAPER': 24,        // 2 years
-      'WIPES': 24,         // 2 years  
+      'WIPES': 24,         // 2 years
       'DIAPER_CREAM': 36,  // 3 years
       'POWDER': 36,        // 3 years
       'DIAPER_BAGS': 120,  // 10 years (durable goods)
       'TRAINING_PANTS': 24, // 2 years
       'SWIMWEAR': 24       // 2 years
     } as const;
-    
+
     const months = monthsToAdd[productType as keyof typeof monthsToAdd] || 24;
     currentDate.setMonth(currentDate.getMonth() + months);
     return currentDate;

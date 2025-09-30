@@ -41,7 +41,7 @@ export function SimpleUsageIndicator({
   const limitedData = data.slice(0, maxItems);
 
   const getBarColor = (index: number): string => {
-    const colorKeys = Object.keys(colors) as Array<keyof typeof colors>;
+    const colorKeys = Object.keys(colors) as (keyof typeof colors)[];
     return colors[colorKeys[index % colorKeys.length]];
   };
 

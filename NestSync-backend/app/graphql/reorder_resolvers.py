@@ -1189,7 +1189,105 @@ class ReorderQueries:
             dashboard = await self.get_subscription_dashboard(info)
 
             if not dashboard.current_subscription:
-                return None
+                # Handle trial users with no active subscription
+                # Provide a mock "Free Trial" subscription status with available upgrade plans
+                from datetime import datetime, timedelta
+                import uuid
+
+                # Create available upgrade plans for trial users (based on business document pricing)
+                available_upgrades = [
+                    AvailableUpgrade(
+                        plan_id="standard",
+                        name="Standard",
+                        monthly_pricing=PlanPricing(amount=Decimal('4.99'), currency="CAD"),
+                        yearly_pricing=YearlyPricing(
+                            amount=Decimal('49.90'),
+                            currency="CAD",
+                            savings_per_month=CostSavings(amount=Decimal('1.00'), currency="CAD", compared_to_regular_price=None, compared_to_last_purchase=None)
+                        ),
+                        new_features=["Inventory optimization", "Size predictions", "Basic analytics", "Email notifications"],
+                        value_proposition="Inventory optimization and size predictions for smart planning"
+                    ),
+                    AvailableUpgrade(
+                        plan_id="premium",
+                        name="Premium",
+                        monthly_pricing=PlanPricing(amount=Decimal('6.99'), currency="CAD"),
+                        yearly_pricing=YearlyPricing(
+                            amount=Decimal('69.90'),
+                            currency="CAD",
+                            savings_per_month=CostSavings(amount=Decimal('1.40'), currency="CAD", compared_to_regular_price=None, compared_to_last_purchase=None)
+                        ),
+                        new_features=["Multi-child support", "Advanced analytics", "Emergency alerts", "Priority support"],
+                        value_proposition="Multi-child, advanced analytics, and emergency alerts for comprehensive family care"
+                    )
+                ]
+
+                # Create mock trial subscription status
+                trial_taxes = TaxBreakdown(
+                    gst=Decimal('0.00'),
+                    pst=Decimal('0.00'),
+                    hst=Decimal('0.00'),
+                    total=Decimal('0.00')
+                )
+
+                trial_price = PlanPrice(
+                    amount=Decimal('0.00'),
+                    currency="CAD",
+                    billing_interval=BillingIntervalType.MONTHLY,
+                    canadian_taxes=trial_taxes
+                )
+
+                trial_limits = PlanLimits(
+                    reorder_suggestions=3,
+                    family_members=1,
+                    price_alerts=1,
+                    auto_ordering=False
+                )
+
+                trial_plan = SubscriptionPlan(
+                    id=str(uuid.uuid4()),
+                    name="Free Trial",
+                    display_name="NestSync Free Trial",
+                    description="14-day free trial with basic features",
+                    features=["Basic inventory tracking", "Manual logging", "Simple notifications"],
+                    price=trial_price,
+                    limits=trial_limits
+                )
+
+                trial_savings = CostSavings(
+                    amount=Decimal('0.00'),
+                    currency="CAD",
+                    compared_to_regular_price=None,
+                    compared_to_last_purchase=None
+                )
+
+                trial_usage = UsageInfo(
+                    current_period=UsageStats(
+                        reorders_suggested=0,
+                        orders_placed=0,
+                        savings_generated=trial_savings,
+                        price_alerts_received=0
+                    ),
+                    lifetime=LifetimeStats(
+                        total_orders=0,
+                        total_savings=trial_savings,
+                        member_since=datetime.now()
+                    )
+                )
+
+                trial_status = SubscriptionStatus(
+                    id=str(uuid.uuid4()),
+                    status="trial",
+                    current_plan=trial_plan,
+                    next_billing_date=datetime.now() + timedelta(days=14),
+                    payment_method=None,
+                    usage=trial_usage,
+                    available_upgrades=available_upgrades,
+                    billing_data_consent=True,
+                    updated_at=datetime.now()
+                )
+
+                return trial_status
 
             subscription = dashboard.current_subscription
 

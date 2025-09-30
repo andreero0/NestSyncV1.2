@@ -10,14 +10,12 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withTiming,
-  interpolate,
-  SharedValue,
   useSharedValue,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Colors, NestSyncColors } from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import type {
   TimePeriod,
   TimePeriodHeaderProps,
@@ -287,4 +285,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { TimePeriodHeader };
+// Export already defined above

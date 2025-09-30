@@ -58,7 +58,7 @@ export interface RetailerComparisonData {
     image: string;
     specifications?: string[];
   };
-  retailers: Array<{
+  retailers: {
     id: string;
     name: string;
     logo: string;
@@ -69,14 +69,14 @@ export interface RetailerComparisonData {
       currency: string;
       originalPrice?: number;
       discountPercentage?: number;
-      bulkDiscounts?: Array<{
+      bulkDiscounts?: {
         quantity: number;
         discountPercentage: number;
         savings: {
           amount: number;
           currency: string;
         };
-      }>;
+      }[];
       taxes: {
         gst: number;
         pst: number;
@@ -100,24 +100,24 @@ export interface RetailerComparisonData {
         amount: number;
         currency: string;
       };
-      deliveryOptions: Array<{
+      deliveryOptions: {
         type: string;
         estimatedDays: number;
         cost: {
           amount: number;
           currency: string;
         };
-      }>;
+      }[];
     };
     customerReviews: {
       averageRating: number;
       totalReviews: number;
-      recentReviews: Array<{
+      recentReviews: {
         rating: number;
         comment: string;
         date: string;
         verified: boolean;
-      }>;
+      }[];
     };
     affiliateInfo: {
       isAffiliate: boolean;
@@ -125,7 +125,7 @@ export interface RetailerComparisonData {
       commissionRate?: number;
     };
     lastPriceUpdate: string;
-  }>;
+  }[];
   priceComparison: {
     lowestPrice: {
       retailerId: string;

@@ -66,7 +66,7 @@ export interface ReorderSuggestion {
     comparedToRegularPrice: number;
     comparedToLastPurchase: number;
   };
-  availableRetailers: Array<{
+  availableRetailers: {
     id: string;
     name: string;
     logo: string;
@@ -88,7 +88,7 @@ export interface ReorderSuggestion {
     rating: number;
     freeShipping: boolean;
     affiliateDisclosure?: string;
-  }>;
+  }[];
   createdAt: string;
   updatedAt: string;
   mlProcessingConsent: boolean;
