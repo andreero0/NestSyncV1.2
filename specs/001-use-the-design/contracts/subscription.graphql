@@ -1,0 +1,347 @@
+# GraphQL Schema Contract: Subscription Management
+# Feature: Premium Upgrade Flow
+# Date: 2025-10-02
+
+"""
+Canadian premium subscription with trial support and PIPEDA compliance.
+All timestamps use America/Toronto timezone per Constitutional Principle 5.
+"""
+type Subscription {
+  id: ID!
+  userId: ID!
+  planId: String!
+  plan: SubscriptionPlan
+  tier: SubscriptionTier!
+  status: SubscriptionStatus!
+  billingInterval: BillingInterval!
+  amount: Float!
+  currency: String!
+  province: CanadianProvince!
+  
+  # Stripe Integration
+  stripeCustomerId: String
+  stripeSubscriptionId: String
+  stripePaymentMethodId: String
+  
+  # Trial Period
+  trialStart: DateTime
+  trialEnd: DateTime
+  trialFeaturesUsed: [String!]!
+  trialDaysRemaining: Int
+  
+  # Billing Periods
+  currentPeriodStart: DateTime
+  currentPeriodEnd: DateTime
+  cancelAtPeriodEnd: Boolean!
+  
+  # Cooling-Off Period (14 days for annual subscriptions)
+  coolingOffEnd: DateTime
+  isInCoolingOffPeriod: Boolean!
+  
+  # PIPEDA Compliance (Constitutional Principle 4)
+  paymentConsentAt: DateTime  # Timestamp when user consented to Stripe payment processing
+  
+  # Related Data
+  billingHistory: [BillingRecord!]!
+  paymentMethods: [PaymentMethod!]!
+  featureAccess: [FeatureAccess!]!
+  trialProgress: TrialProgress
+  
+  # Timestamps
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  canceledAt: DateTime
+}
+
+"""Available subscription tiers"""
+enum SubscriptionTier {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+"""Subscription lifecycle states"""
+enum SubscriptionStatus {
+  ACTIVE      # Paid subscription with valid payment method
+  TRIALING    # 14-day free trial without payment method
+  PAST_DUE    # Payment failed, 3-day grace period active
+  CANCELED    # User-canceled or trial expired without conversion
+  UNPAID      # Grace period expired, premium features revoked
+}
+
+"""Billing frequency"""
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+"""Canadian provinces and territories"""
+enum CanadianProvince {
+  AB  # Alberta
+  BC  # British Columbia
+  MB  # Manitoba
+  NB  # New Brunswick
+  NL  # Newfoundland and Labrador
+  NS  # Nova Scotia
+  NT  # Northwest Territories
+  NU  # Nunavut
+  ON  # Ontario
+  PE  # Prince Edward Island
+  QC  # Quebec
+  SK  # Saskatchewan
+  YT  # Yukon
+}
+
+"""
+Available subscription plans with pricing and feature limits.
+Pricing in CAD before provincial taxes.
+"""
+type SubscriptionPlan {
+  id: ID!
+  name: String!
+  displayName: String!
+  description: String
+  tier: SubscriptionTier!
+  price: Float!
+  currency: String!
+  billingInterval: BillingInterval!
+  trialDays: Int!
+  features: [String!]!
+  limits: PlanLimits!
+  sortOrder: Int!
+  isActive: Boolean!
+  stripePriceId: String!
+  stripeProductId: String!
+}
+
+"""Feature limits per subscription plan"""
+type PlanLimits {
+  familyMembers: Int!
+  reorderSuggestions: Int!
+  priceAlerts: Boolean!
+  automation: Boolean!
+}
+
+# ========================================
+# QUERIES
+# ========================================
+
+extend type Query {
+  """
+  Get current user's subscription status with all related data.
+  Returns free tier subscription if no premium subscription exists.
+  """
+  subscriptionStatus: Subscription!
+  
+  """
+  Get all available subscription plans.
+  Filtered to active plans only.
+  Sorted by sortOrder field.
+  """
+  subscriptionPlans: [SubscriptionPlan!]!
+  
+  """
+  Get specific subscription plan by ID.
+  Used for plan comparison and upgrade decision flow.
+  """
+  subscriptionPlan(planId: String!): SubscriptionPlan
+  
+  """
+  Calculate total price with Canadian taxes for plan and province.
+  Returns breakdown: subtotal, GST/PST/HST/QST, total.
+  """
+  calculatePricing(
+    planId: String!
+    province: CanadianProvince!
+  ): PricingBreakdown!
+}
+
+"""Canadian tax-inclusive pricing breakdown"""
+type PricingBreakdown {
+  planId: String!
+  subtotal: Float!
+  taxAmount: Float!
+  total: Float!
+  currency: String!
+  province: CanadianProvince!
+  provinceName: String!
+  taxBreakdown: TaxBreakdown!
+}
+
+"""Provincial tax rate breakdown"""
+type TaxBreakdown {
+  gstRate: Float
+  gstAmount: Float
+  pstRate: Float
+  pstAmount: Float
+  hstRate: Float
+  hstAmount: Float
+  qstRate: Float
+  qstAmount: Float
+  combinedRate: Float!
+  taxType: String!
+}
+
+# ========================================
+# MUTATIONS
+# ========================================
+
+extend type Mutation {
+  """
+  Activate 14-day free trial without payment method.
+  Creates trialing subscription with full premium feature access.
+  Triggers trial progress tracking and onboarding flow.
+  
+  Requirements:
+  - User must have free tier subscription (no active/trialing subscription)
+  - Trial can only be activated once per user
+  
+  Constitutional Alignment:
+  - Principle 1: Reduces cognitive load (no payment friction)
+  - Principle 3: Builds trust (Canadian no-pressure trial)
+  """
+  startTrial(durationDays: Int = 14): TrialStartResult!
+  
+  """
+  Convert trial subscription to paid subscription.
+  Processes Stripe payment and activates premium tier.
+  
+  Requirements:
+  - User must have active trial (status = TRIALING)
+  - Payment method must be validated by Stripe
+  - Province must match user profile
+  
+  Constitutional Alignment:
+  - Principle 5: Clear consent for billing data collection
+  - Principle 7: AsyncGenerator pattern for database operations
+  - Principle 8: camelCase field aliases via Strawberry
+  """
+  convertToPaid(input: ConvertToPaidInput!): ConversionResult!
+  
+  """
+  Cancel active subscription.
+  Within cooling-off period (14 days): Full refund for annual plans.
+  After cooling-off period: Subscription continues until period end.
+  
+  Requirements:
+  - User must have active subscription
+  - Stripe subscription cancellation processes automatically
+  
+  Constitutional Alignment:
+  - Principle 3: Consumer protection (cooling-off period)
+  - Principle 9: Graceful degradation (3-day grace period)
+  """
+  cancelSubscription(
+    immediately: Boolean = false
+    reason: String
+  ): CancellationResult!
+  
+  """
+  Reactivate canceled subscription within cooling-off period.
+  Only available for subscriptions canceled within 14 days.
+  
+  Requirements:
+  - Subscription must be in CANCELED status
+  - Must be within cooling-off period (coolingOffEnd not passed)
+  - Payment method must still be valid
+  """
+  reactivateSubscription: ReactivationResult!
+  
+  """
+  Update subscription plan (upgrade/downgrade).
+  Applies proration for billing period adjustments.
+  
+  Requirements:
+  - User must have active subscription
+  - New plan must be different tier or billing interval
+  - Stripe handles proration calculations
+  """
+  updateSubscriptionPlan(
+    newPlanId: String!
+    effectiveDate: DateTime
+  ): UpdateResult!
+}
+
+# ========================================
+# MUTATION INPUTS & RESULTS
+# ========================================
+
+"""Input for converting trial to paid subscription"""
+input ConvertToPaidInput {
+  planId: String!
+  paymentMethodId: String!
+  billingInterval: BillingInterval!
+  province: CanadianProvince!
+  acceptedTerms: Boolean!
+}
+
+"""Result of trial activation"""
+type TrialStartResult {
+  success: Boolean!
+  subscription: Subscription
+  trialProgress: TrialProgress
+  error: Error
+}
+
+"""Result of trial-to-paid conversion"""
+type ConversionResult {
+  success: Boolean!
+  subscription: Subscription
+  invoice: BillingRecord
+  error: Error
+}
+
+"""Result of subscription cancellation"""
+type CancellationResult {
+  success: Boolean!
+  subscription: Subscription
+  refundAmount: Float
+  refundIssued: Boolean!
+  effectiveDate: DateTime
+  error: Error
+}
+
+"""Result of subscription reactivation"""
+type ReactivationResult {
+  success: Boolean!
+  subscription: Subscription
+  error: Error
+}
+
+"""Result of plan update"""
+type UpdateResult {
+  success: Boolean!
+  subscription: Subscription
+  prorationAmount: Float
+  effectiveDate: DateTime
+  error: Error
+}
+
+"""
+Standard error response with bilingual support for Quebec/NB compliance (Bill 96).
+Constitutional Alignment: Principle 4 (PIPEDA Compliance), FR-037 (Bilingual Content).
+"""
+type Error {
+  code: String!
+  message: String! @deprecated(reason: "Use messageEn/messageFr for bilingual support")
+  messageEn: String!  # English error message
+  messageFr: String!  # French error message (Quebec Bill 96 compliance)
+  field: String
+}
+
+# ========================================
+# SUBSCRIPTIONS (Real-Time Updates)
+# ========================================
+
+extend type Subscription {
+  """
+  Real-time subscription status updates.
+  Emits when subscription status changes (payment success/failure, trial expiration, etc.)
+  
+  Constitutional Alignment:
+  - Principle 10: Real-time user feedback reduces anxiety
+  - Principle 11: Proactive status monitoring
+  """
+  subscriptionStatusChanged(userId: ID!): Subscription!
+}
+

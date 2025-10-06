@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { BlurView } from 'expo-blur';
@@ -44,6 +45,7 @@ interface QuickLogModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess?: (message: string) => void;
+  childId?: string; // Selected child ID from parent
 }
 
 interface TimeOption {
@@ -81,7 +83,7 @@ const CHANGE_TYPES: ChangeType[] = [
   },
 ];
 
-export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProps) {
+export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLogModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
@@ -184,12 +186,16 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
     ];
   }, [customTime]);
 
-  // Get the first child as default (in a real app, this would be user-selected or stored)
+  // Use childId prop if provided, otherwise default to first child
   React.useEffect(() => {
-    if (children.length > 0 && !selectedChildId) {
+    if (childId) {
+      // Parent provided a specific child ID - use it
+      setSelectedChildId(childId);
+    } else if (children.length > 0 && !selectedChildId) {
+      // Fallback: use first child if no ID provided
       setSelectedChildId(children[0].id);
     }
-  }, [children, selectedChildId]);
+  }, [childId, children, selectedChildId]);
 
   // Animation effects
   React.useEffect(() => {
@@ -278,16 +284,21 @@ export function QuickLogModal({ visible, onClose, onSuccess }: QuickLogModalProp
         const errorMessage = result.data?.logDiaperChange?.error;
         console.error('Failed to log diaper change:', errorMessage);
 
-        // Display the specific error message from backend validation
-        if (errorMessage) {
-          onSuccess?.(errorMessage);
-        } else {
-          onSuccess?.('Failed to log diaper change. Please try again.');
-        }
+        // Display validation error properly with Alert
+        Alert.alert(
+          'Unable to Log Change',
+          errorMessage || 'Failed to log diaper change. Please try again.',
+          [{ text: 'OK' }]
+        );
+        // Don't close modal - let user fix the issue or cancel
       }
     } catch (error) {
       console.error('Error logging diaper change:', error);
-      onSuccess?.('Failed to log diaper change. Please check your connection and try again.');
+      Alert.alert(
+        'Connection Error',
+        'Failed to log diaper change. Please check your connection and try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 

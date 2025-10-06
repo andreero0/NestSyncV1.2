@@ -61,6 +61,9 @@ NestSync-backend/supabase/.temp
 # Testing and development artifacts
 baseline-screenshots/
 .playwright-mcp/
+.logs/
+.pids/
+.specify/
 
 # Git worktrees (separate working directories for branches)
 worktrees/

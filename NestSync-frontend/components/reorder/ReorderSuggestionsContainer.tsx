@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { useQuery } from '@apollo/client';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -33,7 +32,6 @@ import { EducationalEmptyState } from './EducationalEmptyState';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Colors, NestSyncColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { GET_REORDER_SUGGESTIONS } from '@/lib/graphql/reorder-queries';
 import {
   useReorderStore,
   useReorderSuggestions,
@@ -211,29 +209,10 @@ export function ReorderSuggestionsContainer({
   const { isPremium, loadStatus } = usePremiumSubscription();
   const store = useReorderStore();
 
-  // GraphQL query for suggestions
-  const {
-    data: suggestionsData,
-    loading: queryLoading,
-    error: queryError,
-    refetch,
-  } = useQuery(GET_REORDER_SUGGESTIONS, {
-    variables: {
-      childId,
-      limit: limit || (compact ? 3 : (isPremium ? 50 : 3))
-    },
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-    notifyOnNetworkStatusChange: true,
-  });
-
-  // Update store when query data changes
+  // Load suggestions on mount using store (with 8-second timeout protection)
   useEffect(() => {
-    if (suggestionsData?.getReorderSuggestions) {
-      // Update store directly with query results
-      store.suggestions = suggestionsData.getReorderSuggestions;
-    }
-  }, [suggestionsData, store]);
+    loadSuggestions(childId);
+  }, [childId, loadSuggestions]);
 
   // Load subscription status on mount
   useEffect(() => {
@@ -242,17 +221,14 @@ export function ReorderSuggestionsContainer({
 
   // Filter suggestions based on active filter
   const filteredSuggestions = useMemo(() => {
-    const allSuggestions = suggestions.length > 0 ? suggestions : (suggestionsData?.getReorderSuggestions || []);
-    return filterSuggestionsByType(allSuggestions, activeFilter);
-  }, [suggestions, suggestionsData, activeFilter]);
+    return filterSuggestionsByType(suggestions, activeFilter);
+  }, [suggestions, activeFilter]);
 
   // Premium gating logic
   const shouldShowPremiumGate = useMemo(() => {
     if (isPremium) return false;
-
-    const allSuggestions = suggestions.length > 0 ? suggestions : (suggestionsData?.getReorderSuggestions || []);
-    return allSuggestions.length > 3;
-  }, [isPremium, suggestions, suggestionsData]);
+    return suggestions.length > 3;
+  }, [isPremium, suggestions]);
 
   const displayedSuggestions = useMemo(() => {
     if (compact && limit) {
@@ -273,7 +249,6 @@ export function ReorderSuggestionsContainer({
     setRefreshing(true);
     try {
       await Promise.all([
-        refetch(),
         loadSuggestions(childId),
         loadStatus(),
       ]);
@@ -313,7 +288,7 @@ export function ReorderSuggestionsContainer({
   // LOADING STATE
   // =============================================================================
 
-  if (isLoading || queryLoading) {
+  if (isLoading) {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.header}>
@@ -345,7 +320,7 @@ export function ReorderSuggestionsContainer({
   // ERROR STATE
   // =============================================================================
 
-  if (error || queryError) {
+  if (error) {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.errorContainer}>
@@ -358,7 +333,7 @@ export function ReorderSuggestionsContainer({
             Unable to Load Suggestions
           </ThemedText>
           <ThemedText style={[styles.errorMessage, { color: colors.textSecondary }]}>
-            {error || queryError?.message || 'Please check your connection and try again.'}
+            {error || 'Please check your connection and try again.'}
           </ThemedText>
           <NestSyncButton
             title="Try Again"
@@ -376,7 +351,7 @@ export function ReorderSuggestionsContainer({
   // EMPTY STATE - Enhanced Educational Experience
   // =============================================================================
 
-  const allSuggestions = suggestions.length > 0 ? suggestions : (suggestionsData?.getReorderSuggestions || []);
+  const allSuggestions = suggestions;
 
   if (allSuggestions.length === 0) {
     // Simulate progressive enhancement data (in real implementation, this would come from usage analytics)

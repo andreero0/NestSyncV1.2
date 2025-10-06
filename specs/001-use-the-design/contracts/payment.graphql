@@ -1,0 +1,280 @@
+# GraphQL Schema Contract: Payment Processing
+# Feature: Premium Upgrade Flow
+# Date: 2025-10-02
+
+"""
+Tokenized payment method for recurring subscription billing.
+Stripe handles sensitive card data, only tokens stored in backend.
+Phase 1: Credit cards only (Visa, Mastercard, Amex).
+"""
+type PaymentMethod {
+  id: ID!
+  userId: ID!
+  stripePaymentMethodId: String!
+  type: PaymentMethodType!
+  
+  # Card Details (tokenized, no sensitive data)
+  brand: CardBrand
+  lastFour: String!
+  expMonth: Int!
+  expYear: Int!
+  
+  # Canadian Billing Address
+  billingAddress: BillingAddress!
+  
+  # Status
+  isDefault: Boolean!
+  isExpired: Boolean!
+  
+  # Timestamps
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Supported payment method types (Phase 1: card only)"""
+enum PaymentMethodType {
+  CARD     # Credit/debit cards (Phase 1)
+  INTERAC  # Interac Online (Phase 2)
+}
+
+"""Credit card brands supported"""
+enum CardBrand {
+  VISA
+  MASTERCARD
+  AMEX
+}
+
+"""Canadian billing address for payment compliance"""
+type BillingAddress {
+  line1: String!
+  line2: String
+  city: String!
+  province: CanadianProvince!
+  postalCode: String!  # Format: A1A 1A1
+  country: String!     # Always 'CA'
+}
+
+"""Input for Canadian billing address"""
+input BillingAddressInput {
+  line1: String!
+  line2: String
+  city: String!
+  province: CanadianProvince!
+  postalCode: String!  # Must match A1A 1A1 format
+  country: String = "CA"
+}
+
+# ========================================
+# QUERIES
+# ========================================
+
+extend type Query {
+  """
+  Get all payment methods for current user.
+  Returns empty array if no payment methods configured.
+  """
+  paymentMethods: [PaymentMethod!]!
+  
+  """
+  Get specific payment method by ID.
+  """
+  paymentMethod(id: ID!): PaymentMethod
+  
+  """
+  Get default payment method for current user.
+  Returns null if no default configured.
+  """
+  defaultPaymentMethod: PaymentMethod
+  
+  """
+  Generate Stripe Payment Intent client secret for payment processing.
+  Used by Stripe PaymentSheet in React Native app.
+  
+  Requirements:
+  - Amount calculated server-side with Canadian taxes
+  - Payment Intent created with CAD currency
+  - Metadata includes subscription details for reconciliation
+  
+  Constitutional Alignment:
+  - Principle 14: Stripe SDK integration for premium features
+  - Principle 20: PCI DSS compliance (Stripe handles card data)
+  """
+  createPaymentIntent(input: CreatePaymentIntentInput!): PaymentIntentResult!
+}
+
+"""Input for creating Stripe Payment Intent"""
+input CreatePaymentIntentInput {
+  planId: String!
+  billingInterval: BillingInterval!
+  province: CanadianProvince!
+}
+
+"""Stripe Payment Intent details for client-side processing"""
+type PaymentIntentResult {
+  clientSecret: String!
+  paymentIntentId: String!
+  amount: Float!
+  currency: String!
+  subtotal: Float!
+  taxAmount: Float!
+  total: Float!
+}
+
+# ========================================
+# MUTATIONS
+# ========================================
+
+extend type Mutation {
+  """
+  Add new payment method using Stripe PaymentMethod token.
+  Sets as default if no existing payment methods.
+  
+  Flow:
+  1. Frontend collects card details via Stripe PaymentSheet
+  2. Stripe creates PaymentMethod and returns ID
+  3. Frontend calls this mutation with PaymentMethod ID
+  4. Backend attaches PaymentMethod to Stripe Customer
+  5. Backend stores tokenized payment method reference
+  
+  Requirements:
+  - stripePaymentMethodId must be valid Stripe PM ID
+  - Billing address must be Canadian
+  - User must have Stripe Customer ID (created automatically if needed)
+  
+  Constitutional Alignment:
+  - Principle 4: Privacy by Design (no raw card data stored)
+  - Principle 18: Cross-platform storage (payment method references)
+  """
+  addPaymentMethod(input: AddPaymentMethodInput!): AddPaymentMethodResult!
+  
+  """
+  Set payment method as default for subscription billing.
+  Previous default is unset automatically.
+  
+  Requirements:
+  - Payment method must belong to current user
+  - Payment method must not be expired
+  """
+  setDefaultPaymentMethod(paymentMethodId: ID!): SetDefaultResult!
+  
+  """
+  Remove payment method.
+  Detaches from Stripe Customer and deletes local record.
+  
+  Requirements:
+  - Cannot remove default payment method if active subscription exists
+  - Must set new default before removing current default
+  """
+  removePaymentMethod(paymentMethodId: ID!): RemovePaymentMethodResult!
+  
+  """
+  Update billing address for existing payment method.
+  Updates both local record and Stripe PaymentMethod.
+  
+  Requirements:
+  - Payment method must belong to current user
+  - New address must be Canadian
+  """
+  updateBillingAddress(
+    paymentMethodId: ID!
+    billingAddress: BillingAddressInput!
+  ): UpdateBillingAddressResult!
+}
+
+# ========================================
+# MUTATION INPUTS
+# ========================================
+
+"""Input for adding payment method"""
+input AddPaymentMethodInput {
+  stripePaymentMethodId: String!
+  billingAddress: BillingAddressInput!
+  setAsDefault: Boolean = true
+}
+
+# ========================================
+# MUTATION RESULTS
+# ========================================
+
+"""Result of adding payment method"""
+type AddPaymentMethodResult {
+  success: Boolean!
+  paymentMethod: PaymentMethod
+  error: Error
+}
+
+"""Result of setting default payment method"""
+type SetDefaultResult {
+  success: Boolean!
+  paymentMethod: PaymentMethod
+  error: Error
+}
+
+"""Result of removing payment method"""
+type RemovePaymentMethodResult {
+  success: Boolean!
+  paymentMethodId: ID
+  error: Error
+}
+
+"""Result of updating billing address"""
+type UpdateBillingAddressResult {
+  success: Boolean!
+  paymentMethod: PaymentMethod
+  error: Error
+}
+
+# ========================================
+# STRIPE WEBHOOK EVENTS (Backend Processing)
+# ========================================
+
+"""
+Note: These are not GraphQL types, but documented here for contract completeness.
+Stripe webhooks handled by backend /webhooks/stripe endpoint.
+
+Events to handle:
+- payment_intent.succeeded: Mark subscription as active
+- payment_intent.payment_failed: Set subscription to past_due, start grace period
+- customer.subscription.updated: Sync subscription status with Stripe
+- customer.subscription.deleted: Handle external cancellation
+- invoice.paid: Create billing_history record
+- invoice.payment_failed: Send payment retry notification
+- payment_method.attached: Sync payment method details
+- payment_method.detached: Remove payment method reference
+- payment_method.updated: Update card expiration, billing address
+"""
+
+# ========================================
+# PAYMENT FLOW SEQUENCE
+# ========================================
+
+"""
+1. Trial Activation (No Payment):
+   mutation { startTrial() }
+   
+2. Trial-to-Paid Conversion:
+   a. Frontend: Stripe PaymentSheet collects card details
+   b. Frontend: Stripe creates PaymentMethod, returns ID
+   c. Frontend: mutation { addPaymentMethod(stripePaymentMethodId) }
+   d. Frontend: query { createPaymentIntent(planId, province) }
+   e. Frontend: Stripe PaymentSheet processes payment
+   f. Frontend: mutation { convertToPaid(planId, paymentMethodId) }
+   g. Backend: Stripe webhook confirms payment
+   h. Backend: Subscription status -> ACTIVE
+
+3. Subscription Renewal:
+   a. Stripe automatically charges default payment method
+   b. Stripe webhook: invoice.paid
+   c. Backend: Create billing_history record
+   d. Backend: Update subscription current_period_end
+
+4. Payment Failure & Recovery:
+   a. Stripe webhook: payment_intent.payment_failed
+   b. Backend: Subscription status -> PAST_DUE
+   c. Backend: Start 3-day grace period timer
+   d. Frontend: Show update payment method prompt
+   e. User: mutation { addPaymentMethod() } or { updateBillingAddress() }
+   f. Stripe: Retry payment automatically
+   g. Success: status -> ACTIVE | Failure: status -> UNPAID
+"""
+

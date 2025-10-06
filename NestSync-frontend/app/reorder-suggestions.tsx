@@ -28,10 +28,12 @@ import { ThemedView } from '../components/ThemedView';
 import { IconSymbol } from '../components/ui/IconSymbol';
 import { NestSyncButton } from '../components/ui/NestSyncButton';
 import { ReorderSuggestionsContainer } from '../components/reorder/ReorderSuggestionsContainer';
+import { FeatureUpgradePrompt } from '../components/subscription/FeatureUpgradePrompt';
 import { Colors, NestSyncColors } from '../constants/Colors';
 import { useColorScheme } from '../hooks/useColorScheme';
 import { useAsyncStorage } from '../hooks/useUniversalStorage';
 import { useChildren } from '../hooks/useChildren';
+import { useFeatureGate } from '../lib/hooks/useSubscription';
 
 interface ReorderSuggestionsScreenProps {}
 
@@ -46,12 +48,47 @@ export default function ReorderSuggestionsScreen({}: ReorderSuggestionsScreenPro
   const [storedChildId] = useAsyncStorage('nestsync_selected_child_id');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Get children data to validate selection
   const { children, loading: childrenLoading, error: childrenError } = useChildren({
     first: 10,
     // No polling on this screen to preserve battery
   });
+
+  // Feature gating for smart reorder suggestions (Premium/Family only)
+  const { hasAccess, loading: featureLoading, upgradeRequired, recommendedPlan, error: featureError } = useFeatureGate('smart_reorder_suggestions');
+
+  // DEVELOPMENT BYPASS: Allow access in development mode for testing
+  const isDevelopment = __DEV__;
+  const effectiveHasAccess = isDevelopment || hasAccess;
+  const effectiveUpgradeRequired = isDevelopment ? false : upgradeRequired;
+
+  // Timeout state for feature gate check (prevents infinite loading on iOS)
+  const [featureCheckTimedOut, setFeatureCheckTimedOut] = useState(false);
+
+  // Add timeout to feature gate check to prevent iOS loading issue
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (featureLoading) {
+        console.warn('[Reorder] Feature gate check timed out after 3 seconds');
+        setFeatureCheckTimedOut(true);
+      }
+    }, 3000); // 3 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [featureLoading]);
+
+  // Log feature gate errors for debugging
+  useEffect(() => {
+    if (featureError) {
+      console.warn('[Reorder] Feature gate check failed:', featureError.message);
+      console.log('[Reorder] Falling back to basic access for development');
+    }
+    if (isDevelopment) {
+      console.log('[Reorder] Development mode: Feature gate bypassed, allowing access');
+    }
+  }, [featureError, isDevelopment]);
 
   // Initialize child selection from URL params or storage
   useEffect(() => {
@@ -102,25 +139,9 @@ export default function ReorderSuggestionsScreen({}: ReorderSuggestionsScreenPro
     router.back();
   };
 
-  // Handle upgrade to premium (placeholder for future implementation)
+  // Handle upgrade to premium - Shows the new FeatureUpgradePrompt
   const handleUpgradeRequired = () => {
-    Alert.alert(
-      'Premium Feature',
-      'Smart Reorder Suggestions require a NestSync Premium subscription. Get unlimited ML-powered suggestions, price comparisons, and auto-reorder scheduling.',
-      [
-        {
-          text: 'Learn More',
-          onPress: () => {
-            // TODO: Navigate to premium upgrade screen
-            Alert.alert('Coming Soon', 'Premium subscription will be available in a future update!');
-          },
-        },
-        {
-          text: 'Maybe Later',
-          style: 'cancel',
-        },
-      ]
-    );
+    setShowUpgradePrompt(true);
   };
 
   // Handle navigation to diaper logging (main app functionality)
@@ -154,7 +175,11 @@ export default function ReorderSuggestionsScreen({}: ReorderSuggestionsScreenPro
   // LOADING STATE
   // =============================================================================
 
-  if (isLoading || childrenLoading) {
+  // If feature check fails/times out, don't block the screen - let it render
+  // Skip feature loading check entirely in development mode
+  const effectiveLoading = featureLoading && !featureError && !featureCheckTimedOut && !isDevelopment;
+
+  if (isLoading || childrenLoading || effectiveLoading) {
     return (
       <SafeAreaProvider>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
@@ -297,7 +322,42 @@ export default function ReorderSuggestionsScreen({}: ReorderSuggestionsScreenPro
   }
 
   // =============================================================================
-  // MAIN SCREEN RENDER
+  // FEATURE ACCESS GATING
+  // =============================================================================
+
+  // Show blocking upgrade prompt if user doesn't have access
+  // Don't show during loading to avoid flash
+  // DEVELOPMENT BYPASS: Skip upgrade prompt in development mode
+  if (!featureLoading && effectiveUpgradeRequired && !effectiveHasAccess) {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+          <Stack.Screen
+            options={{
+              title: 'Smart Reorder',
+              headerShown: true,
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.text,
+              headerTitleStyle: { fontWeight: '600' },
+            }}
+          />
+
+          <FeatureUpgradePrompt
+            featureId="smart_reorder_suggestions"
+            title="Unlock Smart Reordering"
+            description="Get AI-powered reorder predictions based on your baby's usage patterns, Canadian price comparisons, and automated scheduling with NestSync Premium."
+            requiredTier={recommendedPlan?.tier || 'PREMIUM'}
+            mode="blocking"
+            visible={true}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  // =============================================================================
+  // MAIN SCREEN RENDER (for users with access)
   // =============================================================================
 
   const selectedChild = children.find(child => child.id === selectedChildId);
@@ -346,6 +406,17 @@ export default function ReorderSuggestionsScreen({}: ReorderSuggestionsScreenPro
           onUpgradeRequired={handleUpgradeRequired}
           onLogDiaperChange={handleLogDiaperChange}
           onLearnMore={handleLearnMore}
+        />
+
+        {/* Feature Upgrade Prompt - Dismissible Mode Example */}
+        <FeatureUpgradePrompt
+          featureId="smart_reorder_suggestions"
+          title="Unlock Smart Reordering"
+          description="Get AI-powered reorder predictions, Canadian price comparisons, and automated scheduling with NestSync Premium."
+          requiredTier="PREMIUM"
+          mode="dismissible"
+          visible={showUpgradePrompt}
+          onDismiss={() => setShowUpgradePrompt(false)}
         />
       </SafeAreaView>
     </SafeAreaProvider>

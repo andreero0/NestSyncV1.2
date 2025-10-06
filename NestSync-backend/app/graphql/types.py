@@ -1006,6 +1006,41 @@ class NotificationDeliveryLogConnection:
 
 
 # =============================================================================
+# PIPEDA Data Subject Rights Types
+# =============================================================================
+
+@strawberry.input
+class ExportUserDataInput:
+    """Input for PIPEDA-compliant data export"""
+    format: str = "json"  # Future: support CSV, XML
+    include_deleted: bool = False  # Include soft-deleted records
+
+
+@strawberry.type
+class ExportUserDataResponse(MutationResponse):
+    """Response for user data export (PIPEDA right to data portability)"""
+    export_url: Optional[str] = None
+    export_data: Optional[str] = None  # JSON string until S3 is configured
+    export_size_bytes: Optional[int] = None
+    expires_at: Optional[datetime] = None
+
+
+@strawberry.input
+class DeleteUserAccountInput:
+    """Input for PIPEDA-compliant account deletion"""
+    confirmation_text: str  # Must be "DELETE my account"
+    password: str  # Re-verify password for security
+    reason: Optional[str] = None
+
+
+@strawberry.type
+class DeleteUserAccountResponse(MutationResponse):
+    """Response for account deletion (PIPEDA right to erasure)"""
+    deletion_scheduled_at: Optional[datetime] = None
+    data_retention_period_days: int = 30  # PIPEDA compliance
+
+
+# =============================================================================
 # Export Types
 # =============================================================================
 
@@ -1102,5 +1137,11 @@ __all__ = [
 
     # Error Types
     "ValidationError",
-    "ErrorResponse"
+    "ErrorResponse",
+
+    # PIPEDA Data Subject Rights Types
+    "ExportUserDataInput",
+    "ExportUserDataResponse",
+    "DeleteUserAccountInput",
+    "DeleteUserAccountResponse"
 ]

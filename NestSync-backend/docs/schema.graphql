@@ -1,0 +1,3322 @@
+Importing plotly failed. Interactive plots will not work.
+type AcceptInvitationResponse {
+  success: Boolean!
+  familyMember: FamilyMember
+  family: Family
+  error: String
+  message: String
+}
+
+enum AccessLevel {
+  FULL
+  LIMITED
+  READ_ONLY
+  EMERGENCY_ONLY
+}
+
+type AccessLogEntry {
+  accessedAt: String!
+  ipAddress: String
+  userAgent: String
+  action: String!
+  success: Boolean!
+}
+
+input AddChildToFamilyInput {
+  familyId: ID!
+  childId: ID!
+  accessLevel: AccessLevel = FULL
+}
+
+type AddChildToFamilyResponse {
+  success: Boolean!
+  childId: ID
+  familyId: ID
+  error: String
+  message: String
+}
+
+input AddPaymentMethodInput {
+  """Stripe PaymentMethod ID"""
+  stripePaymentMethodId: String!
+
+  """Set as default"""
+  setAsDefault: Boolean = false
+}
+
+type AllergyInfo {
+  allergen: String!
+  severity: String!
+  reaction: String
+  treatment: String
+  verifiedDate: String
+}
+
+input AllergyInput {
+  allergen: String!
+  severity: String!
+  reaction: String = null
+  treatment: String = null
+}
+
+type AnalyticsDashboard {
+  childId: String
+  lastUpdated: DateTime!
+  insightLevel: InsightLevelType!
+  todayChanges: Int!
+  weekChanges: Int!
+  monthChanges: Int!
+  recentUsage: UsageAnalytics!
+  weeklyTrends: WeeklyTrends!
+  inventoryStatus: InventoryInsights!
+  topInsights: [String!]!
+  recommendations: [String!]!
+  alerts: [String!]!
+  predictions: [PredictionInsight!]
+  healthInsights: [HealthInsight!]
+}
+
+type AnalyticsDashboardResponse {
+  success: Boolean!
+  message: String
+  error: String
+  insightLevel: InsightLevelType!
+  dataPointsAnalyzed: Int!
+  cacheHit: Boolean!
+  dashboard: AnalyticsDashboard
+}
+
+input AnalyticsDateRange {
+  startDate: Date!
+  endDate: Date!
+}
+
+input AnalyticsFilters {
+  childId: String = null
+  productType: String = null
+  size: String = null
+  brand: String = null
+  usageType: String = null
+  dateRange: AnalyticsDateRange = null
+  period: AnalyticsPeriodType = null
+  includePredictions: Boolean! = false
+}
+
+type AnalyticsOverview {
+  """Key metrics summary"""
+  summary: AnalyticsOverviewSummary!
+
+  """Raw data metrics"""
+  raw: AnalyticsRawData!
+}
+
+type AnalyticsOverviewSummary {
+  """Changes logged today"""
+  todayChanges: Int!
+
+  """Current daily logging streak"""
+  currentStreak: Int!
+
+  """Changes this week"""
+  weekChanges: Int!
+
+  """Changes this month"""
+  monthChanges: Int!
+
+  """Average changes per day this week"""
+  weeklyAverage: Float!
+}
+
+enum AnalyticsPeriodType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+type AnalyticsRawData {
+  """Total data points available"""
+  totalDataPoints: Int!
+
+  """Data quality score (0-100)"""
+  dataQualityScore: Float!
+
+  """Oldest data point timestamp"""
+  oldestDataPoint: DateTime!
+
+  """Newest data point timestamp"""
+  newestDataPoint: DateTime!
+
+  """Average diaper efficiency rating"""
+  averageEfficiency: Float!
+}
+
+type AnalyticsTrendsEnhanced {
+  """Weekly trend direction"""
+  weeklyTrend: String!
+
+  """Monthly trend direction"""
+  monthlyTrend: String!
+
+  """Seasonal pattern detected"""
+  seasonalPattern: Boolean!
+
+  """Growth-related change indicator"""
+  growthIndicator: String!
+}
+
+type AnalyticsUsageEnhanced {
+  """Most active hour of day"""
+  peakHour: Int!
+
+  """Most active day of week"""
+  peakDay: String!
+
+  """Average time between changes in hours"""
+  averageGapHours: Float!
+
+  """Detected usage pattern"""
+  patternType: String!
+
+  """Different weekend pattern detected"""
+  weekendPattern: Boolean!
+}
+
+type AuthResponse {
+  success: Boolean!
+  message: String
+  error: String
+  user: UserProfile
+  session: UserSession
+}
+
+type AvailablePlansResponse {
+  """Available plans"""
+  plans: [PremiumSubscriptionPlan!]!
+
+  """Current tier"""
+  currentTier: SubscriptionTier!
+
+  """Recommended plan"""
+  recommendedPlan: PremiumSubscriptionPlan
+}
+
+type AvailableUpgrade {
+  planId: String!
+  name: String!
+  monthlyPricing: PlanPricing!
+  yearlyPricing: YearlyPricing!
+  newFeatures: [String!]!
+  valueProposition: String!
+}
+
+type BillingHistoryResponse {
+  """Billing records"""
+  records: [BillingRecord!]!
+
+  """Total count"""
+  totalCount: Int!
+
+  """Has more records"""
+  hasMore: Boolean!
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+type BillingRecord {
+  """Billing record ID"""
+  id: String!
+
+  """User ID"""
+  userId: String!
+
+  """Subscription ID"""
+  subscriptionId: String
+
+  """Transaction type"""
+  transactionType: TransactionType!
+
+  """Transaction description"""
+  description: String!
+
+  """Subtotal before tax"""
+  subtotal: Float!
+
+  """Total tax"""
+  taxAmount: Float!
+
+  """Total charged"""
+  totalAmount: Float!
+
+  """Currency code"""
+  currency: String!
+
+  """Province"""
+  province: CanadianProvince
+
+  """Tax breakdown"""
+  taxBreakdown: PremiumTaxBreakdown!
+
+  """Tax rate"""
+  taxRate: Float
+
+  """Transaction status"""
+  status: TransactionStatus!
+
+  """Stripe Invoice ID"""
+  stripeInvoiceId: String
+
+  """Refunded flag"""
+  refunded: Boolean!
+
+  """Refund amount"""
+  refundAmount: Float
+
+  """Refund reason"""
+  refundReason: String
+
+  """Invoice number"""
+  invoiceNumber: String
+
+  """Invoice PDF URL"""
+  invoicePdfUrl: String
+
+  """Receipt URL"""
+  receiptUrl: String
+
+  """Transaction timestamp"""
+  createdAt: DateTime!
+}
+
+enum BloodTypeEnum {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  UNKNOWN
+}
+
+enum CanadianProvince {
+  ON
+  QC
+  BC
+  AB
+  SK
+  MB
+  NS
+  NB
+  PE
+  NL
+  NT
+  YT
+  NU
+}
+
+type CanadianTaxRateType {
+  """Province code"""
+  province: String!
+
+  """Province name"""
+  provinceName: String!
+
+  """Tax type"""
+  taxType: TaxType!
+
+  """GST rate"""
+  gstRate: Float
+
+  """PST rate"""
+  pstRate: Float
+
+  """HST rate"""
+  hstRate: Float
+
+  """QST rate"""
+  qstRate: Float
+
+  """Combined tax rate"""
+  combinedRate: Float!
+
+  """Effective from date"""
+  effectiveFrom: DateTime!
+
+  """Effective to date"""
+  effectiveTo: DateTime
+}
+
+input CancelSubscriptionInput {
+  """Cancellation reason"""
+  reason: String = null
+
+  """User feedback"""
+  feedback: String = null
+
+  """Request refund"""
+  requestRefund: Boolean = false
+}
+
+type CancellationPreview {
+  """Refund eligible"""
+  isRefundEligible: Boolean!
+
+  """Refund amount"""
+  refundAmount: Float
+
+  """Access end date"""
+  accessEndsAt: DateTime
+
+  """Features that will be lost"""
+  featuresLost: [String!]!
+}
+
+enum CardBrand {
+  VISA
+  MASTERCARD
+  AMEX
+  DISCOVER
+  DINERS
+  JCB
+  UNKNOWN
+}
+
+type CaregiverInvitation {
+  id: ID!
+  familyId: ID!
+  email: String!
+  role: MemberRole!
+  invitedBy: ID!
+  createdAt: DateTime!
+  expiresAt: DateTime!
+  status: InvitationStatus!
+  invitationToken: String!
+  familyName: String
+  inviterName: String
+}
+
+type CaregiverInvitationConnection {
+  nodes: [CaregiverInvitation!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type CaregiverPresence {
+  userId: ID!
+  familyId: ID!
+  childId: ID
+  status: PresenceStatus!
+  currentActivity: String
+  lastSeen: DateTime!
+  deviceInfo: DeviceInfo
+  userDisplayName: String
+}
+
+input ChangePasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}
+
+input ChangeSubscriptionPlanInput {
+  """New plan ID"""
+  newPlanId: String!
+}
+
+type ChildConnection {
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """A list of edges."""
+  edges: [ChildEdge!]!
+}
+
+type ChildEdge {
+  """The item at the end of the edge."""
+  node: ChildProfile!
+
+  """A cursor for use in pagination."""
+  cursor: String!
+}
+
+type ChildProfile {
+  id: ID!
+  name: String!
+  dateOfBirth: Date!
+  gender: GenderType
+  currentDiaperSize: DiaperSizeType!
+  currentWeightKg: Float
+  currentHeightCm: Float
+  dailyUsageCount: Int!
+  hasSensitiveSkin: Boolean!
+  hasAllergies: Boolean!
+  allergiesNotes: String
+  onboardingCompleted: Boolean!
+  province: String
+  createdAt: DateTime!
+  ageInDays: Int!
+  ageInMonths: Int!
+  weeklyUsage: Int!
+  monthlyUsage: Int!
+}
+
+type ComplianceReportResponse {
+  """User ID"""
+  userId: String!
+
+  """Report generation timestamp"""
+  reportGeneratedAt: DateTime!
+
+  """Subscription data"""
+  subscriptionData: SubscriptionComplianceData
+
+  """Payment methods"""
+  paymentMethods: [PaymentMethodComplianceData!]!
+
+  """Billing records"""
+  billingRecords: [BillingRecord!]!
+
+  """Consent records"""
+  consentRecords: ConsentRecords!
+
+  """Data retention policy"""
+  dataRetentionPolicy: String!
+}
+
+type ConsentConnection {
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """A list of edges."""
+  edges: [ConsentEdge!]!
+}
+
+type ConsentEdge {
+  """The item at the end of the edge."""
+  node: UserConsent!
+
+  """A cursor for use in pagination."""
+  cursor: String!
+}
+
+type ConsentRecords {
+  """Payment consent timestamp"""
+  paymentConsentAt: DateTime
+
+  """Privacy consent timestamp"""
+  privacyConsentAt: DateTime
+}
+
+enum ConsentStatusType {
+  GRANTED
+  WITHDRAWN
+  EXPIRED
+  PENDING
+}
+
+enum ConsentTypeEnum {
+  PRIVACY_POLICY
+  TERMS_OF_SERVICE
+  MARKETING
+  ANALYTICS
+  DATA_SHARING
+  COOKIES
+  LOCATION_TRACKING
+  BIOMETRIC_DATA
+  CHILD_DATA
+  EMERGENCY_CONTACTS
+}
+
+input ConsentUpdateInput {
+  consentType: ConsentTypeEnum!
+  granted: Boolean!
+  consentVersion: String = null
+}
+
+type ConsumptionPrediction {
+  id: String!
+  childId: String!
+  modelVersion: String!
+  predictionDate: DateTime!
+  predictionHorizonDays: Int!
+  confidenceLevel: PredictionConfidenceEnum!
+  meanAbsoluteError: Decimal
+  rSquaredScore: Decimal
+  currentConsumptionRate: Decimal!
+  predictedConsumption30d: Int!
+  predictedRunoutDate: DateTime!
+  recommendedReorderDate: DateTime!
+  sizeChangeProbability: Decimal
+  predictedNewSize: String
+  sizeChangeEstimatedDate: DateTime
+  growthAdjustmentFactor: Decimal!
+  seasonalAdjustmentFactor: Decimal!
+  featureImportance: JSON!
+  trainingDataPoints: Int!
+  trainingPeriodDays: Int!
+  lastUsageDate: DateTime!
+  createdAt: DateTime!
+}
+
+type ConsumptionPredictionConnection {
+  items: [ConsumptionPrediction!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type CostAnalysis {
+  period: String!
+  totalCost: Float!
+  costPerChange: Float!
+  costPerDay: Float!
+  breakdownByProduct: [ProductCostBreakdown!]!
+  comparisonPreviousPeriod: Float
+  budgetRecommendation: String
+}
+
+type CostSavings {
+  amount: Decimal!
+  currency: String!
+  comparedToRegularPrice: Decimal
+  comparedToLastPurchase: Decimal
+}
+
+input CreateChildInput {
+  name: String!
+  dateOfBirth: Date!
+  gender: GenderType = null
+  currentDiaperSize: DiaperSizeType!
+  currentWeightKg: Float = null
+  currentHeightCm: Float = null
+  dailyUsageCount: Int! = 8
+  hasSensitiveSkin: Boolean! = false
+  hasAllergies: Boolean! = false
+  allergiesNotes: String = null
+  preferredBrands: [String!] = null
+  specialNeeds: String = null
+}
+
+type CreateChildResponse {
+  success: Boolean!
+  message: String
+  error: String
+  child: ChildProfile
+}
+
+input CreateEmergencyAccessInput {
+  childId: String = null
+  durationHours: Int! = 24
+  recipientName: String = null
+  recipientPhone: String = null
+  recipientRelationship: String = null
+  purpose: String = null
+  notes: String = null
+  maxUses: Int = null
+  canViewMedical: Boolean! = true
+  canViewContacts: Boolean! = true
+  canViewProviders: Boolean! = true
+  canViewLocation: Boolean! = false
+}
+
+input CreateEmergencyContactInput {
+  childId: String!
+  name: String!
+  relationship: String!
+  phonePrimary: String!
+  phoneSecondary: String = null
+  email: String = null
+  isPrimary: Boolean! = false
+  priorityOrder: Int! = 999
+  address: String = null
+  notes: String = null
+  canPickup: Boolean! = false
+  canMakeMedicalDecisions: Boolean! = false
+  province: String = null
+  speaksFrench: Boolean! = false
+  speaksEnglish: Boolean! = true
+}
+
+input CreateFamilyInput {
+  name: String!
+  familyType: FamilyType = STANDARD
+  description: String = null
+}
+
+type CreateFamilyResponse {
+  success: Boolean!
+  family: Family
+  error: String
+  message: String
+}
+
+input CreateHealthcareProviderInput {
+  childId: String!
+  providerType: ProviderTypeEnum!
+  isPrimary: Boolean! = false
+  providerName: String!
+  clinicName: String = null
+  specialty: String = null
+  phone: String!
+  phoneEmergency: String = null
+  fax: String = null
+  email: String = null
+  addressLine1: String!
+  addressLine2: String = null
+  city: String!
+  province: String!
+  postalCode: String!
+  officeHours: String = null
+  appointmentBookingUrl: String = null
+  patientPortalUrl: String = null
+  notes: String = null
+  acceptsProvincialCoverage: Boolean! = true
+  languagesSpoken: String = null
+  referralRequired: Boolean! = false
+  patientId: String = null
+}
+
+input CreateInventoryItemInput {
+  childId: ID!
+  productType: ProductTypeEnum!
+  brand: String!
+  productName: String = null
+  size: String!
+  quantityTotal: Int!
+  costCad: Float = null
+  expiryDate: DateTime = null
+  storageLocation: String = null
+  notes: String = null
+}
+
+type CreateInventoryItemResponse {
+  success: Boolean!
+  message: String
+  error: String
+  inventoryItem: InventoryItem
+}
+
+input CreateNotificationInput {
+  userId: ID!
+  childId: ID = null
+  notificationType: NotificationTypeEnum!
+  priority: NotificationPriorityType!
+  channels: [NotificationChannelEnum!]!
+  title: String!
+  message: String!
+  dataPayload: String = null
+  scheduledFor: DateTime = null
+}
+
+type CreateNotificationResponse {
+  success: Boolean!
+  message: String
+  error: String
+  notification: NotificationQueue
+}
+
+input CreateReorderPreferencesInput {
+  childId: String!
+  autoReorderEnabled: Boolean! = false
+  reorderThresholdDays: Int! = 7
+  maxOrderAmountCad: Decimal! = "150.00"
+  preferredRetailers: [RetailerTypeEnum!]! = []
+  preferredBrands: [String!]! = []
+  preferredDeliveryDays: [Int!]! = []
+  deliveryInstructions: String = null
+  notificationAdvanceHours: Int! = 24
+}
+
+input CreateRetailerConfigInput {
+  retailerType: RetailerTypeEnum!
+  clientId: String!
+  clientSecret: String!
+  partnerTag: String = null
+  storeId: String = null
+}
+
+input CreateSubscriptionInput {
+  tier: SubscriptionTierType!
+  stripePaymentMethodId: String!
+  billingAddress: JSON!
+  provinceCode: String!
+}
+
+type DailySummary {
+  date: Date!
+  childId: String
+  summary: DailyUsageSummary!
+  hourlyBreakdown: [HourlyUsageDistribution!]!
+  usageTimeline: [UsageDataPoint!]!
+  notablePatterns: [String!]!
+  efficiencyNotes: String
+  recommendations: [String!]!
+}
+
+type DailySummaryResponse {
+  success: Boolean!
+  message: String
+  error: String
+  insightLevel: InsightLevelType!
+  dataPointsAnalyzed: Int!
+  cacheHit: Boolean!
+  summary: DailySummary
+}
+
+type DailyUsageSummary {
+  date: Date!
+  totalChanges: Int!
+  wetOnly: Int!
+  soiledOnly: Int!
+  wetAndSoiled: Int!
+  dryChanges: Int!
+  totalQuantity: Int!
+  averageIntervalMinutes: Float
+  efficiencyScore: Float
+  costEstimate: Float
+}
+
+type DashboardStats {
+  daysRemaining: Int
+  diapersLeft: Int!
+  lastChange: String
+  todayChanges: Int!
+  currentSize: String
+}
+
+"""Date (isoformat)"""
+scalar Date
+
+"""Date with time (isoformat)"""
+scalar DateTime
+
+"""Decimal (fixed-point)"""
+scalar Decimal
+
+input DeleteChildInput {
+  deletionType: DeletionType! = SOFT_DELETE
+  confirmationText: String!
+  reason: String = null
+  retainAuditLogs: Boolean! = true
+}
+
+type DeleteChildResponse {
+  success: Boolean!
+  message: String
+  error: String
+  deletedChildId: String
+  auditInfo: DeletionAuditInfo
+}
+
+input DeleteInventoryItemInput {
+  confirmationText: String!
+  reason: String = null
+}
+
+type DeleteInventoryItemResponse {
+  success: Boolean!
+  message: String
+  error: String
+  deletedItemId: String
+}
+
+type DeletionAuditInfo {
+  deletedAt: DateTime!
+  deletedBy: String!
+  deletionType: DeletionType!
+  reason: String
+  itemsDeletedSummary: String!
+  retentionPeriodDays: Int
+}
+
+enum DeletionType {
+  SOFT_DELETE
+  HARD_DELETE
+}
+
+type DetailedPeakHours {
+  """Top 3 peak time ranges"""
+  peakHours: [PeakHourData!]!
+
+  """24-hour distribution"""
+  hourlyDistribution: [TimeSlotData!]!
+
+  """Weekend usage vs weekday ratio"""
+  weekendVsWeekdayRatio: Float!
+}
+
+type DeviceInfo {
+  platform: String
+  version: String
+  model: String
+}
+
+type DeviceToken {
+  deviceToken: String!
+  platform: String!
+}
+
+enum DiaperSizeType {
+  NEWBORN
+  SIZE_1
+  SIZE_2
+  SIZE_3
+  SIZE_4
+  SIZE_5
+  SIZE_6
+  SIZE_7
+}
+
+type EfficiencyScore {
+  productKey: String!
+  score: Float!
+}
+
+type EmergencyAccess {
+  id: String!
+  familyId: String!
+  childId: String
+  createdBy: String!
+  accessToken: String!
+  accessCode: String!
+  expiresAt: DateTime!
+  isActive: Boolean!
+  maxUses: Int
+  useCount: Int!
+  canViewMedical: Boolean!
+  canViewContacts: Boolean!
+  canViewProviders: Boolean!
+  canViewLocation: Boolean!
+  recipientName: String
+  recipientPhone: String
+  recipientRelationship: String
+  purpose: String
+  notes: String
+  accessLog: [AccessLogEntry!]!
+  lastAccessedAt: DateTime
+  revokedAt: DateTime
+  revokedBy: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type EmergencyAccessConnection {
+  edges: [EmergencyAccess!]!
+  totalCount: Int!
+}
+
+type EmergencyAccessResponse {
+  success: Boolean!
+  message: String!
+  emergencyAccess: EmergencyAccess
+  qrCodeData: QRCodeData
+  errors: [String!]
+}
+
+type EmergencyContact {
+  id: String!
+  childId: String!
+  familyId: String!
+  name: String!
+  relationship: String!
+  phonePrimary: String!
+  phoneSecondary: String
+  email: String
+  isPrimary: Boolean!
+  priorityOrder: Int!
+  address: String
+  notes: String
+  canPickup: Boolean!
+  canMakeMedicalDecisions: Boolean!
+  province: String
+  speaksFrench: Boolean!
+  speaksEnglish: Boolean!
+  lastVerifiedAt: DateTime
+  consentGivenAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type EmergencyContactConnection {
+  edges: [EmergencyContact!]!
+  totalCount: Int!
+}
+
+type EmergencyContactResponse {
+  success: Boolean!
+  message: String!
+  emergencyContact: EmergencyContact
+  errors: [String!]
+}
+
+type EmergencyInformation {
+  childId: String!
+  childName: String!
+  childBirthDate: Date!
+  emergencyContacts: [EmergencyContact!]!
+  medicalInformation: MedicalInformation
+  healthcareProviders: [HealthcareProvider!]!
+  lastUpdated: DateTime!
+}
+
+type EmergencyInformationResponse {
+  success: Boolean!
+  message: String!
+  emergencyInformation: EmergencyInformation
+  errors: [String!]
+}
+
+type EnhancedAnalyticsDashboard {
+  """Overview section data"""
+  overview: AnalyticsOverview!
+
+  """Usage patterns section"""
+  usage: AnalyticsUsageEnhanced!
+
+  """Trends analysis section"""
+  trends: AnalyticsTrendsEnhanced!
+
+  """Your Baby's Patterns section"""
+  weeklyPatterns: WeeklyPatternData!
+
+  """Enhanced cost insights"""
+  costAnalysis: EnhancedCostAnalysis!
+
+  """Detailed peak hours analysis"""
+  peakHoursDetailed: DetailedPeakHours!
+
+  """Smart size change predictions"""
+  sizePredictions: SizeChangePredictions
+
+  """Last analytics calculation timestamp"""
+  lastUpdated: DateTime!
+
+  """Data completeness score (0-100)"""
+  dataQualityScore: Float!
+}
+
+type EnhancedAnalyticsDashboardResponse {
+  """Query success status"""
+  success: Boolean!
+
+  """Success/error message"""
+  message: String
+
+  """Dashboard data"""
+  dashboard: EnhancedAnalyticsDashboard
+
+  """Whether data was served from cache"""
+  cacheHit: Boolean!
+}
+
+type EnhancedCostAnalysis {
+  """Monthly cost in CAD"""
+  monthlyCostCad: Float!
+
+  """Cost per diaper change in CAD"""
+  costPerChangeCad: Float!
+
+  """Efficiency percentage vs target"""
+  efficiencyVsTarget: Float!
+
+  """Weekend vs weekday usage percentage"""
+  weekendVsWeekdayUsage: Float!
+
+  """7-day cost trend percentage"""
+  costTrend7day: Float!
+
+  """Day of week with highest costs"""
+  mostExpensiveDay: String!
+}
+
+type Family {
+  id: ID!
+  name: String!
+  familyType: FamilyType!
+  description: String
+  createdBy: ID!
+  createdAt: DateTime!
+  settings: FamilySettings!
+  memberCount: Int
+  childrenCount: Int
+}
+
+input FamilyActivityInput {
+  familyId: ID!
+  childId: ID!
+  activityType: String!
+  loggedAt: DateTime = null
+  notes: String = null
+  activityMetadata: JSON = null
+}
+
+type FamilyConnection {
+  nodes: [Family!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type FamilyMember {
+  id: ID!
+  userId: ID!
+  familyId: ID!
+  role: MemberRole!
+  permissions: MemberPermissions!
+  joinedAt: DateTime!
+  accessExpiresAt: DateTime
+  status: MemberStatus!
+  userDisplayName: String
+  userEmail: String
+}
+
+type FamilyMemberConnection {
+  nodes: [FamilyMember!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type FamilySettings {
+  timeZone: String!
+  language: String!
+  privacyLevel: String!
+  allowGuestAccess: Boolean!
+  dataRetentionDays: Int!
+  notificationSettings: JSON!
+}
+
+enum FamilyType {
+  PERSONAL
+  STANDARD
+  INSTITUTIONAL
+}
+
+type FeatureAccessRecord {
+  """Feature access ID"""
+  id: String!
+
+  """Feature identifier"""
+  featureId: String!
+
+  """Feature name"""
+  featureName: String!
+
+  """Minimum tier required"""
+  tierRequired: SubscriptionTier!
+
+  """Has access"""
+  hasAccess: Boolean!
+
+  """Access source"""
+  accessSource: FeatureAccessSource!
+
+  """Usage count"""
+  usageCount: Int!
+
+  """Usage limit"""
+  usageLimit: Int
+}
+
+type FeatureAccessResponse {
+  """Has access"""
+  hasAccess: Boolean!
+
+  """Feature ID"""
+  featureId: String!
+
+  """Minimum tier required"""
+  tierRequired: SubscriptionTier
+
+  """Usage count"""
+  usageCount: Int
+
+  """Usage limit"""
+  usageLimit: Int
+
+  """Upgrade recommendation"""
+  upgradeRecommendation: String
+}
+
+enum FeatureAccessSource {
+  SUBSCRIPTION
+  TRIAL
+  PROMO
+  LIFETIME
+  ADMIN_GRANT
+}
+
+type FeatureLimits {
+  """Maximum family members"""
+  familyMembers: Int!
+
+  """Reorder suggestions limit (-1 = unlimited)"""
+  reorderSuggestions: Int!
+
+  """Price alerts enabled"""
+  priceAlerts: Boolean!
+
+  """Automation features enabled"""
+  automation: Boolean!
+}
+
+enum GenderType {
+  BOY
+  GIRL
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum HealthCardProvinceEnum {
+  ON
+  BC
+  AB
+  SK
+  MB
+  QC
+  NB
+  NS
+  PE
+  NL
+  YT
+  NT
+  NU
+}
+
+type HealthCardValidationResult {
+  isValid: Boolean!
+  formattedNumber: String!
+  province: HealthCardProvinceEnum!
+  validationErrors: [String!]!
+  suggestions: [String!]!
+}
+
+type HealthInsight {
+  insightType: String!
+  description: String!
+  recommendation: String
+  urgencyLevel: String!
+  patternDetected: Boolean!
+  confidenceScore: Float!
+}
+
+type HealthcareProvider {
+  id: String!
+  childId: String!
+  familyId: String!
+  providerType: ProviderTypeEnum!
+  isPrimary: Boolean!
+  providerName: String!
+  clinicName: String
+  specialty: String
+  phone: String!
+  phoneEmergency: String
+  fax: String
+  email: String
+  addressLine1: String!
+  addressLine2: String
+  city: String!
+  province: String!
+  postalCode: String!
+  officeHours: String
+  appointmentBookingUrl: String
+  patientPortalUrl: String
+  notes: String
+  acceptsProvincialCoverage: Boolean!
+  languagesSpoken: String
+  referralRequired: Boolean!
+  lastVisitDate: DateTime
+  nextAppointmentDate: DateTime
+  patientId: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type HealthcareProviderConnection {
+  edges: [HealthcareProvider!]!
+  totalCount: Int!
+}
+
+type HealthcareProviderResponse {
+  success: Boolean!
+  message: String!
+  healthcareProvider: HealthcareProvider
+  errors: [String!]
+}
+
+type HospitalizationInfo {
+  reason: String!
+  admissionDate: String!
+  dischargeDate: String
+  hospital: String
+  attendingPhysician: String
+  notes: String
+}
+
+type HourlyUsageDistribution {
+  hour: Int!
+  count: Int!
+  percentage: Float!
+  isPeakHour: Boolean!
+}
+
+type ImmunizationInfo {
+  vaccine: String!
+  dateGiven: String!
+  doseNumber: Int!
+  nextDoseDue: String
+  administeredBy: String
+}
+
+input ImmunizationInput {
+  vaccine: String!
+  dateGiven: String!
+  doseNumber: Int!
+  nextDoseDue: String = null
+  administeredBy: String = null
+}
+
+input InitialInventoryInput {
+  diaperSize: DiaperSizeType!
+  brand: String!
+  quantity: Int!
+  purchaseDate: Date = null
+  expiryDate: Date = null
+}
+
+enum InsightLevelType {
+  FREE
+  PREMIUM
+}
+
+type InventoryConnection {
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """A list of edges."""
+  edges: [InventoryItemEdge!]!
+}
+
+type InventoryInsight {
+  productType: String!
+  size: String!
+  brand: String
+  currentStock: Int!
+  dailyConsumptionRate: Float!
+  daysRemaining: Float
+  predictedNextPurchase: Date
+  reorderRecommendation: String
+  costPerDay: Float
+  efficiencyRating: String
+}
+
+type InventoryInsights {
+  childId: String
+  insightLevel: InsightLevelType!
+  currentItems: [InventoryInsight!]!
+  consumptionTrends: [TrendDataPoint!]!
+  efficiencyScores: [EfficiencyScore!]!
+  reorderAlerts: [String!]!
+  upcomingPurchases: [UpcomingPurchase!]!
+  costOptimizationTips: [String!]!
+  mlPredictions: [PredictionInsight!]
+  seasonalAdjustments: [String!]
+  bulkPurchaseRecommendations: [String!]
+}
+
+type InventoryInsightsResponse {
+  success: Boolean!
+  message: String
+  error: String
+  insightLevel: InsightLevelType!
+  dataPointsAnalyzed: Int!
+  cacheHit: Boolean!
+  insights: InventoryInsights
+}
+
+type InventoryItem {
+  id: ID!
+  childId: ID!
+  productType: ProductTypeEnum!
+  brand: String!
+  productName: String
+  size: String!
+  quantityTotal: Int!
+  quantityRemaining: Int!
+  quantityReserved: Int!
+  purchaseDate: DateTime!
+  costCad: Float
+  expiryDate: DateTime
+  storageLocation: String
+  isOpened: Boolean!
+  openedDate: DateTime
+  notes: String
+  qualityRating: Int
+  wouldRebuy: Boolean
+  createdAt: DateTime!
+  quantityAvailable: Int!
+  usagePercentage: Float!
+  isExpired: Boolean!
+  daysUntilExpiry: Int
+}
+
+type InventoryItemEdge {
+  """The item at the end of the edge."""
+  node: InventoryItem!
+
+  """A cursor for use in pagination."""
+  cursor: String!
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+input InviteCaregiverInput {
+  familyId: ID!
+  email: String!
+  role: MemberRole!
+  accessRestrictions: JSON = null
+}
+
+type InviteCaregiverResponse {
+  success: Boolean!
+  invitation: CaregiverInvitation
+  error: String
+  message: String
+}
+
+type InvoiceDownloadResponse {
+  """Operation success"""
+  success: Boolean!
+
+  """Invoice download URL"""
+  downloadUrl: String
+
+  """URL expiration timestamp"""
+  expiresAt: DateTime
+
+  """Error message"""
+  error: String
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON @specifiedBy(url: "http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf")
+
+type LifetimeStats {
+  totalOrders: Int!
+  totalSavings: CostSavings!
+  memberSince: DateTime!
+}
+
+input LogDiaperChangeInput {
+  childId: ID!
+  usageType: UsageTypeEnum! = DIAPER_CHANGE
+  context: UsageContextEnum = null
+  caregiverName: String = null
+  wasWet: Boolean = null
+  wasSoiled: Boolean = null
+  diaperCondition: String = null
+  hadLeakage: Boolean = null
+  notes: String = null
+  loggedAt: DateTime = null
+}
+
+type LogDiaperChangeResponse {
+  success: Boolean!
+  message: String
+  error: String
+  usageLog: UsageLog
+  updatedInventoryItems: [InventoryItem!]
+}
+
+type LogFamilyActivityResponse {
+  success: Boolean!
+  activityId: ID
+  error: String
+  message: String
+  conflictResolved: Boolean
+}
+
+input ManualOrderInput {
+  childId: String!
+  retailerType: RetailerTypeEnum!
+  products: JSON!
+  deliveryAddress: JSON!
+  paymentMethodId: String!
+}
+
+type MedicalConditionInfo {
+  condition: String!
+  diagnosedDate: String
+  severity: String!
+  treatmentPlan: String
+  monitoringRequired: Boolean!
+}
+
+input MedicalConditionInput {
+  condition: String!
+  severity: String! = "moderate"
+  treatmentPlan: String = null
+}
+
+type MedicalInformation {
+  id: String!
+  childId: String!
+  familyId: String!
+  bloodType: BloodTypeEnum
+  allergies: [AllergyInfo!]!
+  hasEpipen: Boolean!
+  medications: [MedicationInfo!]!
+  medicalConditions: [MedicalConditionInfo!]!
+  healthCardNumber: String
+  healthCardProvince: HealthCardProvinceEnum
+  healthCardExpiry: Date
+  healthCardVersion: String
+  immunizations: [ImmunizationInfo!]!
+  emergencyNotes: String
+  specialInstructions: String
+  medicalDevices: [String!]!
+  privateInsuranceProvider: String
+  privateInsuranceNumber: String
+  surgeriesProcedures: [SurgeryProcedureInfo!]!
+  hospitalizations: [HospitalizationInfo!]!
+  lastUpdatedBy: String
+  lastVerifiedAt: Date
+  consentToShareWithProviders: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type MedicalInformationResponse {
+  success: Boolean!
+  message: String!
+  medicalInformation: MedicalInformation
+  errors: [String!]
+}
+
+type MedicationInfo {
+  name: String!
+  dosage: String!
+  frequency: String!
+  prescribingDoctor: String
+  startDate: String
+  endDate: String
+  notes: String
+}
+
+input MedicationInput {
+  name: String!
+  dosage: String!
+  frequency: String!
+  prescribingDoctor: String = null
+  notes: String = null
+}
+
+type MemberPermissions {
+  canViewAllData: Boolean!
+  canEditChildProfiles: Boolean!
+  canInviteMembers: Boolean!
+  canManageSettings: Boolean!
+  canExportData: Boolean!
+  canAccessHistoricalData: Boolean!
+  allowedActivityTypes: [String!]!
+  canEditOwnActivities: Boolean!
+  canEditOthersActivities: Boolean!
+  canBulkLog: Boolean!
+}
+
+enum MemberRole {
+  FAMILY_CORE
+  EXTENDED_FAMILY
+  PROFESSIONAL
+  INSTITUTIONAL
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  EXPIRED
+}
+
+type Mutation {
+  signUp(input: SignUpInput!): AuthResponse!
+  signIn(input: SignInInput!): AuthResponse!
+  signOut: MutationResponse!
+  resetPassword(input: ResetPasswordInput!): MutationResponse!
+  changePassword(input: ChangePasswordInput!): MutationResponse!
+  updateProfile(input: UpdateProfileInput!): UserProfileResponse!
+  updateConsent(input: ConsentUpdateInput!): MutationResponse!
+  refreshToken(refreshToken: String!): AuthResponse!
+  completeOnboarding: MutationResponse!
+  createChild(input: CreateChildInput!): CreateChildResponse!
+  updateChild(childId: ID!, input: UpdateChildInput!): UpdateChildResponse!
+  deleteChild(childId: ID!, input: DeleteChildInput!): DeleteChildResponse!
+  recreateChildProfile(input: RecreateChildProfileInput!): RecreateChildProfileResponse!
+  completeOnboardingStep(childId: ID!, input: OnboardingWizardStepInput!): MutationResponse!
+  setInitialInventory(childId: ID!, inventoryItems: [InitialInventoryInput!]!): MutationResponse!
+  logDiaperChange(input: LogDiaperChangeInput!): LogDiaperChangeResponse!
+  createInventoryItem(input: CreateInventoryItemInput!): CreateInventoryItemResponse!
+  updateInventoryItem(inventoryItemId: ID!, input: UpdateInventoryItemInput!): UpdateInventoryItemResponse!
+  deleteInventoryItem(inventoryItemId: ID!, input: DeleteInventoryItemInput!): DeleteInventoryItemResponse!
+  updateNotificationPreferences(input: UpdateNotificationPreferencesInput!): UpdateNotificationPreferencesResponse!
+  registerDeviceToken(input: RegisterDeviceTokenInput!): RegisterDeviceTokenResponse!
+  createNotification(input: CreateNotificationInput!): CreateNotificationResponse!
+  markNotificationRead(notificationId: ID!, action: String!): MutationResponse!
+  testNotification(message: String!): TestNotificationResponse!
+  createFamily(input: CreateFamilyInput!): CreateFamilyResponse!
+  inviteCaregiver(input: InviteCaregiverInput!): InviteCaregiverResponse!
+  acceptInvitation(token: String!): AcceptInvitationResponse!
+  addChildToFamily(input: AddChildToFamilyInput!): AddChildToFamilyResponse!
+  updatePresence(input: UpdatePresenceInput!): PresenceResponse!
+  logFamilyActivity(input: FamilyActivityInput!): LogFamilyActivityResponse!
+  createEmergencyContact(input: CreateEmergencyContactInput!): EmergencyContactResponse!
+  updateEmergencyContact(input: UpdateEmergencyContactInput!): EmergencyContactResponse!
+  deleteEmergencyContact(contactId: String!): EmergencyContactResponse!
+  updateMedicalInformation(input: UpdateMedicalInformationInput!): MedicalInformationResponse!
+  createHealthcareProvider(input: CreateHealthcareProviderInput!): HealthcareProviderResponse!
+  updateHealthcareProvider(input: UpdateHealthcareProviderInput!): HealthcareProviderResponse!
+  deleteHealthcareProvider(providerId: String!): HealthcareProviderResponse!
+  generateEmergencyAccessToken(input: CreateEmergencyAccessInput!): EmergencyAccessResponse!
+  revokeEmergencyAccessToken(accessId: String!): EmergencyAccessResponse!
+  validateHealthCard(healthCardNumber: String!, province: HealthCardProvinceEnum!): HealthCardValidationResult!
+  createSubscription(input: CreateSubscriptionInput!): SubscriptionResponse!
+  updateSubscription(input: UpdateSubscriptionInput!): SubscriptionResponse!
+  cancelSubscription: SubscriptionResponse!
+  createReorderPreferences(input: CreateReorderPreferencesInput!): PreferencesResponse!
+  updateReorderPreferences(childId: String!, input: UpdateReorderPreferencesInput!): PreferencesResponse!
+  createRetailerConfig(input: CreateRetailerConfigInput!): RetailerConfigResponse!
+  updateRetailerConfig(configId: String!, input: CreateRetailerConfigInput!): RetailerConfigResponse!
+  deleteRetailerConfig(configId: String!): RetailerConfigResponse!
+  createManualOrder(input: ManualOrderInput!): OrderResponse!
+  cancelOrder(orderId: String!): OrderResponse!
+  triggerPredictionUpdate(childId: String!): PredictionResponse!
+  startTrial(input: StartTrialInput!): TrialStartResponse!
+  trackTrialEvent(input: TrackTrialEventInput!): Boolean!
+  addPaymentMethod(input: AddPaymentMethodInput!): PaymentMethodResponse!
+  removePaymentMethod(paymentMethodId: String!): PaymentMethodResponse!
+  subscribe(input: SubscribeInput!): PremiumSubscriptionResponse!
+  changeSubscriptionPlan(input: ChangeSubscriptionPlanInput!): PremiumSubscriptionResponse!
+  cancelSubscriptionPremium(input: CancelSubscriptionInput!): PremiumSubscriptionResponse!
+  requestRefund(input: RequestRefundInput!): RefundResponse!
+  syncFeatureAccess: PremiumMutationResponse!
+  updateBillingProvince(province: CanadianProvince!): PremiumSubscriptionResponse!
+}
+
+type MutationResponse {
+  success: Boolean!
+  message: String
+  error: String
+}
+
+enum NotificationChannelEnum {
+  PUSH
+  EMAIL
+  SMS
+  IN_APP
+}
+
+type NotificationDeliveryLog {
+  id: ID!
+  userId: ID!
+  queueItemId: ID
+  preferencesId: ID
+  notificationType: NotificationTypeEnum!
+  priority: NotificationPriorityType!
+  channel: NotificationChannelEnum!
+  title: String!
+  message: String!
+  deliveryStatus: NotificationStatusEnum!
+  sentAt: DateTime
+  deliveredAt: DateTime
+  externalId: String
+  externalResponse: String
+  errorCode: String
+  errorMessage: String
+  processingTimeMs: Int
+  dataRetentionDate: DateTime
+  openedAt: DateTime
+  clickedAt: DateTime
+  dismissedAt: DateTime
+  createdAt: DateTime!
+}
+
+type NotificationDeliveryLogConnection {
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """A list of edges."""
+  edges: [NotificationDeliveryLogEdge!]!
+}
+
+type NotificationDeliveryLogEdge {
+  """The item at the end of the edge."""
+  node: NotificationDeliveryLog!
+
+  """A cursor for use in pagination."""
+  cursor: String!
+}
+
+type NotificationPreferences {
+  id: ID!
+  userId: ID!
+  notificationsEnabled: Boolean!
+  criticalNotifications: Boolean!
+  importantNotifications: Boolean!
+  optionalNotifications: Boolean!
+  pushNotifications: Boolean!
+  emailNotifications: Boolean!
+  smsNotifications: Boolean!
+  quietHoursEnabled: Boolean!
+  quietHoursStart: String
+  quietHoursEnd: String
+  stockAlertEnabled: Boolean!
+  stockAlertThreshold: Int
+  changeReminderEnabled: Boolean!
+  changeReminderIntervalHours: Int
+  expiryWarningEnabled: Boolean!
+  expiryWarningDays: Int
+  healthTipsEnabled: Boolean!
+  marketingEnabled: Boolean!
+  deviceTokens: [DeviceToken!]!
+  userTimezone: String!
+  dailyNotificationLimit: Int!
+  notificationConsentGranted: Boolean!
+  notificationConsentDate: DateTime
+  marketingConsentGranted: Boolean!
+  marketingConsentDate: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime
+}
+
+enum NotificationPriorityType {
+  CRITICAL
+  IMPORTANT
+  OPTIONAL
+}
+
+type NotificationQueue {
+  id: ID!
+  userId: ID!
+  childId: ID
+  notificationType: NotificationTypeEnum!
+  priority: NotificationPriorityType!
+  channels: [NotificationChannelEnum!]!
+  title: String!
+  message: String!
+  dataPayload: String
+  scheduledFor: DateTime!
+  status: NotificationStatusEnum!
+  attempts: Int!
+  maxAttempts: Int!
+  lastError: String
+  batchId: ID
+  createdAt: DateTime!
+}
+
+type NotificationQueueConnection {
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """A list of edges."""
+  edges: [NotificationQueueEdge!]!
+}
+
+type NotificationQueueEdge {
+  """The item at the end of the edge."""
+  node: NotificationQueue!
+
+  """A cursor for use in pagination."""
+  cursor: String!
+}
+
+enum NotificationStatusEnum {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum NotificationTypeEnum {
+  STOCK_ALERT
+  DIAPER_CHANGE_REMINDER
+  EXPIRY_WARNING
+  HEALTH_TIP
+  SYSTEM_UPDATE
+  MARKETING
+}
+
+type OnboardingStatusResponse {
+  userOnboardingCompleted: Boolean!
+  currentStep: String
+  completedSteps: [OnboardingWizardStep!]!
+  childrenCount: Int!
+  requiredConsentsGiven: Boolean!
+}
+
+type OnboardingWizardStep {
+  stepName: String!
+  completed: Boolean!
+  completedAt: DateTime
+  data: String
+}
+
+input OnboardingWizardStepInput {
+  stepName: String!
+  data: String = null
+}
+
+type OrderResponse {
+  success: Boolean!
+  transaction: ReorderTransaction
+  message: String
+  trackingInfo: JSON
+}
+
+enum OrderStatusType {
+  PENDING
+  AUTHORIZED
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  FAILED
+  REFUNDED
+}
+
+type OrderStatusUpdate {
+  id: String!
+  transactionId: String!
+  previousStatus: OrderStatusType
+  newStatus: OrderStatusType!
+  statusMessage: String
+  updateSource: String!
+  externalReference: String
+  trackingNumber: String
+  trackingUrl: String
+  estimatedDelivery: DateTime
+  carrierName: String
+  currentLocation: String
+  deliveryNotes: String
+  userNotified: Boolean!
+  notificationSentAt: DateTime
+  createdAt: DateTime!
+}
+
+type OrderStatusUpdateConnection {
+  items: [OrderStatusUpdate!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+
+  """When paginating backwards, the cursor to continue."""
+  startCursor: String
+
+  """When paginating forwards, the cursor to continue."""
+  endCursor: String
+
+  """Total count of items available."""
+  totalCount: Int!
+}
+
+type PaymentMethod {
+  """Payment method ID"""
+  id: String!
+
+  """User ID"""
+  userId: String!
+
+  """Payment method type"""
+  type: PaymentMethodType!
+
+  """Card brand"""
+  cardBrand: CardBrand
+
+  """Last 4 digits"""
+  cardLast4: String
+
+  """Expiration month"""
+  cardExpMonth: Int
+
+  """Expiration year"""
+  cardExpYear: Int
+
+  """Default payment method"""
+  isDefault: Boolean!
+
+  """Active status"""
+  isActive: Boolean!
+
+  """Creation timestamp"""
+  createdAt: DateTime!
+
+  """Update timestamp"""
+  updatedAt: DateTime!
+}
+
+type PaymentMethodComplianceData {
+  """Card brand"""
+  cardBrand: String!
+
+  """Last 4 digits"""
+  cardLast4: String!
+
+  """Default payment method"""
+  isDefault: Boolean!
+
+  """Payment method added"""
+  createdAt: DateTime!
+}
+
+type PaymentMethodInfo {
+  id: String!
+  type: String!
+  brand: String!
+  last4: String!
+  expiryMonth: Int!
+  expiryYear: Int!
+  isDefault: Boolean!
+}
+
+type PaymentMethodResponse {
+  """Operation success"""
+  success: Boolean!
+
+  """Payment method"""
+  paymentMethod: PaymentMethod
+
+  """Error message"""
+  error: String
+}
+
+enum PaymentMethodType {
+  CARD
+}
+
+enum PaymentMethodTypeEnum {
+  STRIPE_CARD
+  STRIPE_PAYMENT_METHOD
+  STRIPE_SETUP_INTENT
+}
+
+type PeakHourData {
+  """Time range (e.g., '7-9am')"""
+  timeRange: String!
+
+  """Percentage of daily changes in this range"""
+  percentage: Float!
+
+  """Average changes during this time"""
+  averageCount: Float!
+}
+
+type PlanLimits {
+  reorderSuggestions: Int
+  familyMembers: Int
+  priceAlerts: Int
+  autoOrdering: Boolean!
+}
+
+type PlanPrice {
+  amount: Decimal!
+  currency: String!
+  billingInterval: String!
+  canadianTaxes: TaxBreakdown!
+}
+
+type PlanPricing {
+  amount: Decimal!
+  currency: String!
+}
+
+enum PredictionConfidenceEnum {
+  VERY_LOW
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
+}
+
+type PredictionInsight {
+  predictionType: String!
+  confidenceLevel: Float!
+  predictedValue: Float!
+  predictedDate: Date
+  factors: [String!]!
+  recommendation: String!
+  modelAccuracy: Float
+}
+
+type PredictionResponse {
+  success: Boolean!
+  prediction: ConsumptionPrediction
+  message: String
+  recommendations: [String!]
+}
+
+type PreferencesResponse {
+  success: Boolean!
+  preferences: ReorderPreferences
+  message: String
+}
+
+type PremiumMutationResponse {
+  """Operation success"""
+  success: Boolean!
+
+  """Success message"""
+  message: String
+
+  """Error message"""
+  error: String
+}
+
+type PremiumSubscription {
+  """Subscription ID"""
+  id: String!
+
+  """User ID"""
+  userId: String!
+
+  """Current plan"""
+  plan: PremiumSubscriptionPlan!
+
+  """Current tier"""
+  tier: SubscriptionTier!
+
+  """Subscription status"""
+  status: PremiumSubscriptionStatus!
+
+  """Billing interval"""
+  billingInterval: BillingInterval!
+
+  """Subscription amount CAD"""
+  amount: Float!
+
+  """Currency code"""
+  currency: String!
+
+  """Province for tax"""
+  province: CanadianProvince!
+
+  """Stripe Customer ID"""
+  stripeCustomerId: String
+
+  """Stripe Subscription ID"""
+  stripeSubscriptionId: String
+
+  """Trial start"""
+  trialStart: DateTime
+
+  """Trial end"""
+  trialEnd: DateTime
+
+  """Cooling-off period end"""
+  coolingOffEnd: DateTime
+
+  """Payment consent timestamp"""
+  paymentConsentAt: DateTime
+
+  """Currently on trial"""
+  isOnTrial: Boolean!
+
+  """In cooling-off period"""
+  isInCoolingOffPeriod: Boolean!
+
+  """Creation timestamp"""
+  createdAt: DateTime!
+
+  """Update timestamp"""
+  updatedAt: DateTime!
+}
+
+type PremiumSubscriptionPlan {
+  """Plan identifier"""
+  id: String!
+
+  """Internal plan name"""
+  name: String!
+
+  """User-facing plan name"""
+  displayName: String!
+
+  """Subscription tier"""
+  tier: SubscriptionTier!
+
+  """Plan price in CAD"""
+  price: Float!
+
+  """Billing interval"""
+  billingInterval: BillingInterval!
+
+  """Feature IDs included"""
+  features: [String!]!
+
+  """Feature limits"""
+  limits: FeatureLimits!
+
+  """Plan description"""
+  description: String
+
+  """Display order"""
+  sortOrder: Int!
+
+  """Plan available for new subscriptions"""
+  isActive: Boolean!
+
+  """Stripe Price ID"""
+  stripePriceId: String
+
+  """Stripe Product ID"""
+  stripeProductId: String
+
+  """Creation timestamp"""
+  createdAt: DateTime!
+
+  """Update timestamp"""
+  updatedAt: DateTime!
+}
+
+type PremiumSubscriptionResponse {
+  """Operation success"""
+  success: Boolean!
+
+  """Subscription data"""
+  subscription: PremiumSubscription
+
+  """Error message"""
+  error: String
+}
+
+enum PremiumSubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+type PremiumTaxBreakdown {
+  """GST amount"""
+  gst: Float
+
+  """PST amount"""
+  pst: Float
+
+  """HST amount"""
+  hst: Float
+
+  """QST amount"""
+  qst: Float
+}
+
+type PresenceResponse {
+  success: Boolean!
+  presence: CaregiverPresence
+  error: String
+  message: String
+}
+
+enum PresenceStatus {
+  ONLINE
+  AWAY
+  CARING
+  OFFLINE
+}
+
+type ProductCostBreakdown {
+  productType: String!
+  quantityUsed: Int!
+  totalCost: Float!
+  percentageOfTotal: Float!
+}
+
+type ProductInfo {
+  id: String!
+  name: String!
+  brand: String!
+  size: String!
+  category: String!
+  image: String
+  description: String
+  features: [String!]!
+}
+
+type ProductMapping {
+  id: String!
+  retailerConfigId: String!
+  retailerProductId: String!
+  retailerSku: String
+  productUrl: String
+  brand: String!
+  productName: String!
+  diaperSize: String!
+  packCount: Int!
+  currentPriceCad: Decimal
+  regularPriceCad: Decimal
+  pricePerDiaperCad: Decimal
+  isAvailable: Boolean!
+  estimatedDeliveryDays: Int
+  shippingCostCad: Decimal
+  freeShippingThresholdCad: Decimal
+  features: JSON!
+  ingredients: [String!]!
+  certifications: [String!]!
+  lastPriceUpdate: DateTime
+  lastAvailabilityCheck: DateTime
+  priceHistory: JSON!
+  userRating: Decimal
+  userNotes: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ProductSearchResponse {
+  success: Boolean!
+  products: [ProductMapping!]!
+  totalCount: Int!
+  message: String
+}
+
+enum ProductTypeEnum {
+  DIAPER
+  WIPES
+  DIAPER_CREAM
+  POWDER
+  DIAPER_BAGS
+  TRAINING_PANTS
+  SWIMWEAR
+}
+
+enum ProviderTypeEnum {
+  PEDIATRICIAN
+  FAMILY_DOCTOR
+  DENTIST
+  OPTOMETRIST
+  SPECIALIST
+  WALK_IN_CLINIC
+  EMERGENCY_ROOM
+  THERAPIST
+  PHARMACY
+  OTHER
+}
+
+type QRCodeData {
+  url: String!
+  code: String!
+  expires: String!
+  childId: String
+}
+
+type Query {
+  me: UserProfile
+  myChildren(first: Int! = 10, after: String = null): ChildConnection!
+  child(childId: ID!): ChildProfile
+  onboardingStatus: OnboardingStatusResponse!
+  getDashboardStats(childId: ID!): DashboardStats!
+  getInventoryItems(childId: ID!, productType: ProductTypeEnum = null, limit: Int! = 50, offset: Int! = 0): InventoryConnection!
+  getUsageLogs(childId: ID!, usageType: UsageTypeEnum = null, daysBack: Int! = 7, limit: Int! = 50, offset: Int! = 0): UsageLogConnection!
+  getNotificationPreferences: NotificationPreferences
+  getNotificationHistory(notificationType: NotificationTypeEnum = null, daysBack: Int! = 30, limit: Int! = 50, offset: Int! = 0): NotificationDeliveryLogConnection!
+  getPendingNotifications(limit: Int! = 50, offset: Int! = 0): NotificationQueueConnection!
+  getUsageAnalytics(filters: AnalyticsFilters = null): UsageAnalyticsResponse!
+  getWeeklyTrends(childId: String = null, weeksBack: Int! = 8): WeeklyTrendsResponse!
+  getDailySummary(targetDate: Date!, childId: String = null): DailySummaryResponse!
+  getUsagePatterns(childId: String = null, analysisDays: Int! = 30): UsagePatternsResponse!
+  getInventoryInsights(childId: String = null, includePredictions: Boolean! = false): InventoryInsightsResponse!
+  getAnalyticsDashboard(childId: String = null): AnalyticsDashboardResponse!
+  getEnhancedAnalyticsDashboard(childId: String!, dateRange: Int = 30): EnhancedAnalyticsDashboardResponse!
+  myFamilies: FamilyConnection!
+  familyDetails(familyId: ID!): Family
+  familyMembers(familyId: ID!): FamilyMemberConnection!
+  pendingInvitations: CaregiverInvitationConnection!
+  familyPresence(familyId: ID!): [CaregiverPresence!]!
+  getEmergencyContacts(childId: String!, limit: Int! = 50, offset: Int! = 0): EmergencyContactConnection!
+  getMedicalInformation(childId: String!): MedicalInformation
+  getHealthcareProviders(childId: String!, providerType: ProviderTypeEnum = null, limit: Int! = 50, offset: Int! = 0): HealthcareProviderConnection!
+  getEmergencyInformation(childId: String!): EmergencyInformationResponse!
+  getEmergencyAccessTokens(childId: String = null, activeOnly: Boolean! = true, limit: Int! = 50, offset: Int! = 0): EmergencyAccessConnection!
+  getSubscriptionDashboard: SubscriptionDashboard!
+  getMySubscription(first: Int! = 10, after: String = null): ReorderSubscriptionConnection!
+  getReorderPreferences(childId: String = null): ReorderPreferencesConnection!
+  getConsumptionPredictions(childId: String = null, limit: Int! = 10): ConsumptionPredictionConnection!
+  getRetailerConfigurations: RetailerConfigurationConnection!
+  searchProducts(brand: String = null, diaperSize: String = null, minPriceCad: Decimal = null, maxPriceCad: Decimal = null, retailerType: RetailerTypeEnum = null, limit: Int! = 20): ProductSearchResponse!
+  getOrderHistory(childId: String = null, status: OrderStatusType = null, limit: Int! = 20): ReorderTransactionConnection!
+  getOrderStatusUpdates(transactionId: String!, first: Int! = 10, after: String = null): OrderStatusUpdateConnection!
+  getReorderAnalytics: ReorderAnalytics!
+  getReorderSuggestions(childId: ID! = "Field(name=None,type=<object object at 0x108503ae0>,default=<dataclasses._MISSING_TYPE object at 0x10326d2e0>,default_factory=<dataclasses._MISSING_TYPE object at 0x10326d2e0>,init=True,repr=True,hash=None,compare=True,metadata=mappingproxy({}),_field_type=None)", limit: Int! = 10): [ReorderSuggestion!]!
+  getSubscriptionStatus: SubscriptionStatus
+  myConsents(first: Int! = 10, after: String = null): ConsentConnection!
+  availablePlans: AvailablePlansResponse!
+  subscriptionPlan(planId: String!): PremiumSubscriptionPlan
+  myTrialProgress: TrialProgress
+  myPaymentMethods: [PaymentMethod!]!
+  mySubscription: PremiumSubscription
+  cancellationPreview: CancellationPreview
+  myBillingHistory(limit: Int = 10, offset: Int = 0): BillingHistoryResponse!
+  billingRecord(recordId: ID!): BillingRecord
+  downloadInvoice(recordId: ID!): InvoiceDownloadResponse!
+  checkFeatureAccess(featureId: String!): FeatureAccessResponse!
+  myFeatureAccess: [FeatureAccessRecord!]!
+  calculateTax(amount: Float!, province: CanadianProvince!): TaxCalculationResponse!
+  taxRates: [CanadianTaxRateType!]!
+  complianceReport: ComplianceReportResponse!
+  healthCheck: String!
+  apiInfo: String!
+}
+
+input RecreateChildProfileInput {
+  name: String!
+  dateOfBirth: Date!
+  gender: GenderType = null
+  currentDiaperSize: DiaperSizeType!
+  currentWeightKg: Float = null
+  currentHeightCm: Float = null
+  dailyUsageCount: Int = null
+  hasSensitiveSkin: Boolean! = false
+  hasAllergies: Boolean! = false
+  allergiesNotes: String = null
+  specialNeeds: String = null
+  preferredBrands: [String!] = null
+  province: String = null
+}
+
+type RecreateChildProfileResponse {
+  success: Boolean!
+  message: String
+  error: String
+  child: ChildProfile
+  previousDeletionInfo: DeletionAuditInfo
+  dataIntegrityVerified: Boolean!
+}
+
+type RefundResponse {
+  """Operation success"""
+  success: Boolean!
+
+  """Refund amount"""
+  refundAmount: Float
+
+  """Stripe refund ID"""
+  refundId: String
+
+  """Error message"""
+  error: String
+}
+
+input RegisterDeviceTokenInput {
+  deviceToken: String!
+  platform: String!
+}
+
+type RegisterDeviceTokenResponse {
+  success: Boolean!
+  message: String
+  error: String
+  preferences: NotificationPreferences
+}
+
+type ReorderAnalytics {
+  totalOrders: Int!
+  totalAmountCad: Decimal!
+  averageOrderValueCad: Decimal!
+  successfulOrders: Int!
+  failedOrders: Int!
+  averageDeliveryDays: Decimal
+  topRetailers: [String!]!
+  monthlySavingsCad: Decimal
+  predictionAccuracy: Decimal
+}
+
+type ReorderPreferences {
+  id: String!
+  subscriptionId: String!
+  childId: String!
+  autoReorderEnabled: Boolean!
+  reorderThresholdDays: Int!
+  maxOrderAmountCad: Decimal!
+  preferredRetailers: [RetailerTypeEnum!]!
+  preferredBrands: [String!]!
+  sizePreferences: JSON!
+  preferredDeliveryDays: [Int!]!
+  deliveryInstructions: String
+  emergencyContactOnDelivery: Boolean!
+  notifyBeforeOrder: Boolean!
+  notifyOrderPlaced: Boolean!
+  notifyDeliveryUpdates: Boolean!
+  notificationAdvanceHours: Int!
+  useGrowthPrediction: Boolean!
+  useSeasonalAdjustments: Boolean!
+  predictionConfidenceThreshold: PredictionConfidenceEnum!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ReorderPreferencesConnection {
+  items: [ReorderPreferences!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type ReorderSubscription {
+  id: String!
+  userId: String!
+  tier: SubscriptionTierType!
+  isActive: Boolean!
+  stripeSubscriptionId: String
+  stripeCustomerId: String
+  stripePriceId: String
+  billingAmountCad: Decimal!
+  billingInterval: String!
+  gstRate: Decimal!
+  pstHstRate: Decimal!
+  totalTaxRate: Decimal!
+  trialEndDate: DateTime
+  currentPeriodStart: DateTime
+  currentPeriodEnd: DateTime
+  cancelAtPeriodEnd: Boolean!
+  cancelledAt: DateTime
+  features: JSON!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ReorderSubscriptionConnection {
+  items: [ReorderSubscription!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type ReorderSuggestion {
+  id: String!
+  childId: String!
+  productId: String!
+  product: ProductInfo!
+  predictedRunOutDate: DateTime!
+  confidence: String!
+  priority: String!
+  suggestedQuantity: Int!
+  currentInventoryLevel: Int!
+  usagePattern: ReorderUsagePattern!
+  estimatedCostSavings: CostSavings!
+  availableRetailers: [RetailerInfo!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  mlProcessingConsent: Boolean!
+  dataRetentionDays: Int!
+}
+
+type ReorderTransaction {
+  id: String!
+  subscriptionId: String!
+  childId: String!
+  orderNumber: String!
+  retailerOrderId: String
+  retailerType: RetailerTypeEnum!
+  status: OrderStatusType!
+  orderType: String!
+  products: JSON!
+  totalItems: Int!
+  subtotalCad: Decimal!
+  shippingCostCad: Decimal!
+  taxAmountCad: Decimal!
+  totalAmountCad: Decimal!
+  stripePaymentIntentId: String
+  paymentMethodType: PaymentMethodTypeEnum!
+  paymentAuthorizedAt: DateTime
+  paymentCapturedAt: DateTime
+  deliveryAddress: JSON!
+  estimatedDeliveryDate: DateTime
+  actualDeliveryDate: DateTime
+  trackingNumber: String
+  trackingUrl: String
+  predictionId: String
+  predictedRunoutDate: DateTime
+  daysUntilRunout: Int
+  failureReason: String
+  retryCount: Int!
+  lastRetryAt: DateTime
+  orderedAt: DateTime!
+  confirmedAt: DateTime
+  shippedAt: DateTime
+  deliveredAt: DateTime
+  cancelledAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ReorderTransactionConnection {
+  items: [ReorderTransaction!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type ReorderUsagePattern {
+  averageDailyUsage: Decimal!
+  weeklyTrend: String!
+  seasonalFactors: JSON!
+}
+
+input RequestRefundInput {
+  """Refund reason"""
+  reason: String!
+}
+
+input ResetPasswordInput {
+  email: String!
+}
+
+type RetailerConfigResponse {
+  success: Boolean!
+  config: RetailerConfiguration
+  message: String
+  authorizationUrl: String
+}
+
+type RetailerConfiguration {
+  id: String!
+  userId: String!
+  retailerType: RetailerTypeEnum!
+  retailerName: String!
+  isActive: Boolean!
+  apiEndpoint: String!
+  apiVersion: String
+  rateLimitPerHour: Int!
+  partnerTag: String
+  storeId: String
+  affiliateId: String
+  lastSuccessfulRequest: DateTime
+  totalRequestsMade: Int!
+  totalSuccessfulOrders: Int!
+  averageResponseTimeMs: Int
+  consecutiveFailures: Int!
+  lastErrorMessage: String
+  lastErrorDate: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type RetailerConfigurationConnection {
+  items: [RetailerConfiguration!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type RetailerInfo {
+  id: String!
+  name: String!
+  logo: String
+  price: RetailerPrice!
+  deliveryTime: Int!
+  inStock: Boolean!
+  rating: Decimal
+  freeShipping: Boolean!
+  affiliateDisclosure: String
+}
+
+type RetailerPrice {
+  amount: Decimal!
+  currency: String!
+  originalPrice: Decimal
+  discountPercentage: Decimal
+  taxes: TaxBreakdown!
+  finalAmount: Decimal!
+}
+
+enum RetailerTypeEnum {
+  AMAZON_CA
+  WALMART_CA
+  LOBLAWS
+  METRO
+  SOBEYS
+  COSTCO_CA
+}
+
+input SignInInput {
+  email: String!
+  password: String!
+}
+
+input SignUpInput {
+  email: String!
+  password: String!
+  firstName: String = null
+  lastName: String = null
+  timezone: String! = "America/Toronto"
+  language: String! = "en"
+  province: String = null
+  postalCode: String = null
+  acceptPrivacyPolicy: Boolean!
+  acceptTermsOfService: Boolean!
+  marketingConsent: Boolean! = false
+  analyticsConsent: Boolean! = false
+}
+
+type SizeChangePredictions {
+  """Predicted date range for size change"""
+  predictionDateRange: String!
+
+  """Prediction confidence (0-100)"""
+  confidenceScore: Float!
+
+  """Growth velocity in cm/week"""
+  growthVelocityCmWeek: Float!
+
+  """Current size fit efficiency percentage"""
+  currentFitEfficiency: Float!
+
+  """Next recommended size"""
+  nextSizeRecommendation: String!
+
+  """Data points used for prediction"""
+  predictionBasis: String!
+}
+
+input StartTrialInput {
+  """Trial tier"""
+  tier: SubscriptionTier!
+
+  """Canadian province"""
+  province: CanadianProvince!
+}
+
+input SubscribeInput {
+  """Subscription plan ID"""
+  planId: String!
+
+  """Payment method ID"""
+  paymentMethodId: String!
+
+  """Canadian province"""
+  province: CanadianProvince!
+}
+
+type Subscription {
+  onboardingProgress: String!
+  orderStatusUpdates(orderId: String!): String!
+  predictionUpdates(childId: String!): String!
+  subscriptionBillingEvents: String!
+}
+
+type SubscriptionComplianceData {
+  """Plan name"""
+  planName: String!
+
+  """Subscription tier"""
+  tier: SubscriptionTier!
+
+  """Subscription status"""
+  status: PremiumSubscriptionStatus!
+
+  """Billing interval"""
+  billingInterval: BillingInterval!
+
+  """Billing province"""
+  province: String!
+
+  """Subscription created"""
+  createdAt: DateTime!
+}
+
+type SubscriptionDashboard {
+  currentSubscription: ReorderSubscription
+  activePreferences: [ReorderPreferences!]!
+  recentPredictions: [ConsumptionPrediction!]!
+  recentOrders: [ReorderTransaction!]!
+  analytics: ReorderAnalytics!
+  nextBillingDate: DateTime
+  usageThisPeriod: JSON!
+}
+
+type SubscriptionPlan {
+  id: String!
+  name: String!
+  displayName: String!
+  description: String!
+  features: [String!]!
+  price: PlanPrice!
+  limits: PlanLimits!
+}
+
+type SubscriptionResponse {
+  success: Boolean!
+  subscription: ReorderSubscription
+  message: String
+  clientSecret: String
+}
+
+type SubscriptionStatus {
+  id: String!
+  status: String!
+  currentPlan: SubscriptionPlan!
+  nextBillingDate: DateTime
+  paymentMethod: PaymentMethodInfo
+  usage: UsageInfo!
+  availableUpgrades: [AvailableUpgrade!]!
+  billingDataConsent: Boolean!
+  updatedAt: DateTime!
+}
+
+enum SubscriptionTier {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+enum SubscriptionTierType {
+  BASIC
+  PREMIUM
+  FAMILY
+}
+
+type SurgeryProcedureInfo {
+  procedure: String!
+  date: String!
+  hospital: String
+  surgeon: String
+  notes: String
+}
+
+type TaxBreakdown {
+  gst: Decimal!
+  pst: Decimal!
+  hst: Decimal!
+  total: Decimal!
+}
+
+type TaxCalculationResponse {
+  """Subtotal before tax"""
+  subtotal: Float!
+
+  """Province"""
+  province: CanadianProvince!
+
+  """Tax breakdown"""
+  taxBreakdown: PremiumTaxBreakdown!
+
+  """Tax type"""
+  taxType: TaxType!
+
+  """Combined tax rate"""
+  combinedRate: Float!
+
+  """Total tax"""
+  totalTax: Float!
+
+  """Total amount"""
+  totalAmount: Float!
+
+  """Currency code"""
+  currency: String!
+}
+
+enum TaxType {
+  GST_PST
+  HST
+  GST_QST
+  GST
+}
+
+type TestNotificationResponse {
+  success: Boolean!
+  message: String
+  error: String
+  testSent: Boolean!
+  deliveryLog: NotificationDeliveryLog
+}
+
+type TimeSlotData {
+  """Hour of day (0-23)"""
+  hour: Int!
+
+  """Number of changes in this hour"""
+  changeCount: Int!
+
+  """Percentage of daily total"""
+  percentage: Float!
+}
+
+input TrackTrialEventInput {
+  """Event type"""
+  eventType: TrialEventType!
+
+  """Feature used"""
+  featureUsed: String = null
+
+  """Value saved"""
+  valueSaved: Float = null
+
+  """Time saved minutes"""
+  timeSavedMinutes: Int = null
+
+  """Screen"""
+  screen: String = null
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
+enum TransactionType {
+  SUBSCRIPTION_CHARGE
+  UPGRADE
+  DOWNGRADE
+  REFUND
+  TRIAL_CONVERSION
+  RENEWAL
+  CANCELLATION_FEE
+}
+
+type TrendDataPoint {
+  date: Date!
+  value: Float!
+  count: Int!
+  label: String!
+  changePercentage: Float
+}
+
+enum TrialEventType {
+  FEATURE_USED
+  VALUE_SAVED
+  PROMPT_SHOWN
+  PROMPT_CLICKED
+  TRIAL_STARTED
+  TRIAL_ENDED
+  TRIAL_CONVERTED
+  TRIAL_CANCELED
+}
+
+type TrialProgress {
+  """Trial progress ID"""
+  id: String!
+
+  """User ID"""
+  userId: String!
+
+  """Trial active"""
+  isActive: Boolean!
+
+  """Trial tier"""
+  trialTier: SubscriptionTier!
+
+  """Trial start"""
+  trialStartedAt: DateTime!
+
+  """Trial end"""
+  trialEndsAt: DateTime!
+
+  """Days remaining"""
+  daysRemaining: Int!
+
+  """Converted to paid"""
+  convertedToPaid: Boolean!
+
+  """Conversion timestamp"""
+  convertedAt: DateTime
+
+  """Trial canceled"""
+  canceled: Boolean!
+
+  """Features used count"""
+  featuresUsedCount: Int!
+
+  """Usage days"""
+  usageDays: Int!
+
+  """Value saved CAD"""
+  valueSavedEstimate: Float
+
+  """Engagement score 0-100"""
+  engagementScore: Int
+
+  """Creation timestamp"""
+  createdAt: DateTime!
+
+  """Update timestamp"""
+  updatedAt: DateTime!
+}
+
+type TrialStartResponse {
+  """Operation success"""
+  success: Boolean!
+
+  """Trial progress"""
+  trialProgress: TrialProgress
+
+  """Subscription data"""
+  subscription: PremiumSubscription
+
+  """Error message"""
+  error: String
+}
+
+type UpcomingPurchase {
+  product: String!
+  predictedDate: String!
+  confidence: Float!
+}
+
+input UpdateChildInput {
+  name: String = null
+  currentDiaperSize: DiaperSizeType = null
+  currentWeightKg: Float = null
+  currentHeightCm: Float = null
+  dailyUsageCount: Int = null
+  hasSensitiveSkin: Boolean = null
+  hasAllergies: Boolean = null
+  allergiesNotes: String = null
+  preferredBrands: [String!] = null
+  specialNeeds: String = null
+}
+
+type UpdateChildResponse {
+  success: Boolean!
+  message: String
+  error: String
+  child: ChildProfile
+}
+
+input UpdateEmergencyContactInput {
+  id: String!
+  name: String = null
+  relationship: String = null
+  phonePrimary: String = null
+  phoneSecondary: String = null
+  email: String = null
+  isPrimary: Boolean = null
+  priorityOrder: Int = null
+  address: String = null
+  notes: String = null
+  canPickup: Boolean = null
+  canMakeMedicalDecisions: Boolean = null
+  province: String = null
+  speaksFrench: Boolean = null
+  speaksEnglish: Boolean = null
+}
+
+input UpdateHealthcareProviderInput {
+  id: String!
+  providerType: ProviderTypeEnum = null
+  isPrimary: Boolean = null
+  providerName: String = null
+  clinicName: String = null
+  specialty: String = null
+  phone: String = null
+  phoneEmergency: String = null
+  fax: String = null
+  email: String = null
+  addressLine1: String = null
+  addressLine2: String = null
+  city: String = null
+  province: String = null
+  postalCode: String = null
+  officeHours: String = null
+  appointmentBookingUrl: String = null
+  patientPortalUrl: String = null
+  notes: String = null
+  acceptsProvincialCoverage: Boolean = null
+  languagesSpoken: String = null
+  referralRequired: Boolean = null
+  lastVisitDate: String = null
+  nextAppointmentDate: String = null
+  patientId: String = null
+}
+
+input UpdateInventoryItemInput {
+  quantityRemaining: Int = null
+  storageLocation: String = null
+  notes: String = null
+  qualityRating: Int = null
+  wouldRebuy: Boolean = null
+}
+
+type UpdateInventoryItemResponse {
+  success: Boolean!
+  message: String
+  error: String
+  inventoryItem: InventoryItem
+}
+
+input UpdateMedicalInformationInput {
+  childId: String!
+  bloodType: BloodTypeEnum = null
+  healthCardNumber: String = null
+  healthCardProvince: HealthCardProvinceEnum = null
+  healthCardExpiry: String = null
+  healthCardVersion: String = null
+  emergencyNotes: String = null
+  specialInstructions: String = null
+  privateInsuranceProvider: String = null
+  privateInsuranceNumber: String = null
+  consentToShareWithProviders: Boolean = null
+  allergies: [AllergyInput!] = null
+  medications: [MedicationInput!] = null
+  medicalConditions: [MedicalConditionInput!] = null
+  medicalDevices: [String!] = null
+  immunizations: [ImmunizationInput!] = null
+}
+
+input UpdateNotificationPreferencesInput {
+  notificationsEnabled: Boolean = null
+  criticalNotifications: Boolean = null
+  importantNotifications: Boolean = null
+  optionalNotifications: Boolean = null
+  pushNotifications: Boolean = null
+  emailNotifications: Boolean = null
+  smsNotifications: Boolean = null
+  quietHoursEnabled: Boolean = null
+  quietHoursStart: String = null
+  quietHoursEnd: String = null
+  stockAlertEnabled: Boolean = null
+  stockAlertThreshold: Int = null
+  changeReminderEnabled: Boolean = null
+  changeReminderIntervalHours: Int = null
+  expiryWarningEnabled: Boolean = null
+  expiryWarningDays: Int = null
+  healthTipsEnabled: Boolean = null
+  marketingEnabled: Boolean = null
+  userTimezone: String = null
+  dailyNotificationLimit: Int = null
+  notificationConsentGranted: Boolean = null
+  marketingConsentGranted: Boolean = null
+}
+
+type UpdateNotificationPreferencesResponse {
+  success: Boolean!
+  message: String
+  error: String
+  preferences: NotificationPreferences
+}
+
+input UpdatePresenceInput {
+  familyId: ID!
+  status: PresenceStatus!
+  currentActivity: String = null
+  childId: ID = null
+  deviceInfo: JSON = null
+}
+
+input UpdateProfileInput {
+  firstName: String = null
+  lastName: String = null
+  displayName: String = null
+  timezone: String = null
+  language: String = null
+  province: String = null
+  postalCode: String = null
+  phoneNumber: String = null
+}
+
+input UpdateReorderPreferencesInput {
+  autoReorderEnabled: Boolean = null
+  reorderThresholdDays: Int = null
+  maxOrderAmountCad: Decimal = null
+  preferredRetailers: [RetailerTypeEnum!] = null
+  preferredBrands: [String!] = null
+  preferredDeliveryDays: [Int!] = null
+  deliveryInstructions: String = null
+  notificationAdvanceHours: Int = null
+}
+
+input UpdateSubscriptionInput {
+  tier: SubscriptionTierType = null
+  autoReorderEnabled: Boolean = null
+  cancelAtPeriodEnd: Boolean = null
+}
+
+type UsageAnalytics {
+  startDate: Date!
+  endDate: Date!
+  childId: String
+  period: AnalyticsPeriodType!
+  insightLevel: InsightLevelType!
+  totalChanges: Int!
+  totalQuantity: Int!
+  dailyAverage: Float!
+  wetOnlyCount: Int!
+  soiledOnlyCount: Int!
+  wetAndSoiledCount: Int!
+  dryChangesCount: Int!
+  weekdayCount: Int!
+  weekendCount: Int!
+  currentStreak: Int!
+  averageIntervalMinutes: Float!
+  shortestIntervalMinutes: Int
+  longestIntervalMinutes: Int
+  usagePattern: UsagePattern!
+  hourlyDistribution: [HourlyUsageDistribution!]!
+  dailySummaries: [DailyUsageSummary!]!
+  trendData: [TrendDataPoint!]!
+  costAnalysis: CostAnalysis
+  predictions: [PredictionInsight!]
+  healthInsights: [HealthInsight!]
+  advancedPatterns: [String!]
+}
+
+type UsageAnalyticsResponse {
+  success: Boolean!
+  message: String
+  error: String
+  insightLevel: InsightLevelType!
+  dataPointsAnalyzed: Int!
+  cacheHit: Boolean!
+  analytics: UsageAnalytics
+}
+
+enum UsageContextEnum {
+  HOME
+  DAYCARE
+  OUTING
+  TRAVEL
+  GRANDPARENTS
+  OTHER
+}
+
+type UsageDataPoint {
+  timestamp: DateTime!
+  count: Int!
+  quantity: Int!
+  hourOfDay: Int!
+  dayOfWeek: Int!
+  wasWet: Boolean
+  wasSoiled: Boolean
+  timeSinceLast: Int
+}
+
+type UsageInfo {
+  currentPeriod: UsageStats!
+  lifetime: LifetimeStats!
+}
+
+type UsageLog {
+  id: ID!
+  childId: ID!
+  inventoryItemId: ID
+  usageType: UsageTypeEnum!
+  loggedAt: DateTime!
+  quantityUsed: Int!
+  context: UsageContextEnum
+  caregiverName: String
+  wasWet: Boolean
+  wasSoiled: Boolean
+  diaperCondition: String
+  hadLeakage: Boolean
+  productRating: Int
+  timeSinceLastChange: Int
+  changeDuration: Int
+  notes: String
+  healthNotes: String
+  createdAt: DateTime!
+}
+
+type UsageLogConnection {
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """A list of edges."""
+  edges: [UsageLogEdge!]!
+}
+
+type UsageLogEdge {
+  """The item at the end of the edge."""
+  node: UsageLog!
+
+  """A cursor for use in pagination."""
+  cursor: String!
+}
+
+type UsagePattern {
+  patternType: UsagePatternType!
+  confidenceScore: Float!
+  description: String!
+  peakHours: [Int!]!
+  lowHours: [Int!]!
+  averageIntervalMinutes: Float!
+  consistencyScore: Float!
+}
+
+enum UsagePatternType {
+  MORNING_PEAK
+  EVENING_PEAK
+  CONSISTENT
+  IRREGULAR
+  NIGHT_HEAVY
+  DAY_HEAVY
+}
+
+type UsagePatterns {
+  childId: String
+  analysisPeriodDays: Int!
+  primaryPattern: UsagePattern!
+  secondaryPatterns: [UsagePattern!]!
+  peakHours: [Int!]!
+  peakDaysOfWeek: [Int!]!
+  quietHours: [Int!]!
+  routineConsistencyScore: Float!
+  intervalConsistencyScore: Float!
+  patternDeviations: [String!]!
+  unusualDays: [Date!]!
+  routineRecommendations: [String!]!
+  optimizationSuggestions: [String!]!
+}
+
+type UsagePatternsResponse {
+  success: Boolean!
+  message: String
+  error: String
+  insightLevel: InsightLevelType!
+  dataPointsAnalyzed: Int!
+  cacheHit: Boolean!
+  patterns: UsagePatterns
+}
+
+type UsageStats {
+  reordersSuggested: Int!
+  ordersPlaced: Int!
+  savingsGenerated: CostSavings!
+  priceAlertsReceived: Int!
+}
+
+enum UsageTypeEnum {
+  DIAPER_CHANGE
+  WIPE_USE
+  CREAM_APPLICATION
+  ACCIDENT_CLEANUP
+  PREVENTIVE_CHANGE
+  OVERNIGHT_CHANGE
+}
+
+type UserConsent {
+  consentType: ConsentTypeEnum!
+  status: ConsentStatusType!
+  grantedAt: DateTime
+  withdrawnAt: DateTime
+  expiresAt: DateTime
+  consentVersion: String!
+}
+
+type UserProfile {
+  id: ID!
+  email: String!
+  firstName: String
+  lastName: String
+  displayName: String
+  timezone: String!
+  language: String!
+  currency: String!
+  province: String
+  status: UserStatusType!
+  emailVerified: Boolean!
+  onboardingCompleted: Boolean!
+  createdAt: DateTime!
+}
+
+type UserProfileResponse {
+  success: Boolean!
+  message: String
+  error: String
+  user: UserProfile
+}
+
+type UserSession {
+  accessToken: String!
+  refreshToken: String!
+  expiresIn: Int!
+  tokenType: String!
+}
+
+enum UserStatusType {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+  PENDING_DELETION
+}
+
+type WeeklyPatternData {
+  """Daily change counts for last 7 days (Mon-Sun)"""
+  dailyCounts: [Int!]!
+
+  """Average changes per day"""
+  weeklyAverage: Float!
+
+  """Pattern consistency percentage"""
+  consistencyPercentage: Float!
+
+  """Human-readable pattern analysis"""
+  patternInsights: String!
+
+  """Start date of the analyzed week"""
+  weekStartDate: DateTime!
+}
+
+type WeeklyTrendPoint {
+  weekStart: Date!
+  weekEnd: Date!
+  totalChanges: Int!
+  dailyAverage: Float!
+  changeFromPrevious: Float
+  patternType: UsagePatternType!
+}
+
+type WeeklyTrends {
+  childId: String
+  weeksAnalyzed: Int!
+  currentWeekChanges: Int!
+  previousWeekChanges: Int!
+  changePercentage: Float!
+  weeklyData: [WeeklyTrendPoint!]!
+  trendDirection: String!
+  seasonalityDetected: Boolean!
+  patternConsistency: Float!
+  peakWeek: WeeklyTrendPoint
+  lowWeek: WeeklyTrendPoint
+  averageWeeklyChanges: Float!
+}
+
+type WeeklyTrendsResponse {
+  success: Boolean!
+  message: String
+  error: String
+  insightLevel: InsightLevelType!
+  dataPointsAnalyzed: Int!
+  cacheHit: Boolean!
+  trends: WeeklyTrends
+}
+
+type YearlyPricing {
+  amount: Decimal!
+  currency: String!
+  savingsPerMonth: CostSavings!
+}

@@ -433,6 +433,13 @@ app.include_router(
     tags=["Stripe", "Webhooks", "Canadian Billing"]
 )
 
+# Mount Stripe REST endpoints for payment processing
+from app.api.stripe_endpoints import router as stripe_endpoints_router
+app.include_router(
+    stripe_endpoints_router,
+    tags=["Stripe", "Payment Processing"]
+)
+
 # Include observability and monitoring health routes
 include_health_routes(app)
 

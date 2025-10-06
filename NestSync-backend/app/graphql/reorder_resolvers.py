@@ -30,7 +30,7 @@ from sqlalchemy import select, func
 async def get_current_user_from_info(info: Info) -> Optional[User]:
     """Get current user from GraphQL info context"""
     try:
-        user_id = await get_user_id_from_context(info.context)
+        user_id = await get_user_id_from_context(info)
         if not user_id:
             return None
 
@@ -58,7 +58,7 @@ from .reorder_types import (
     # Dashboard types
     SubscriptionDashboard, ReorderAnalytics,
     # Enum types
-    SubscriptionTierType, RetailerTypeEnum, OrderStatusType,
+    SubscriptionTierType, RetailerTypeEnum, OrderStatusType, PaymentMethodTypeEnum,
     # Core types
     ReorderSubscription as ReorderSubscriptionType,
     ReorderPreferences as ReorderPreferencesType,
@@ -2056,12 +2056,151 @@ class ReorderMutations:
         info: Info,
         input: ManualOrderInput
     ) -> OrderResponse:
-        """Create a manual order"""
-        return OrderResponse(
-            success=False,
-            transaction=None,
-            message="Manual order creation not implemented yet"
-        )
+        """Create a manual/emergency order"""
+        try:
+            current_user = await get_current_user_from_info(info)
+            if not current_user:
+                return OrderResponse(
+                    success=False,
+                    transaction=None,
+                    message="Authentication required",
+                    tracking_info=None
+                )
+
+            async for session in get_async_session():
+                # Verify user owns the child
+                child_result = await session.execute(
+                    select(Child).where(
+                        Child.id == input.child_id,
+                        Child.parent_id == current_user.id,
+                        Child.is_deleted == False
+                    )
+                )
+                child = child_result.scalar_one_or_none()
+
+                if not child:
+                    return OrderResponse(
+                        success=False,
+                        transaction=None,
+                        message="Child not found or access denied",
+                        tracking_info=None
+                    )
+
+                # Get or create ReorderSubscription for the user
+                subscription_result = await session.execute(
+                    select(ReorderSubscription).where(
+                        ReorderSubscription.user_id == current_user.id,
+                        ReorderSubscription.is_active == True
+                    )
+                )
+                subscription = subscription_result.scalar_one_or_none()
+
+                # If no subscription exists, create a basic one for emergency orders
+                if not subscription:
+                    subscription = ReorderSubscription(
+                        user_id=current_user.id,
+                        tier=SubscriptionTier.BASIC.value,
+                        billing_amount_cad=Decimal('0.00'),  # Free for emergency orders
+                        gst_rate=Decimal('0.05'),
+                        pst_hst_rate=Decimal('0.08'),  # Ontario default
+                        total_tax_rate=Decimal('0.13'),
+                        features={"emergency_orders": True}
+                    )
+                    session.add(subscription)
+                    await session.flush()  # Get subscription ID
+
+                # Generate unique order number
+                import random
+                from datetime import datetime as dt
+                timestamp = dt.now().strftime('%Y%m%d')
+                random_suffix = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+                order_number = f"NEST-{timestamp}-{random_suffix}"
+
+                # Calculate pricing (placeholder - would integrate with retailer APIs in production)
+                base_price = Decimal('44.99')  # Placeholder product price
+                gst_amount = base_price * Decimal('0.05')
+                hst_amount = base_price * Decimal('0.08')
+                tax_total = gst_amount + hst_amount
+                total_amount = base_price + tax_total
+
+                # Create ReorderTransaction
+                transaction = ReorderTransaction(
+                    subscription_id=subscription.id,
+                    child_id=input.child_id,
+                    order_number=order_number,
+                    retailer_type=input.retailer_type,
+                    status=OrderStatus.PENDING.value,
+                    order_type="emergency",
+                    products=input.products,
+                    total_items=input.products.get('quantity', 1) if isinstance(input.products, dict) else 1,
+                    subtotal_cad=base_price,
+                    shipping_cost_cad=Decimal('0.00'),  # Free shipping placeholder
+                    tax_amount_cad=tax_total,
+                    total_amount_cad=total_amount,
+                    payment_method_type=PaymentMethodTypeEnum.STRIPE_PAYMENT_METHOD.value,
+                    delivery_address=input.delivery_address,
+                    ordered_at=datetime.utcnow()
+                )
+
+                session.add(transaction)
+                await session.commit()
+                await session.refresh(transaction)
+
+                # Convert to GraphQL type
+                transaction_type = ReorderTransactionType(
+                    id=str(transaction.id),
+                    subscription_id=str(transaction.subscription_id),
+                    child_id=str(transaction.child_id),
+                    order_number=transaction.order_number,
+                    retailer_order_id=transaction.retailer_order_id,
+                    retailer_type=transaction.retailer_type,
+                    status=transaction.status,
+                    order_type=transaction.order_type,
+                    products=transaction.products,
+                    total_items=transaction.total_items,
+                    subtotal_cad=transaction.subtotal_cad,
+                    shipping_cost_cad=transaction.shipping_cost_cad,
+                    tax_amount_cad=transaction.tax_amount_cad,
+                    total_amount_cad=transaction.total_amount_cad,
+                    stripe_payment_intent_id=transaction.stripe_payment_intent_id,
+                    payment_method_type=transaction.payment_method_type,
+                    payment_authorized_at=transaction.payment_authorized_at,
+                    payment_captured_at=transaction.payment_captured_at,
+                    delivery_address=transaction.delivery_address,
+                    estimated_delivery_date=transaction.estimated_delivery_date,
+                    actual_delivery_date=transaction.actual_delivery_date,
+                    tracking_number=transaction.tracking_number,
+                    tracking_url=transaction.tracking_url,
+                    prediction_id=str(transaction.prediction_id) if transaction.prediction_id else None,
+                    predicted_runout_date=transaction.predicted_runout_date,
+                    days_until_runout=transaction.days_until_runout,
+                    failure_reason=transaction.failure_reason,
+                    retry_count=transaction.retry_count,
+                    last_retry_at=transaction.last_retry_at,
+                    ordered_at=transaction.ordered_at,
+                    confirmed_at=transaction.confirmed_at,
+                    shipped_at=transaction.shipped_at,
+                    delivered_at=transaction.delivered_at,
+                    cancelled_at=transaction.cancelled_at,
+                    created_at=transaction.created_at,
+                    updated_at=transaction.updated_at
+                )
+
+                return OrderResponse(
+                    success=True,
+                    transaction=transaction_type,
+                    message=f"Emergency order {order_number} created successfully",
+                    tracking_info=None  # No tracking info for emergency orders at creation time
+                )
+
+        except Exception as e:
+            logger.error(f"Error creating manual order: {e}")
+            return OrderResponse(
+                success=False,
+                transaction=None,
+                message=f"Error creating order: {str(e)}",
+                tracking_info=None
+            )
 
     @strawberry.mutation
     async def cancel_order(

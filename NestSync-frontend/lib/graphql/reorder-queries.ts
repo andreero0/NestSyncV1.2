@@ -296,86 +296,26 @@ export const GET_SUBSCRIPTION_STATUS = gql`
   }
 `;
 
-// Create a new order from reorder suggestion
-export const CREATE_ORDER = gql`
-  mutation CreateOrder($input: CreateOrderInput!) {
-    createOrder(input: $input) {
+// Create a manual order (emergency orders)
+export const CREATE_MANUAL_ORDER = gql`
+  mutation CreateManualOrder($input: ManualOrderInput!) {
+    createManualOrder(input: $input) {
       success
-      order {
+      transaction {
         id
-        status
         orderNumber
-        retailer {
-          id
-          name
-          logo
-        }
-        items {
-          id
-          productId
-          product {
-            name
-            brand
-            size
-            image
-          }
-          quantity
-          unitPrice {
-            amount
-            currency
-          }
-          totalPrice {
-            amount
-            currency
-          }
-        }
-        pricing {
-          subtotal {
-            amount
-            currency
-          }
-          taxes {
-            gst
-            pst
-            hst
-            total
-          }
-          shipping {
-            amount
-            currency
-            method
-          }
-          total {
-            amount
-            currency
-          }
-        }
-        delivery {
-          estimatedDelivery
-          shippingAddress {
-            name
-            line1
-            line2
-            city
-            province
-            postalCode
-            country
-          }
-        }
-        paymentMethod {
-          type
-          last4
-        }
-        tracking {
-          trackingNumber
-          carrier
-          status
-        }
-        createdAt
-        orderDataConsent
+        status
+        retailerType
+        products
+        totalItems
+        subtotalCad
+        shippingCostCad
+        taxAmountCad
+        totalAmountCad
+        orderedAt
+        estimatedDeliveryDate
       }
-      redirectUrl # For external retailer checkout
-      error
+      message
     }
   }
 `;
@@ -472,55 +412,21 @@ export const SETUP_AUTO_REORDER = gql`
 
 // Get order history with details
 export const GET_ORDER_HISTORY = gql`
-  query GetOrderHistory($limit: Int = 20, $offset: Int = 0) {
-    getOrderHistory(limit: $limit, offset: $offset) {
-      orders {
-        id
-        orderNumber
-        status
-        retailer {
-          id
-          name
-          logo
-        }
-        items {
-          id
-          productId
-          product {
-            name
-            brand
-            size
-            image
-          }
-          quantity
-          unitPrice {
-            amount
-            currency
-          }
-        }
-        total {
-          amount
-          currency
-        }
-        placedAt
-        deliveredAt
-        tracking {
-          trackingNumber
-          carrier
-          status
-          estimatedDelivery
-        }
-        canReorder
-        satisfaction {
-          rating
-          feedback
-        }
-      }
-      pagination {
-        total
-        hasMore
-        nextOffset
-      }
+  query GetOrderHistory($limit: Int = 20) {
+    getOrderHistory(limit: $limit) {
+      id
+      orderNumber
+      status
+      retailerType
+      products
+      totalItems
+      subtotalCad
+      shippingCostCad
+      taxAmountCad
+      totalAmountCad
+      orderedAt
+      estimatedDeliveryDate
+      actualDeliveryDate
     }
   }
 `;
@@ -565,21 +471,12 @@ export const REPORT_PRICE_DISCREPANCY = gql`
 `;
 
 // Input types for mutations
-export interface CreateOrderInput {
-  suggestionId?: string;
-  retailerId: string;
-  items: Array<{
-    productId: string;
-    quantity: number;
-  }>;
-  shippingAddressId: string;
-  paymentMethodId?: string;
-  useStoredPayment?: boolean;
-  deliveryPreference?: 'STANDARD' | 'EXPRESS' | 'PRIORITY';
-  specialInstructions?: string;
-  // Canadian compliance
-  dataProcessingConsent: boolean;
-  marketingConsent?: boolean;
+export interface ManualOrderInput {
+  childId: string;
+  retailerType: 'AMAZON_CA' | 'WALMART_CA' | 'LOBLAWS' | 'METRO' | 'SOBEYS' | 'COSTCO_CA';
+  products: any; // JSON object with product details
+  deliveryAddress: any; // JSON object with address details
+  paymentMethodId: string;
 }
 
 export interface AutoReorderInput {

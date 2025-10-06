@@ -393,10 +393,10 @@ export function TrialProgressCard({
           style={styles.secondaryButton}
           onPress={onLearnMorePress}
           accessibilityRole="button"
-          accessibilityLabel="Learn more about features"
-          accessibilityHint="Get more information about premium features"
+          accessibilityLabel="View premium features"
+          accessibilityHint="See detailed list of premium features"
         >
-          <Text style={styles.secondaryButtonText}>Learn More</Text>
+          <Text style={styles.secondaryButtonText}>View Features</Text>
         </TouchableOpacity>
       </View>
     </View>

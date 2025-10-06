@@ -551,3 +551,78 @@ export interface MarkNotificationReadMutationVariables {
   notificationId: string;
   action: 'opened' | 'clicked' | 'dismissed';
 }
+
+// =============================================================================
+// DATA EXPORT & ACCOUNT DELETION MUTATIONS
+// =============================================================================
+
+export const EXPORT_USER_DATA = gql`
+  mutation ExportUserData($input: ExportUserDataInput!) {
+    exportUserData(input: $input) {
+      success
+      message
+      error
+      exportUrl
+      exportData
+    }
+  }
+`;
+
+export const DELETE_USER_ACCOUNT = gql`
+  mutation DeleteUserAccount($input: DeleteUserAccountInput!) {
+    deleteUserAccount(input: $input) {
+      success
+      message
+      error
+      deletionScheduledAt
+      dataRetentionPeriodDays
+    }
+  }
+`;
+
+// =============================================================================
+// DATA EXPORT & ACCOUNT DELETION TYPES
+// =============================================================================
+
+export interface ExportUserDataInput {
+  format?: 'json' | 'csv';
+  includeDeleted?: boolean;
+}
+
+export interface ExportUserDataResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  exportUrl?: string;
+  exportData?: string;
+}
+
+export interface ExportUserDataMutationData {
+  exportUserData: ExportUserDataResponse;
+}
+
+export interface ExportUserDataMutationVariables {
+  input: ExportUserDataInput;
+}
+
+export interface DeleteUserAccountInput {
+  confirmationText: string;
+  password: string;
+  reason?: string;
+}
+
+export interface DeleteUserAccountResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  deletionScheduledAt?: string;
+  dataRetentionPeriodDays?: number;
+}
+
+export interface DeleteUserAccountMutationData {
+  deleteUserAccount: DeleteUserAccountResponse;
+}
+
+export interface DeleteUserAccountMutationVariables {
+  input: DeleteUserAccountInput;
+}

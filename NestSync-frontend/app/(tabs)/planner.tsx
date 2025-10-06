@@ -161,14 +161,16 @@ export default function PlannerScreen() {
 
   // Set filter from URL params when component mounts or params change
   useEffect(() => {
-    if (params.filter && params.filter !== activeFilter) {
+    // Always sync activeFilter with URL params when params change
+    // This fixes the "Critical Items only works on second click" bug
+    if (params.filter) {
       setActiveFilter(params.filter);
       // Switch to inventory view when navigating from traffic light cards
       if (params.filter !== 'all') {
         setCurrentView('inventory');
       }
     }
-  }, [params.filter]);
+  }, [params.filter, activeFilter]);
 
   // Show analytics discovery tooltip for trial users when they switch to analytics view
   useEffect(() => {
@@ -375,6 +377,11 @@ export default function PlannerScreen() {
     router.setParams({ view: 'analytics' });
   };
 
+  // Handle learn more navigation from trial progress card
+  const handleLearnMore = () => {
+    router.push('/(subscription)/subscription-management');
+  };
+
   // Handle premium upgrade modal close
   const handleUpgradeModalClose = () => {
     setPremiumUpgradeModalVisible(false);
@@ -528,6 +535,7 @@ export default function PlannerScreen() {
                     totalTrialDays={14}
                     onUpgradePress={handleUpgradeRequired}
                     onAnalyticsNavigate={handleAnalyticsNavigate}
+                    onLearnMorePress={handleLearnMore}
                     style={{ marginHorizontal: 0 }}
                   />
                 </View>

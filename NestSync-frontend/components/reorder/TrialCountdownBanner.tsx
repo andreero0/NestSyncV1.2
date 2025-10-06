@@ -22,6 +22,7 @@ import { NestSyncColors } from '../../constants/Colors';
 import { useNestSyncTheme } from '../../contexts/ThemeContext';
 import { useAnalyticsAccess, useFeatureAccess } from '../../hooks/useFeatureAccess';
 import { StorageHelpers } from '../../hooks/useUniversalStorage';
+import { useTrialProgress } from '../../lib/hooks/useSubscription';
 
 interface TrialCountdownBannerProps {
   daysRemaining?: number;
@@ -32,7 +33,7 @@ interface TrialCountdownBannerProps {
 }
 
 export function TrialCountdownBanner({
-  daysRemaining = 7,
+  daysRemaining: propDaysRemaining,
   onUpgradePress,
   onDismiss,
   showDismiss = true,
@@ -41,8 +42,12 @@ export function TrialCountdownBanner({
   const theme = useNestSyncTheme();
   const hasAnalyticsAccess = useAnalyticsAccess();
   const { isLoading: isFeatureAccessLoading } = useFeatureAccess();
+  const { trialProgress, loading: trialLoading } = useTrialProgress();
   const [isVisible, setIsVisible] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
+
+  // Use real trial data if available, otherwise fall back to prop or default
+  const daysRemaining = trialProgress?.daysRemaining ?? propDaysRemaining ?? 7;
 
   // Load dismissed state on mount
   useEffect(() => {
@@ -64,7 +69,13 @@ export function TrialCountdownBanner({
   // 1. User already has access (confirmed, not during loading)
   // 2. Banner was manually dismissed
   // 3. Still loading access status (prevents flashing)
-  if (!isVisible || isDismissed || hasAnalyticsAccess || isFeatureAccessLoading) {
+  // 4. Trial is not active or data is still loading
+  if (!isVisible || isDismissed || hasAnalyticsAccess || isFeatureAccessLoading || trialLoading) {
+    return null;
+  }
+
+  // Don't show if no trial is active
+  if (!trialProgress?.isActive) {
     return null;
   }
 
@@ -261,23 +272,21 @@ export function TrialCountdownBanner({
     // Compact dismiss button
     dismissButton: {
       paddingHorizontal: 8, // 2 × 4px base units
-      paddingVertical: 4, // 1 × 4px base unit
-      borderRadius: 4, // 1 × 4px base unit
-      height: 28, // Match upgrade button height
+      paddingVertical: 6, // 1.5 × 4px base units
+      borderRadius: 6, // 1.5 × 4px base units
+      minWidth: 28, // Compact width for dismiss
+      height: 28, // Match primary button height
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: 'transparent',
     },
     dismissButtonText: {
       color: theme === 'dark'
-        ? 'rgba(255, 255, 255, 0.7)'
+        ? 'rgba(255, 255, 255, 0.6)'
         : NestSyncColors.neutral[500],
-      fontSize: 11, // Smaller caption scale
-      fontWeight: '500', // Medium weight for clarity
-      fontFamily: Platform.select({
-        ios: 'System',
-        android: 'Roboto',
-        default: 'System'
-      }),
+      fontSize: 18, // Large enough for touch target
+      fontWeight: '400', // Regular weight
+      lineHeight: 18,
     },
   });
 
@@ -344,26 +353,12 @@ export function TrialCountdownBanner({
 }
 
 /**
- * Hook to calculate trial days remaining
- * Integrates with existing subscription status from reorderStore
+ * Hook to get trial days remaining
+ * Uses real trial data from backend via useTrialProgress
  */
 export function useTrialDaysRemaining(): number {
-  const [daysRemaining, setDaysRemaining] = useState(7); // Default trial length
-
-  useEffect(() => {
-    // TODO: Integrate with actual trial status from backend
-    // For now, using mock calculation to simulate end-of-trial scenario
-    const currentDate = new Date();
-    const trialEndDate = new Date(currentDate);
-    trialEndDate.setDate(currentDate.getDate() + 1); // Trial ends in 1 day to test daysRemaining <= 1 condition
-
-    const timeDiff = trialEndDate.getTime() - currentDate.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-    setDaysRemaining(Math.max(0, daysDiff));
-  }, []);
-
-  return daysRemaining;
+  const { trialProgress } = useTrialProgress();
+  return trialProgress?.daysRemaining ?? 7;
 }
 
 export default TrialCountdownBanner;

@@ -122,6 +122,8 @@ const wsLink = new GraphQLWsLink(
           'x-client-name': 'NestSync-Mobile',
           'x-client-version': '1.0.0',
           'x-canadian-compliance': 'PIPEDA',
+          'X-Data-Residency': 'Canada',
+          'X-Compliance-Framework': 'PIPEDA',
         };
       } catch (error) {
         if (__DEV__) {
@@ -177,6 +179,8 @@ const authLink = setContext(async (_, { headers }) => {
         'x-client-name': 'NestSync-Mobile',
         'x-client-version': '1.0.0',
         'x-canadian-compliance': 'PIPEDA',
+        'X-Data-Residency': 'Canada',
+        'X-Compliance-Framework': 'PIPEDA',
       },
     };
   } catch (error) {

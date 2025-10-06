@@ -332,7 +332,7 @@ export default function HomeScreen() {
           showReorderTooltip(reorderButtonRef.current);
         }
         router.push({
-          pathname: '/reorder-suggestions',
+          pathname: '/reorder-suggestions-simple',
           params: { childId: selectedChildId }
         });
       }
@@ -461,7 +461,7 @@ export default function HomeScreen() {
           {/* Trial Countdown Banner - Show for trial users */}
           <TrialCountdownBanner
             onUpgradePress={() => {
-              setPremiumUpgradeModalVisible(true);
+              router.push('/subscription-management');
             }}
           />
 
@@ -685,6 +685,7 @@ export default function HomeScreen() {
           visible={quickLogModalVisible}
           onClose={() => setQuickLogModalVisible(false)}
           onSuccess={handleModalSuccess}
+          childId={selectedChildId}
         />
         
         <AddInventoryModal

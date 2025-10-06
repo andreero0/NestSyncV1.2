@@ -22,8 +22,8 @@ from app.models import User, ConsentRecord, create_default_consent_records, User
 from app.services.user_service import UserService
 from app.services.consent_service import ConsentService
 from .types import (
-    AuthResponse, 
-    UserProfile, 
+    AuthResponse,
+    UserProfile,
     UserSession,
     SignUpInput,
     SignInInput,
@@ -35,7 +35,11 @@ from .types import (
     MutationResponse,
     UserConsent,
     ConsentConnection,
-    PageInfo
+    PageInfo,
+    ExportUserDataInput,
+    ExportUserDataResponse,
+    DeleteUserAccountInput,
+    DeleteUserAccountResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -560,29 +564,29 @@ class AuthMutations:
         """
         try:
             logger.info("Processing onboarding completion request")
-            
+
             # Get current authenticated user
             user = await require_context_user(info)
-            
+
             # Use UserService to complete onboarding
             async for session in get_async_session():
                 from app.services.user_service import UserService
                 user_service = UserService(session)
-                
+
                 # Reload user in current session to avoid session persistence issues
                 session_user = await user_service.get_user_by_id(user.id)
                 if not session_user:
                     raise ValueError("User not found")
-                
+
                 # Complete onboarding in database
                 updated_user = await user_service.complete_onboarding(session_user)
-                
+
                 logger.info(f"Onboarding completed for user: {updated_user.id}")
                 return MutationResponse(
                     success=True,
                     message="Onboarding completed successfully"
                 )
-                
+
         except GraphQLError:
             # Re-raise GraphQL authentication errors
             raise
@@ -591,6 +595,348 @@ class AuthMutations:
             return MutationResponse(
                 success=False,
                 error="Failed to complete onboarding. Please try again."
+            )
+
+    @strawberry.mutation
+    async def export_user_data(
+        self,
+        input: ExportUserDataInput,
+        info: Info
+    ) -> ExportUserDataResponse:
+        """
+        Export all user data (PIPEDA right to data portability)
+        Returns comprehensive JSON export of all user data
+        """
+        try:
+            logger.info("Processing user data export request")
+
+            # Get current authenticated user
+            user = await require_context_user(info)
+
+            async for session in get_async_session():
+                from app.models import Child, InventoryItem, UsageLog, NotificationPreferences
+                import json
+
+                # Build PIPEDA-compliant export structure
+                export_data = {
+                    "export_metadata": {
+                        "generated_at": datetime.now(timezone.utc).isoformat(),
+                        "user_id": str(user.id),
+                        "email": user.email,
+                        "data_residency": "Canada",
+                        "compliance_framework": "PIPEDA",
+                        "format": input.format,
+                        "includes_deleted_records": input.include_deleted
+                    },
+                    "user_profile": {
+                        "id": str(user.id),
+                        "email": user.email,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
+                        "display_name": user.display_name,
+                        "phone_number": user.phone_number,
+                        "timezone": user.timezone,
+                        "language": user.language,
+                        "currency": user.currency,
+                        "province": user.province,
+                        "postal_code": user.postal_code,
+                        "status": user.status,
+                        "email_verified": user.email_verified,
+                        "email_verified_at": user.email_verified_at.isoformat() if user.email_verified_at else None,
+                        "onboarding_completed": user.onboarding_completed,
+                        "onboarding_completed_at": user.onboarding_completed_at.isoformat() if user.onboarding_completed_at else None,
+                        "created_at": user.created_at.isoformat(),
+                        "updated_at": user.updated_at.isoformat() if user.updated_at else None
+                    },
+                    "consents": {
+                        "privacy_policy_accepted": user.privacy_policy_accepted,
+                        "privacy_policy_accepted_at": user.privacy_policy_accepted_at.isoformat() if user.privacy_policy_accepted_at else None,
+                        "terms_of_service_accepted": user.terms_of_service_accepted,
+                        "terms_of_service_accepted_at": user.terms_of_service_accepted_at.isoformat() if user.terms_of_service_accepted_at else None,
+                        "marketing_consent": user.marketing_consent,
+                        "analytics_consent": user.analytics_consent,
+                        "data_sharing_consent": user.data_sharing_consent,
+                        "consent_version": user.consent_version,
+                        "consent_granted_at": user.consent_granted_at.isoformat() if user.consent_granted_at else None
+                    },
+                    "children": [],
+                    "inventory": [],
+                    "usage_history": [],
+                    "notification_preferences": None
+                }
+
+                # Query children profiles
+                children_query = select(Child).where(
+                    Child.parent_id == user.id
+                )
+                if not input.include_deleted:
+                    children_query = children_query.where(Child.is_deleted == False)
+
+                children_result = await session.execute(children_query)
+                children = children_result.scalars().all()
+
+                for child in children:
+                    child_data = {
+                        "id": str(child.id),
+                        "name": child.name,
+                        "date_of_birth": child.date_of_birth.isoformat(),
+                        "gender": child.gender,
+                        "current_diaper_size": child.current_diaper_size,
+                        "current_weight_kg": child.current_weight_kg,
+                        "current_height_cm": child.current_height_cm,
+                        "daily_usage_count": child.daily_usage_count,
+                        "has_sensitive_skin": child.has_sensitive_skin,
+                        "has_allergies": child.has_allergies,
+                        "allergies_notes": child.allergies_notes,
+                        "province": child.province,
+                        "created_at": child.created_at.isoformat(),
+                        "is_deleted": child.is_deleted,
+                        "deleted_at": child.deleted_at.isoformat() if child.deleted_at else None
+                    }
+                    export_data["children"].append(child_data)
+
+                    # Query inventory items for this child
+                    inventory_query = select(InventoryItem).where(
+                        InventoryItem.child_id == child.id
+                    )
+                    if not input.include_deleted:
+                        inventory_query = inventory_query.where(InventoryItem.is_deleted == False)
+
+                    inventory_result = await session.execute(inventory_query)
+                    inventory_items = inventory_result.scalars().all()
+
+                    for item in inventory_items:
+                        inventory_data = {
+                            "id": str(item.id),
+                            "child_id": str(item.child_id),
+                            "product_type": item.product_type,
+                            "brand": item.brand,
+                            "size": item.size,
+                            "quantity_total": item.quantity_total,
+                            "quantity_remaining": item.quantity_remaining,
+                            "purchase_date": item.purchase_date.isoformat() if item.purchase_date else None,
+                            "cost_cad": float(item.cost_cad) if item.cost_cad else None,
+                            "created_at": item.created_at.isoformat()
+                        }
+                        export_data["inventory"].append(inventory_data)
+
+                    # Query usage logs for this child
+                    usage_query = select(UsageLog).where(
+                        UsageLog.child_id == child.id
+                    )
+                    if not input.include_deleted:
+                        usage_query = usage_query.where(UsageLog.is_deleted == False)
+
+                    usage_result = await session.execute(usage_query)
+                    usage_logs = usage_result.scalars().all()
+
+                    for log in usage_logs:
+                        usage_data = {
+                            "id": str(log.id),
+                            "child_id": str(log.child_id),
+                            "usage_type": log.usage_type,
+                            "logged_at": log.logged_at.isoformat(),
+                            "quantity_used": log.quantity_used,
+                            "context": log.context,
+                            "caregiver_name": log.caregiver_name,
+                            "created_at": log.created_at.isoformat()
+                        }
+                        export_data["usage_history"].append(usage_data)
+
+                # Query notification preferences
+                prefs_result = await session.execute(
+                    select(NotificationPreferences).where(
+                        NotificationPreferences.user_id == user.id
+                    )
+                )
+                prefs = prefs_result.scalar_one_or_none()
+
+                if prefs:
+                    export_data["notification_preferences"] = {
+                        "notifications_enabled": prefs.notifications_enabled,
+                        "push_notifications": prefs.push_notifications,
+                        "email_notifications": prefs.email_notifications,
+                        "stock_alert_enabled": prefs.stock_alert_enabled,
+                        "stock_alert_threshold": prefs.stock_alert_threshold,
+                        "change_reminder_enabled": prefs.change_reminder_enabled,
+                        "created_at": prefs.created_at.isoformat()
+                    }
+
+                # Query consent records
+                consent_result = await session.execute(
+                    select(ConsentRecord).where(
+                        ConsentRecord.user_id == user.id
+                    )
+                )
+                consent_records = consent_result.scalars().all()
+
+                export_data["consent_records"] = []
+                for record in consent_records:
+                    consent_data = {
+                        "consent_type": record.consent_type,
+                        "status": record.status,
+                        "granted_at": record.granted_at.isoformat() if record.granted_at else None,
+                        "withdrawn_at": record.withdrawn_at.isoformat() if record.withdrawn_at else None,
+                        "consent_version": record.consent_version
+                    }
+                    export_data["consent_records"].append(consent_data)
+
+                # Convert to JSON string
+                export_json = json.dumps(export_data, indent=2, ensure_ascii=False)
+                export_size = len(export_json.encode('utf-8'))
+
+                # Create audit log entry
+                user.data_export_requested = True
+                user.data_export_requested_at = datetime.now(timezone.utc)
+                await session.commit()
+
+                logger.info(f"Data export completed for user {user.id}: {export_size} bytes")
+
+                return ExportUserDataResponse(
+                    success=True,
+                    message="Data export completed successfully",
+                    export_data=export_json,
+                    export_size_bytes=export_size,
+                    expires_at=None  # Future: set expiry when using S3 presigned URLs
+                )
+
+        except GraphQLError:
+            raise
+        except Exception as e:
+            logger.error(f"Error exporting user data: {e}", exc_info=True)
+            return ExportUserDataResponse(
+                success=False,
+                error="Failed to export user data. Please try again."
+            )
+
+    @strawberry.mutation
+    async def delete_user_account(
+        self,
+        input: DeleteUserAccountInput,
+        info: Info
+    ) -> DeleteUserAccountResponse:
+        """
+        Delete user account with PIPEDA compliance (30-day retention)
+        Performs soft delete with cascading to all related data
+        """
+        try:
+            logger.info("Processing account deletion request")
+
+            # Get current authenticated user
+            user = await require_context_user(info)
+
+            async for session in get_async_session():
+                from app.models import Child, InventoryItem, UsageLog
+
+                # Validate confirmation text
+                if input.confirmation_text.strip() != "DELETE my account":
+                    return DeleteUserAccountResponse(
+                        success=False,
+                        error="Confirmation text must be exactly: DELETE my account"
+                    )
+
+                # Verify password with Supabase
+                try:
+                    auth_result = await supabase_auth.sign_in(user.email, input.password)
+                    if not auth_result["success"]:
+                        return DeleteUserAccountResponse(
+                            success=False,
+                            error="Invalid password. Account deletion cancelled."
+                        )
+                except Exception as auth_error:
+                    logger.error(f"Password verification failed: {auth_error}")
+                    return DeleteUserAccountResponse(
+                        success=False,
+                        error="Password verification failed. Please try again."
+                    )
+
+                # Set user status to pending deletion
+                user.status = UserStatus.PENDING_DELETION
+                user.data_deletion_requested = True
+                user.data_deletion_requested_at = datetime.now(timezone.utc)
+                deletion_scheduled = datetime.now(timezone.utc)
+
+                # Soft delete all children profiles (cascades to inventory and usage logs)
+                children_result = await session.execute(
+                    select(Child).where(
+                        Child.parent_id == user.id,
+                        Child.is_deleted == False
+                    )
+                )
+                children = children_result.scalars().all()
+
+                for child in children:
+                    # Use the soft_delete method from BaseModel
+                    child.soft_delete()
+                    logger.info(f"Soft deleted child profile: {child.id}")
+
+                # Soft delete all inventory items
+                inventory_result = await session.execute(
+                    select(InventoryItem).where(
+                        InventoryItem.child_id.in_([c.id for c in children]),
+                        InventoryItem.is_deleted == False
+                    )
+                )
+                inventory_items = inventory_result.scalars().all()
+
+                for item in inventory_items:
+                    item.soft_delete()
+
+                # Soft delete all usage logs
+                usage_result = await session.execute(
+                    select(UsageLog).where(
+                        UsageLog.child_id.in_([c.id for c in children]),
+                        UsageLog.is_deleted == False
+                    )
+                )
+                usage_logs = usage_result.scalars().all()
+
+                for log in usage_logs:
+                    log.soft_delete()
+
+                # Set retention period (PIPEDA compliance)
+                user.deleted_at = deletion_scheduled
+                retention_days = 30
+
+                # Commit all changes
+                await session.commit()
+
+                logger.info(f"Account deletion scheduled for user {user.id}: {len(children)} children, {len(inventory_items)} inventory items, {len(usage_logs)} usage logs")
+
+                # Create audit log entry
+                from app.models.emergency_audit_log import log_emergency_data_access, EmergencyAccessAction, EmergencyDataType
+                await log_emergency_data_access(
+                    session=session,
+                    user_id=user.id,
+                    action=EmergencyAccessAction.DELETE,
+                    data_type=EmergencyDataType.USER_PROFILE,
+                    accessed_by_email=user.email,
+                    ip_address=info.context.request.client.host if hasattr(info.context.request, 'client') else "unknown",
+                    success=True,
+                    details={
+                        "reason": input.reason,
+                        "children_count": len(children),
+                        "inventory_items_count": len(inventory_items),
+                        "usage_logs_count": len(usage_logs),
+                        "retention_period_days": retention_days
+                    }
+                )
+                await session.commit()
+
+                return DeleteUserAccountResponse(
+                    success=True,
+                    message=f"Account deletion scheduled. Data will be permanently deleted after {retention_days} days.",
+                    deletion_scheduled_at=deletion_scheduled,
+                    data_retention_period_days=retention_days
+                )
+
+        except GraphQLError:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting user account: {e}", exc_info=True)
+            return DeleteUserAccountResponse(
+                success=False,
+                error="Failed to delete account. Please try again."
             )
 
 

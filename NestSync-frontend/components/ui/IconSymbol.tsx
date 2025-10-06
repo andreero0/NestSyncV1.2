@@ -19,7 +19,8 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-  
+  'chevron.left': 'chevron-left',
+
   // Professional emoji replacements for NestSync
   'figure.child': 'child-care',           // Baby/Child icon
   'shippingbox.fill': 'inventory',        // Package/Inventory icon
@@ -27,7 +28,16 @@ const MAPPING = {
   'moon.zzz': 'bedtime',                  // Sleep/rest icon (overwhelmed persona)
   'bolt.fill': 'flash-on',                // Energy/efficiency icon
   'checkmark.circle.fill': 'check-circle', // Success/celebration icon
+  'checkmark.circle': 'check-circle-outline', // Checkmark circle outline
   'shield.checkered': 'security',         // Privacy/security icon (alternative to 🇨🇦)
+  'shield.checkmark.fill': 'verified',    // Verified/security icon
+  'checkmark.shield.fill': 'verified-user', // Verified user icon
+  'star.fill': 'star',                    // Star icon
+  'xmark': 'close',                       // Close/X icon
+  'clock.fill': 'schedule',               // Clock/schedule icon
+  'exclamationmark.triangle': 'warning',  // Warning triangle icon
+  'figure.2.and.child.holdinghands': 'family-restroom', // Family icon
+  'brain.head.profile': 'psychology',     // AI/ML brain icon
 } as IconMapping;
 
 /**

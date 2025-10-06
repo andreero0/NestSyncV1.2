@@ -204,6 +204,7 @@ export function PremiumUpgradeModal({
   const [selectedBilling, setSelectedBilling] = useState<BillingInterval>('YEARLY');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentIntentClientSecret, setPaymentIntentClientSecret] = useState<string>('');
+  const [showWebLimitation, setShowWebLimitation] = useState(false);
 
   // Animation values
   const modalScale = useSharedValue(0.9);
@@ -399,13 +400,7 @@ export function PremiumUpgradeModal({
 
     // Check if we're on web platform
     if (Platform.OS === 'web') {
-      Alert.alert(
-        'Mobile App Required',
-        'Payments are only available through the NestSync mobile app. Please download the app from the App Store or Google Play to complete your subscription upgrade.',
-        [
-          { text: 'OK' }
-        ]
-      );
+      setShowWebLimitation(true);
       return;
     }
 
@@ -609,6 +604,29 @@ export function PremiumUpgradeModal({
                 <IconSymbol name="xmark" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
+
+            {/* Web Platform Limitation Banner */}
+            {showWebLimitation && (
+              <View style={[styles.webLimitationBanner, { backgroundColor: colors.warning + '20', borderColor: colors.warning }]}>
+                <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.warning} />
+                <View style={styles.webLimitationContent}>
+                  <ThemedText type="defaultSemiBold" style={[styles.webLimitationTitle, { color: colors.text }]}>
+                    Mobile App Required
+                  </ThemedText>
+                  <ThemedText style={[styles.webLimitationMessage, { color: colors.textSecondary }]}>
+                    Payments are only available through the NestSync mobile app. Please download the app from the App Store or Google Play to complete your subscription upgrade.
+                  </ThemedText>
+                </View>
+                <TouchableOpacity
+                  style={[styles.webLimitationClose, { backgroundColor: colors.surface }]}
+                  onPress={() => setShowWebLimitation(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss web limitation notice"
+                >
+                  <IconSymbol name="xmark" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Loading State */}
             {subscriptionLoading && availablePlans.length === 0 && (
@@ -906,6 +924,36 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Web Limitation Banner
+  webLimitationBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    margin: 20,
+    marginBottom: 0,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  webLimitationContent: {
+    flex: 1,
+  },
+  webLimitationTitle: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  webLimitationMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  webLimitationClose: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },

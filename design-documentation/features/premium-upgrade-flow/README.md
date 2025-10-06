@@ -467,7 +467,7 @@ CREATE TABLE premium_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   stripe_subscription_id TEXT UNIQUE NOT NULL,
-  subscription_tier TEXT NOT NULL CHECK (subscription_tier IN ('free', 'family', 'professional')),
+  subscription_tier TEXT NOT NULL CHECK (subscription_tier IN ('free', 'standard', 'premium')),
   status TEXT NOT NULL CHECK (status IN ('active', 'trialing', 'past_due', 'canceled', 'unpaid')),
   trial_start TIMESTAMPTZ,
   trial_end TIMESTAMPTZ,

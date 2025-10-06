@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Switch, Alert, TextInput, Modal, Pressable } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Switch, Alert, TextInput, Modal, Pressable, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useMutation } from '@apollo/client';
 
 import NotificationPreferencesModal from '@/components/settings/NotificationPreferences';
 import FamilyManagement from '@/components/collaboration/FamilyManagement';
@@ -17,6 +18,15 @@ import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 import { useCurrentFamily, useCollaborationAvailable } from '@/lib/graphql/collaboration-hooks';
 import { usePendingInvitationsCount } from '@/stores/collaborationStore';
 import { useTrialOnboarding } from '@/hooks/useTrialOnboarding';
+import { useAuthStore } from '@/stores/authStore';
+import {
+  EXPORT_USER_DATA,
+  DELETE_USER_ACCOUNT,
+  ExportUserDataMutationData,
+  ExportUserDataMutationVariables,
+  DeleteUserAccountMutationData,
+  DeleteUserAccountMutationVariables
+} from '@/lib/graphql/mutations';
 
 interface SettingItem {
   id: string;
@@ -33,7 +43,19 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
   const router = useRouter();
-  
+  const { signOut } = useAuthStore();
+
+  // GraphQL mutations
+  const [exportData, { loading: exportLoading }] = useMutation<
+    ExportUserDataMutationData,
+    ExportUserDataMutationVariables
+  >(EXPORT_USER_DATA);
+
+  const [deleteAccount, { loading: deleteLoading }] = useMutation<
+    DeleteUserAccountMutationData,
+    DeleteUserAccountMutationVariables
+  >(DELETE_USER_ACCOUNT);
+
   // Privacy settings state
   const [dataSharing, setDataSharing] = useState(false);
   const [analyticsOptIn, setAnalyticsOptIn] = useState(false);
@@ -134,42 +156,163 @@ export default function SettingsScreen() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
+        {
+          text: 'Sign Out',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement logout logic with auth store
-            console.log('Signing out...');
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/(auth)/login');
+            } catch (error) {
+              console.error('Sign out failed:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
           }
         }
       ]
     );
   };
 
-  const handleDataExport = () => {
-    Alert.alert(
-      'Data Export',
-      'Your data export will be prepared and emailed to you within 24 hours.',
-      [{ text: 'OK' }]
-    );
+  const handleDataExport = async () => {
+    try {
+      const { data } = await exportData({
+        variables: {
+          input: {
+            format: "json",
+            includeDeleted: false
+          }
+        }
+      });
+
+      if (data?.exportUserData?.success) {
+        Alert.alert(
+          'Data Export Ready',
+          'Your data has been prepared. Check your email for download instructions. The link will expire in 24 hours.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Export Failed',
+          data?.exportUserData?.error || 'Failed to export data. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert(
+        'Error',
+        'Failed to export data. Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const handleDataDeletion = () => {
+    // Step 1: Show warning modal
     Alert.alert(
       'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted.',
+      'This will permanently delete your account and all data after 30 days. You can recover your account during this period.\n\nAre you sure you want to continue?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete Account', 
+        {
+          text: 'Continue',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement account deletion
-            console.log('Account deletion requested...');
-          }
+          onPress: () => showDeleteConfirmation()
         }
       ]
     );
+  };
+
+  const showDeleteConfirmation = () => {
+    // Step 2: Show confirmation text input modal
+    Alert.prompt(
+      'Confirm Deletion',
+      'Type "DELETE my account" to confirm',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: (text) => {
+            if (text === 'DELETE my account') {
+              showPasswordConfirmation();
+            } else {
+              Alert.alert(
+                'Confirmation Failed',
+                'Please type exactly: DELETE my account',
+                [{ text: 'Try Again', onPress: showDeleteConfirmation }]
+              );
+            }
+          }
+        }
+      ],
+      'plain-text'
+    );
+  };
+
+  const showPasswordConfirmation = () => {
+    // Step 3: Request password
+    Alert.prompt(
+      'Enter Password',
+      'Please enter your password to confirm account deletion',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: async (password) => {
+            if (!password || password.trim().length === 0) {
+              Alert.alert('Error', 'Password is required');
+              return;
+            }
+            await performAccountDeletion(password);
+          }
+        }
+      ],
+      'secure-text'
+    );
+  };
+
+  const performAccountDeletion = async (password: string) => {
+    try {
+      const { data } = await deleteAccount({
+        variables: {
+          input: {
+            confirmationText: "DELETE my account",
+            password: password,
+            reason: "User requested account deletion"
+          }
+        }
+      });
+
+      if (data?.deleteUserAccount?.success) {
+        Alert.alert(
+          'Account Deletion Scheduled',
+          `Your account will be permanently deleted in ${data.deleteUserAccount.dataRetentionPeriodDays} days. You can recover it by signing in before then.`,
+          [{
+            text: 'OK',
+            onPress: async () => {
+              // Sign out user
+              await signOut();
+              router.replace('/(auth)/login');
+            }
+          }]
+        );
+      } else {
+        Alert.alert(
+          'Deletion Failed',
+          data?.deleteUserAccount?.error || 'Failed to delete account. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Delete account error:', error);
+      Alert.alert(
+        'Error',
+        'Failed to delete account. Please check your password and try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   // Threshold editing handlers
@@ -302,6 +445,34 @@ export default function SettingsScreen() {
     }
   ];
 
+  // Subscription & Billing settings
+  const subscriptionSettings: SettingItem[] = [
+    {
+      id: 'subscription-management',
+      title: 'Manage Subscription',
+      description: 'View and manage your premium subscription',
+      icon: 'star.circle.fill',
+      type: 'navigation',
+      onPress: () => router.push('/(subscription)/subscription-management')
+    },
+    {
+      id: 'payment-methods',
+      title: 'Payment Methods',
+      description: 'Manage your payment information',
+      icon: 'creditcard.fill',
+      type: 'navigation',
+      onPress: () => router.push('/(subscription)/payment-methods')
+    },
+    {
+      id: 'billing-history',
+      title: 'Billing History',
+      description: 'View past invoices and receipts',
+      icon: 'doc.text.fill',
+      type: 'navigation',
+      onPress: () => router.push('/(subscription)/billing-history')
+    }
+  ];
+
   // Collaboration settings - only show if collaboration is enabled or if there are pending invitations
   const collaborationSettings: SettingItem[] = [];
 
@@ -421,7 +592,7 @@ export default function SettingsScreen() {
     {
       id: 'export',
       title: 'Export My Data',
-      description: 'Download all your data (PIPEDA Right)',
+      description: exportLoading ? 'Preparing your data...' : 'Download all your data (PIPEDA Right)',
       icon: 'square.and.arrow.down',
       type: 'navigation',
       onPress: handleDataExport
@@ -429,61 +600,72 @@ export default function SettingsScreen() {
     {
       id: 'delete',
       title: 'Delete Account',
-      description: 'Permanently delete all data',
+      description: deleteLoading ? 'Processing deletion...' : 'Permanently delete all data',
       icon: 'trash.fill',
       type: 'navigation',
       onPress: handleDataDeletion
     }
   ];
 
-  const renderSettingItem = (item: SettingItem) => (
-    <TouchableOpacity
-      key={item.id}
-      style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-      onPress={item.type === 'navigation' ? item.onPress : undefined}
-      disabled={item.type === 'toggle'}
-      accessibilityRole={item.type === 'navigation' ? 'button' : 'none'}
-      accessibilityLabel={`${item.title}. ${item.description || ''}`}
-    >
-      <View style={styles.settingIcon}>
-        <IconSymbol 
-          name={item.icon} 
-          size={24} 
-          color={item.id === 'delete' ? colors.error : colors.tint} 
-        />
-      </View>
-      <View style={styles.settingContent}>
-        <ThemedText type="defaultSemiBold" style={[
-          styles.settingTitle,
-          item.id === 'delete' && { color: colors.error }
-        ]}>
-          {item.title}
-        </ThemedText>
-        {item.description && (
-          <ThemedText style={[styles.settingDescription, { color: colors.textSecondary }]}>
-            {item.description}
+  const renderSettingItem = (item: SettingItem) => {
+    // Check if this item is loading
+    const isLoading = (item.id === 'export' && exportLoading) || (item.id === 'delete' && deleteLoading);
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={[
+          styles.settingItem,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+          isLoading && { opacity: 0.6 }
+        ]}
+        onPress={item.type === 'navigation' ? item.onPress : undefined}
+        disabled={item.type === 'toggle' || isLoading}
+        accessibilityRole={item.type === 'navigation' ? 'button' : 'none'}
+        accessibilityLabel={`${item.title}. ${item.description || ''}`}
+      >
+        <View style={styles.settingIcon}>
+          <IconSymbol
+            name={item.icon}
+            size={24}
+            color={item.id === 'delete' ? colors.error : colors.tint}
+          />
+        </View>
+        <View style={styles.settingContent}>
+          <ThemedText type="defaultSemiBold" style={[
+            styles.settingTitle,
+            item.id === 'delete' && { color: colors.error }
+          ]}>
+            {item.title}
           </ThemedText>
-        )}
-      </View>
-      <View style={styles.settingAction}>
-        {item.type === 'toggle' ? (
-          <Switch
-            value={item.value}
-            onValueChange={item.onToggle}
-            trackColor={{ false: colors.border, true: colors.tint }}
-            thumbColor={item.value ? '#FFFFFF' : colors.background}
-            accessibilityLabel={`Toggle ${item.title}`}
-          />
-        ) : (
-          <IconSymbol 
-            name="chevron.right" 
-            size={16} 
-            color={colors.textSecondary} 
-          />
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+          {item.description && (
+            <ThemedText style={[styles.settingDescription, { color: colors.textSecondary }]}>
+              {item.description}
+            </ThemedText>
+          )}
+        </View>
+        <View style={styles.settingAction}>
+          {item.type === 'toggle' ? (
+            <Switch
+              value={item.value}
+              onValueChange={item.onToggle}
+              trackColor={{ false: colors.border, true: colors.tint }}
+              thumbColor={item.value ? '#FFFFFF' : colors.background}
+              accessibilityLabel={`Toggle ${item.title}`}
+            />
+          ) : isLoading ? (
+            <ActivityIndicator size="small" color={colors.tint} />
+          ) : (
+            <IconSymbol
+              name="chevron.right"
+              size={16}
+              color={colors.textSecondary}
+            />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaProvider>
@@ -507,6 +689,14 @@ export default function SettingsScreen() {
               Account
             </ThemedText>
             {accountSettings.map(renderSettingItem)}
+          </ThemedView>
+
+          {/* Subscription & Billing Section */}
+          <ThemedView style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Subscription & Billing
+            </ThemedText>
+            {subscriptionSettings.map(renderSettingItem)}
           </ThemedView>
 
           {/* Collaboration Section */}
@@ -605,6 +795,7 @@ export default function SettingsScreen() {
               style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
               accessibilityRole="button"
               accessibilityLabel="Contact support"
+              onPress={() => Linking.openURL('mailto:support@nestsync.com?subject=Help%20Request')}
             >
               <View style={styles.settingIcon}>
                 <IconSymbol name="questionmark.circle" size={24} color={colors.tint} />
