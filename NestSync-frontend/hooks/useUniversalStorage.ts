@@ -233,6 +233,10 @@ export const StorageHelpers = {
 
   // Convenience methods for specific data types
   async setAccessToken(token: string): Promise<void> {
+    if (__DEV__) {
+      const parts = token.split('.');
+      console.log(`[StorageHelpers] Storing access token: ${parts.length} parts, length: ${token.length}`);
+    }
     await this.setItem(STORAGE_KEYS.ACCESS_TOKEN, token, true);
   },
 
@@ -242,16 +246,12 @@ export const StorageHelpers = {
       let token = await this.getItem(STORAGE_KEYS.ACCESS_TOKEN, true);
 
       if (token) {
-        // Check if token is expired before returning
-        if (isJWTExpired(token, 5)) {
-          console.log('[StorageHelpers] Access token is expired, clearing and returning null');
-          await this.removeItem(STORAGE_KEYS.ACCESS_TOKEN, true);
-          return null;
-        }
-
+        // Log token format for debugging
         if (__DEV__) {
-          console.log('[StorageHelpers] Access token validation passed, returning valid token');
+          const parts = token.split('.');
+          console.log(`[StorageHelpers] Access token format: ${parts.length} parts, returning to authStore for validation`);
         }
+        // Return token regardless of expiration - let authStore handle validation and refresh
         return token;
       }
 
@@ -262,15 +262,12 @@ export const StorageHelpers = {
         const sessionToken = session.accessToken || null;
 
         if (sessionToken) {
-          // Validate session token before returning
-          if (isJWTExpired(sessionToken, 5)) {
-            console.log('[StorageHelpers] Session token is expired, returning null');
-            return null;
-          }
-
+          // Log token format for debugging
           if (__DEV__) {
-            console.log('[StorageHelpers] Session token validation passed, returning valid token');
+            const parts = sessionToken.split('.');
+            console.log(`[StorageHelpers] Session access token format: ${parts.length} parts, returning to authStore for validation`);
           }
+          // Return token regardless of expiration - let authStore handle validation and refresh
           return sessionToken;
         }
       }
@@ -283,6 +280,10 @@ export const StorageHelpers = {
   },
 
   async setRefreshToken(token: string): Promise<void> {
+    if (__DEV__) {
+      const parts = token.split('.');
+      console.log(`[StorageHelpers] Storing refresh token: ${parts.length} parts, length: ${token.length}`);
+    }
     await this.setItem(STORAGE_KEYS.REFRESH_TOKEN, token, true);
   },
 
@@ -292,18 +293,19 @@ export const StorageHelpers = {
       let token = await this.getItem(STORAGE_KEYS.REFRESH_TOKEN, true);
 
       if (token) {
-        // Basic validation: check if token has valid JWT format
+        // Log token format for debugging
         const parts = token.split('.');
-        if (parts.length !== 3) {
-          console.warn('[StorageHelpers] Refresh token has invalid JWT format, clearing and returning null');
-          await this.removeItem(STORAGE_KEYS.REFRESH_TOKEN, true);
-          return null;
+        if (__DEV__) {
+          console.log(`[StorageHelpers] Refresh token format: ${parts.length} parts`);
         }
 
-        if (__DEV__) {
-          console.log('[StorageHelpers] Refresh token format validation passed');
+        // Basic validation but DON'T clear on failure
+        if (parts.length !== 3) {
+          console.warn(`[StorageHelpers] Refresh token has unexpected format (${parts.length} parts), but returning anyway`);
+          // Let backend decide if it's valid - DON'T clear here!
         }
-        return token;
+
+        return token;  // Always return token if it exists
       }
 
       // Fallback: Try extracting from session data
@@ -313,17 +315,11 @@ export const StorageHelpers = {
         const sessionToken = session.refreshToken || null;
 
         if (sessionToken) {
-          // Basic validation: check if token has valid JWT format
-          const parts = sessionToken.split('.');
-          if (parts.length !== 3) {
-            console.warn('[StorageHelpers] Session refresh token has invalid JWT format, returning null');
-            return null;
-          }
-
           if (__DEV__) {
-            console.log('[StorageHelpers] Session refresh token format validation passed');
+            const parts = sessionToken.split('.');
+            console.log(`[StorageHelpers] Session refresh token format: ${parts.length} parts`);
           }
-          return sessionToken;
+          return sessionToken;  // Return even if format questionable
         }
       }
 
@@ -365,6 +361,13 @@ export const StorageHelpers = {
       this.removeItem(STORAGE_KEYS.ACCESS_TOKEN, true),
       this.removeItem(STORAGE_KEYS.REFRESH_TOKEN, true),
       this.removeItem(STORAGE_KEYS.USER_SESSION, true),
+    ]);
+  },
+
+  async clearTokens(): Promise<void> {
+    await Promise.all([
+      this.removeItem(STORAGE_KEYS.ACCESS_TOKEN, true),
+      this.removeItem(STORAGE_KEYS.REFRESH_TOKEN, true),
     ]);
   },
 

@@ -591,6 +591,89 @@ curl -I http://localhost:8082
 
 **Testing Validation**: Comprehensive Playwright testing confirmed authentication flow working end-to-end with test credentials (parents@nestsync.com / Shazam11#)
 
+### Token Refresh Loop and Data Loading Issues (RESOLVED - 2025)
+**Problem**: Users can log in but no data appears on physical devices; refresh token has invalid JWT format; continuous re-login loop
+**Symptoms**:
+- Login succeeds but dashboard shows no family/children data
+- Logs show: "Refresh token has invalid JWT format (1 parts)"
+- Logs show: "Token refresh failed, forcing re-login"
+- Continuous authentication loop preventing data access
+- Backend receives NULL user_id in queries due to expired tokens
+
+**Root Causes**:
+1. **Token Storage Layer Premature Validation**: Storage layer was clearing tokens based on client-side format validation before backend could validate them
+2. **Database Orphaned Records**: Children records had created_by = NULL, preventing proper family linkage
+3. **Server Process Conflicts**: Multiple competing processes on ports 8001/8082 causing network failures
+
+**Solution Process**:
+1. **Architectural Separation of Concerns**:
+   - Storage layer should only store/retrieve tokens, never validate
+   - Backend is authoritative source for token validity
+   - Removed premature token clearing from client-side validation
+
+2. **Database Migration**:
+   - Created production-safe SQL migration to link orphaned children records
+   - Used atomic transactions with pre/post verification
+   - Migration: `NestSync-backend/migrations/fix_orphaned_children_records.sql`
+
+3. **Server Conflict Resolution**:
+   - Killed competing background processes on ports 8001/8082
+   - Established single backend and frontend instances
+   - Verified connectivity before testing
+
+**Files Modified**:
+- `hooks/useUniversalStorage.ts` - Removed token validation from storage layer (lines 290-329)
+  - getRefreshToken() now always returns token if it exists
+  - Added comprehensive logging for debugging (lines 235-241, 282-288)
+  - Storage layer defers all validation to backend
+- Database migration created for orphaned children records
+
+**Critical Code Pattern**:
+```typescript
+// INCORRECT - Storage layer validates and clears prematurely
+async getRefreshToken(): Promise<string | null> {
+  if (token && parts.length !== 3) {
+    console.warn('Invalid format, clearing');
+    await this.removeItem(STORAGE_KEYS.REFRESH_TOKEN); // WRONG - Causes loop
+    return null;
+  }
+}
+
+// CORRECT - Storage layer only stores/retrieves
+async getRefreshToken(): Promise<string | null> {
+  if (token && parts.length !== 3) {
+    console.warn('Unexpected format, but returning anyway');
+    // Let backend decide if valid - DON'T clear here!
+  }
+  return token; // Always return if exists
+}
+```
+
+**Prevention Guidelines**:
+1. **Never validate tokens in storage layer** - Only store and retrieve
+2. **Always check for orphaned database records** - Verify foreign key relationships
+3. **Check for process conflicts** - Use `lsof -i :8001 && lsof -i :8082` before starting servers
+4. **Monitor token lifecycle** - Use comprehensive logging for debugging
+5. **Test on physical devices** - Simulator behavior differs from real device token handling
+
+**Diagnostic Commands**:
+```bash
+# Check for token format issues in logs
+# Look for: "Refresh token format: X parts" (should be 3)
+
+# Verify database linkage
+psql -c "SELECT c.id, c.name, c.created_by FROM children c WHERE c.created_by IS NULL;"
+
+# Check server conflicts
+lsof -i :8001 && lsof -i :8082
+
+# Clean restart if conflicts detected
+lsof -ti:8001 | xargs kill -9 2>/dev/null
+lsof -ti:8082 | xargs kill -9 2>/dev/null
+```
+
+**Testing Validation**: Verified working across iOS simulator, physical iPhone, and web platforms with test credentials (parents@nestsync.com / Shazam11#). All family data loads correctly after fresh login.
+
 ## Design System Integration
 
 ### Theme System
