@@ -377,26 +377,69 @@ export function formatCurrency(amount: number | null | undefined): string {
 }
 
 /**
- * Gets a time-based greeting based on current local time
- * Uses Canadian timezone for consistency
+ * Validates if a timezone string is valid
+ * Uses a simple try-catch with toLocaleString
  */
-export function getTimeBasedGreeting(): string {
+function isValidTimezone(tz: string): boolean {
   try {
-    // Get current time in Canadian timezone
-    const now = new Date();
-    const canadianTime = new Date(now.toLocaleString("en-US", {timeZone: CANADIAN_TIMEZONE}));
-    const hour = canadianTime.getHours();
-    
-    // Determine greeting based on hour ranges
-    if (hour >= 5 && hour < 12) {
-      return "Good morning!";
-    } else if (hour >= 12 && hour < 18) {
-      return "Good afternoon!";
-    } else if (hour >= 18 && hour < 23) {
-      return "Good evening!";
-    } else {
-      return "Good night!";
+    new Date().toLocaleString("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns a time-appropriate greeting based on current hour
+ * @param userTimezone - Optional timezone string (e.g., "America/Toronto", "America/Vancouver")
+ *                       Defaults to America/Toronto if not provided
+ * @returns Greeting string appropriate for current time of day
+ */
+export function getTimeBasedGreeting(userTimezone?: string): string {
+  try {
+    let timezone = userTimezone || CANADIAN_TIMEZONE; // Fallback to Toronto
+
+    // Validate timezone format if provided
+    if (userTimezone && !isValidTimezone(userTimezone)) {
+      if (__DEV__) {
+        console.warn(`[getTimeBasedGreeting] Invalid timezone: ${userTimezone}, falling back to ${CANADIAN_TIMEZONE}`);
+      }
+      timezone = CANADIAN_TIMEZONE;
     }
+
+    // Use Intl.DateTimeFormat to get the hour directly in the target timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: isValidTimezone(timezone) ? timezone : CANADIAN_TIMEZONE,
+      hour: 'numeric',
+      hour12: false  // 24-hour format for accurate parsing
+    });
+
+    // Format returns just the hour as a string (e.g., "14")
+    const hourString = formatter.format(new Date());
+    const hour = parseInt(hourString, 10);
+
+    // Determine greeting based on hour ranges
+    // Good night: 11pm-5am (23:00-05:00)
+    // Good morning: 5am-12pm (05:00-12:00)
+    // Good afternoon: 12pm-6pm (12:00-18:00)
+    // Good evening: 6pm-11pm (18:00-23:00)
+    let greeting: string;
+    if (hour >= 5 && hour < 12) {
+      greeting = "Good morning!";
+    } else if (hour >= 12 && hour < 18) {
+      greeting = "Good afternoon!";
+    } else if (hour >= 18 && hour < 23) {
+      greeting = "Good evening!";
+    } else {
+      greeting = "Good night!";
+    }
+
+    // Development logging
+    if (__DEV__) {
+      console.log(`[getTimeBasedGreeting] Timezone: ${timezone}, Hour: ${hour}, Greeting: ${greeting}`);
+    }
+
+    return greeting;
   } catch (error) {
     console.error('[getTimeBasedGreeting] Error getting time-based greeting:', error);
     return "Hello!"; // Fallback greeting

@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -76,6 +76,7 @@ export default function ProfileSettingsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { user } = useAuthStore();
+  const client = useApolloClient();
 
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
@@ -95,8 +96,12 @@ export default function ProfileSettingsScreen() {
   const [showTimezonePicker, setShowTimezonePicker] = useState(false);
 
   // Fetch current user profile
+  // Use platform-specific fetch policy to handle native SecureStore async timing
+  // Native platforms: cache-and-network (ensures fresh data despite cache hydration delays)
+  // Web platform: cache-first (faster, cache works reliably with synchronous localStorage)
+  const isNativePlatform = Platform.OS === 'ios' || Platform.OS === 'android';
   const { data, loading, error, refetch } = useQuery<MeQueryData>(ME_QUERY, {
-    fetchPolicy: 'cache-first',
+    fetchPolicy: isNativePlatform ? 'cache-and-network' : 'cache-first',
   });
 
   // Update profile mutation
@@ -106,12 +111,39 @@ export default function ProfileSettingsScreen() {
       onCompleted: (data) => {
         if (data.updateProfile.success) {
           setHasChanges(false);
+
+          // CRITICAL: Update Apollo cache immediately with new user data
+          if (data.updateProfile.user) {
+            try {
+              // Write the updated user data to the ME_QUERY cache
+              client.writeQuery({
+                query: ME_QUERY,
+                data: { me: data.updateProfile.user }
+              });
+
+              if (__DEV__) {
+                console.log('[ProfileSettings] Apollo cache updated with new user data:', {
+                  timezone: data.updateProfile.user.timezone,
+                  province: data.updateProfile.user.province,
+                  firstName: data.updateProfile.user.firstName,
+                  lastName: data.updateProfile.user.lastName,
+                  displayName: data.updateProfile.user.displayName
+                });
+              }
+            } catch (cacheError) {
+              console.error('[ProfileSettings] Error updating Apollo cache:', cacheError);
+              // Non-fatal error, continue with success flow
+            }
+          }
+
           Alert.alert(
             'Profile Updated',
             'Your profile information has been saved successfully.',
             [{ text: 'OK' }]
           );
-          // Refetch user data to update UI
+
+          // Refetch as a backup to ensure consistency
+          // (cache update should make this redundant, but it's a safety net)
           refetch();
         } else {
           Alert.alert(
@@ -122,9 +154,9 @@ export default function ProfileSettingsScreen() {
         }
       },
       onError: (error) => {
-        console.error('Profile update error:', error);
+        console.error('[ProfileSettings] Profile update error:', error);
         Alert.alert(
-          'Error',
+          'Update Failed',
           'An error occurred while updating your profile. Please try again.',
           [{ text: 'OK' }]
         );

@@ -226,7 +226,7 @@ export function PremiumUpgradeModal({
   // GraphQL queries and mutations
   const { data: subscriptionData, loading: subscriptionLoading } = useQuery(GET_SUBSCRIPTION_STATUS, {
     skip: !visible,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     errorPolicy: 'all',
   });
 

@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-11-04T03:09:14.860Z",
+  "summary": {
+    "appLoaded": true,
+    "userAuthenticated": true,
+    "dashboardVisible": true,
+    "childrenCount": 0,
+    "inventoryCardsCount": 0,
+    "gridLayoutWorking": false
+  },
+  "graphqlRequests": 5,
+  "graphqlResponses": 0,
+  "graphqlErrors": 0,
+  "consoleErrors": 2,
+  "consoleWarnings": 10,
+  "screenshots": [
+    "01-initial-page.png",
+    "03-login-form-filled.png",
+    "04-after-login-submit.png",
+    "05-profile-check.png",
+    "07-iphone-viewport.png",
+    "08-grid-layout-final.png",
+    "09-final-state.png",
+    "detailed-01-initial.png",
+    "detailed-02-dashboard.png",
+    "detailed-05-iphone-grid.png",
+    "detailed-06-final.png"
+  ]
+}

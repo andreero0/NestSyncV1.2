@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StatusOverviewGrid Layout Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      align-items: flex-start;
+      padding: 20px;
+      align-self: center;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      background-color: white;
+      border: 2px solid #0891B2;
+    }
+
+    .card-wrapper {
+      width: 160px;
+      height: 120px;
+      margin-right: 16px;
+      margin-bottom: 16px;
+      background-color: #E0F2FE;
+      border: 2px solid #0891B2;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #0369A1;
+    }
+
+    .info {
+      padding: 20px;
+      max-width: 400px;
+      margin: 20px auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #0891B2;
+      text-align: center;
+    }
+
+    .measurement {
+      font-family: monospace;
+      background-color: #f5f5f5;
+      padding: 8px;
+      margin: 4px 0;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>2x2 Grid Layout Test - iPhone 17 Pro (393x852px)</h1>
+
+  <div class="container" id="grid">
+    <div class="card-wrapper" id="card1">Card 1<br>Critical Items</div>
+    <div class="card-wrapper" id="card2">Card 2<br>Low Stock</div>
+    <div class="card-wrapper" id="card3">Card 3<br>Well Stocked</div>
+    <div class="card-wrapper" id="card4">Card 4<br>Pending Orders</div>
+  </div>
+
+  <div class="info">
+    <h3>Layout Measurements:</h3>
+    <div id="measurements"></div>
+
+    <h3>Grid Verification:</h3>
+    <div id="verification"></div>
+  </div>
+
+  <script>
+    window.addEventListener('load', () => {
+      const cards = [
+        document.getElementById('card1'),
+        document.getElementById('card2'),
+        document.getElementById('card3'),
+        document.getElementById('card4')
+      ];
+
+      const measurements = document.getElementById('measurements');
+      const verification = document.getElementById('verification');
+
+      const cardData = cards.map((card, index) => {
+        const rect = card.getBoundingClientRect();
+        return {
+          index,
+          x: Math.round(rect.left),
+          y: Math.round(rect.top),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height)
+        };
+      });
+
+      // Display measurements
+      cardData.forEach(card => {
+        const div = document.createElement('div');
+        div.className = 'measurement';
+        div.textContent = `Card ${card.index + 1}: Position (${card.x}, ${card.y}), Size ${card.width}x${card.height}`;
+        measurements.appendChild(div);
+      });
+
+      // Verify 2x2 grid
+      const [card0, card1, card2, card3] = cardData;
+
+      const row1SameY = Math.abs(card0.y - card1.y) < 10;
+      const row2SameY = Math.abs(card2.y - card3.y) < 10;
+      const col1SameX = Math.abs(card0.x - card2.x) < 10;
+      const col2SameX = Math.abs(card1.x - card3.x) < 10;
+      const differentRows = Math.abs(card0.y - card2.y) > 50;
+
+      const results = [
+        { test: 'Row 1 alignment (cards 1 & 2)', pass: row1SameY, diff: Math.abs(card0.y - card1.y) },
+        { test: 'Row 2 alignment (cards 3 & 4)', pass: row2SameY, diff: Math.abs(card2.y - card3.y) },
+        { test: 'Column 1 alignment (cards 1 & 3)', pass: col1SameX, diff: Math.abs(card0.x - card2.x) },
+        { test: 'Column 2 alignment (cards 2 & 4)', pass: col2SameX, diff: Math.abs(card1.x - card3.x) },
+        { test: 'Rows are separate', pass: differentRows, diff: Math.abs(card0.y - card2.y) }
+      ];
+
+      results.forEach(result => {
+        const div = document.createElement('div');
+        div.className = 'measurement';
+        div.textContent = `${result.pass ? '✅' : '❌'} ${result.test}: ${result.pass ? 'PASS' : 'FAIL'} (diff: ${result.diff}px)`;
+        div.style.color = result.pass ? '#059669' : '#DC2626';
+        verification.appendChild(div);
+      });
+
+      // Overall result
+      const isGridLayout = row1SameY && row2SameY && col1SameX && col2SameX && differentRows;
+      const overall = document.createElement('div');
+      overall.className = 'measurement';
+      overall.style.marginTop = '16px';
+      overall.style.fontWeight = 'bold';
+      overall.style.fontSize = '18px';
+      overall.textContent = isGridLayout ? '✅ SUCCESS: Proper 2x2 Grid Layout!' : '❌ FAIL: NOT in 2x2 grid layout';
+      overall.style.color = isGridLayout ? '#059669' : '#DC2626';
+      verification.appendChild(overall);
+
+      // Spacing measurements
+      const horizontalSpacing = card1.x - (card0.x + card0.width);
+      const verticalSpacing = card2.y - (card0.y + card0.height);
+
+      const spacing = document.createElement('div');
+      spacing.className = 'measurement';
+      spacing.style.marginTop = '16px';
+      spacing.innerHTML = `<strong>Spacing:</strong><br>
+        Horizontal gap: ${horizontalSpacing}px (expected: 16px)<br>
+        Vertical gap: ${verticalSpacing}px (expected: 16px)`;
+      verification.appendChild(spacing);
+    });
+  </script>
+</body>
+</html>

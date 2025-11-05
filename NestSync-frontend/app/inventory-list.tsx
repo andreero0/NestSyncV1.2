@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@apollo/client';
@@ -31,7 +32,7 @@ export default function InventoryList() {
   const { data, loading, error, refetch } = useQuery(GET_INVENTORY_ITEMS_QUERY, {
     variables: { childId, limit: 100 },
     skip: !childId,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
   });
 
   const handleRefresh = async () => {

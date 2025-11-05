@@ -4,6 +4,7 @@
  */
 
 import { useQuery } from '@apollo/client';
+import { Platform } from 'react-native';
 import { useMemo, useEffect } from 'react';
 import {
   GET_USAGE_ANALYTICS_QUERY,
@@ -49,6 +50,7 @@ export function useUsageAnalytics(variables: GetUsageAnalyticsVariables) {
       notifyOnNetworkStatusChange: true,
       pollInterval: 30000, // 30 seconds for real-time updates
       skip: !variables.childId, // Skip query if childId is empty
+      fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     }
   );
 
@@ -138,6 +140,7 @@ export function useWeeklyTrends(variables: GetWeeklyTrendsVariables) {
       notifyOnNetworkStatusChange: true,
       pollInterval: 30000, // 30 seconds for real-time updates
       skip: !variables.childId, // Skip query if childId is empty
+      fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     }
   );
 
@@ -202,6 +205,7 @@ export function useAnalyticsOverview(variables: GetAnalyticsDashboardVariables) 
       notifyOnNetworkStatusChange: true,
       pollInterval: 30000, // 30 seconds for real-time updates
       skip: !variables.childId, // Skip query if childId is empty
+      fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     }
   );
 
@@ -315,6 +319,7 @@ export function useInventoryInsights(variables: GetInventoryInsightsVariables) {
       notifyOnNetworkStatusChange: true,
       pollInterval: 60000, // 1 minute for inventory (less critical)
       skip: !variables.childId, // Skip query if childId is empty
+      fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     }
   );
 
@@ -380,6 +385,7 @@ export function useDailySummary(variables: GetDailySummaryVariables) {
       notifyOnNetworkStatusChange: true,
       pollInterval: 30000, // 30 seconds for real-time updates
       skip: !variables.childId, // Skip query if childId is empty
+      fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     }
   );
 

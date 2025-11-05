@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useQuery } from '@apollo/client';
@@ -34,7 +35,7 @@ export default function OrderHistory({}: OrderHistoryProps) {
     variables: {
       limit: 20,
     },
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
   });
 
   const handleRefresh = async () => {

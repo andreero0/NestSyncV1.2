@@ -52,29 +52,84 @@ class CollaborationQueries:
     @strawberry.field
     async def my_families(self, info: Info) -> FamilyConnection:
         """Get families where current user is a member"""
+        import traceback
+        from sqlalchemy.exc import SQLAlchemyError
+
         try:
             user_id = await get_user_id_from_context(info)
+            logger.info(f"my_families: Fetching families for user_id={user_id}")
 
             async for session in get_async_session():
-                result = await session.execute(
-                    select(Family)
-                    .join(FamilyMember)
-                    .where(
-                        FamilyMember.user_id == user_id,
-                        FamilyMember.status == ModelMemberStatus.ACTIVE
+                try:
+                    # Execute query with detailed logging and eager loading
+                    logger.info(f"my_families: Executing SQL query for user_id={user_id}")
+                    result = await session.execute(
+                        select(Family)
+                        .join(FamilyMember)
+                        .options(
+                            selectinload(Family.members),
+                            selectinload(Family.children)
+                        )
+                        .where(
+                            FamilyMember.user_id == user_id,
+                            FamilyMember.status == ModelMemberStatus.ACTIVE
+                        )
+                        .order_by(FamilyMember.joined_at.desc())
                     )
-                    .order_by(FamilyMember.joined_at.desc())
-                )
-                families = result.scalars().all()
+                    families = result.scalars().all()
+                    logger.info(f"my_families: SQL query returned {len(families)} families")
 
-                return FamilyConnection(
-                    nodes=[FamilyType.from_orm(family) for family in families],
-                    total_count=len(families)
-                )
+                    # Try ORM conversion with detailed error tracking
+                    converted_families = []
+                    for idx, family in enumerate(families):
+                        try:
+                            logger.debug(f"my_families: Converting family {idx+1}/{len(families)} (id={family.id}, name={family.name})")
+                            converted_family = FamilyType.from_orm(family)
+                            converted_families.append(converted_family)
+                        except AttributeError as attr_error:
+                            logger.error(
+                                f"my_families: AttributeError converting family {family.id}: {attr_error}\n"
+                                f"Family attributes: {dir(family)}\n"
+                                f"Traceback: {traceback.format_exc()}"
+                            )
+                            raise
+                        except Exception as conv_error:
+                            logger.error(
+                                f"my_families: Conversion error for family {family.id}: {conv_error}\n"
+                                f"Traceback: {traceback.format_exc()}"
+                            )
+                            raise
+
+                    logger.info(f"my_families: Successfully converted {len(converted_families)} families")
+                    return FamilyConnection(
+                        nodes=converted_families,
+                        total_count=len(converted_families)
+                    )
+
+                except SQLAlchemyError as db_error:
+                    logger.error(
+                        f"my_families: Database error during query execution: {db_error}\n"
+                        f"User ID: {user_id}\n"
+                        f"Error type: {type(db_error).__name__}\n"
+                        f"Traceback: {traceback.format_exc()}"
+                    )
+                    raise
+                except Exception as inner_error:
+                    logger.error(
+                        f"my_families: Unexpected error in session context: {inner_error}\n"
+                        f"Error type: {type(inner_error).__name__}\n"
+                        f"Traceback: {traceback.format_exc()}"
+                    )
+                    raise
 
         except Exception as e:
-            logger.error(f"Error getting user families: {e}")
-            return FamilyConnection(nodes=[], total_count=0)
+            logger.error(
+                f"my_families: Critical error getting families for user: {e}\n"
+                f"Error type: {type(e).__name__}\n"
+                f"Full traceback:\n{traceback.format_exc()}"
+            )
+            # Re-raise the exception so GraphQL returns proper error to client
+            raise
 
     @strawberry.field
     async def family_details(self, family_id: strawberry.ID, info: Info) -> Optional[FamilyType]:

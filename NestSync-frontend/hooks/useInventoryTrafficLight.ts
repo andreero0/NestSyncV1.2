@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useCallback, useRef } from 'react';
+import { Platform } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useRouter } from 'expo-router';
 import { GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/queries';
@@ -65,7 +66,8 @@ export function useInventoryTrafficLight(childId: string): UseInventoryTrafficLi
     pollInterval: 15000, // Poll every 15 seconds for faster updates
     errorPolicy: 'all', // Allow partial data to prevent blank states
     notifyOnNetworkStatusChange: true, // Update loading state on network changes
-    fetchPolicy: 'cache-and-network', // Get fresh data while showing cache
+    // Use cache-and-network on native for fresh data, cache-first on web for performance
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     context: { timeout: 6000 }, // 6 second timeout for inventory queries
   });
 

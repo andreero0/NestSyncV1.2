@@ -53,7 +53,7 @@ function useReorderDetection(childId: string): ReorderState {
     variables: { childId, limit: 5 },
     skip: !childId,
     pollInterval: 60000, // Check every minute for fresh suggestions
-    fetchPolicy: 'cache-first', // Optimize performance
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     errorPolicy: 'ignore', // Don't break FAB for reorder errors
   });
 

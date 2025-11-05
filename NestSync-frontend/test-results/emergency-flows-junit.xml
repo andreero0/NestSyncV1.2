@@ -1,0 +1,52 @@
+<testsuites id="" name="" tests="2" failures="1" skipped="0" errors="0" time="28.113457999999998">
+<testsuite name="inventory-grid-e2e.spec.ts" timestamp="2025-11-04T00:13:57.358Z" hostname="emergency-desktop-chrome" tests="2" failures="1" skipped="0" time="19.511" errors="0">
+<testcase name="Inventory Card Grid Layout › should display inventory cards in 2x2 grid after login" classname="inventory-grid-e2e.spec.ts" time="9.441">
+<system-out>
+<![CDATA[Inventory cards not found - may need to navigate to correct screen
+Page content includes: Welcome BackSign in to continue managing your little one's needsEmail AddressPasswordShowForgot Password?Sign InDon't have an account? Sign UpYour data is securely stored in Canada and protected under PIPEDATrusted by Canadian families nationwide
+
+]]>
+</system-out>
+</testcase>
+<testcase name="Inventory Card Grid Layout › should verify card dimensions and spacing" classname="inventory-grid-e2e.spec.ts" time="10.07">
+<failure message="inventory-grid-e2e.spec.ts:82:7 should verify card dimensions and spacing" type="FAILURE">
+<![CDATA[  [emergency-desktop-chrome] › inventory-grid-e2e.spec.ts:82:7 › Inventory Card Grid Layout › should verify card dimensions and spacing 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 4
+    Received: 0
+
+      121 |
+      122 |     // Expect to find all 4 cards
+    > 123 |     expect(visibleCards.length).toBe(4);
+          |                                 ^
+      124 |   });
+      125 | });
+      126 |
+        at /Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/NestSync-frontend/tests/inventory-grid-e2e.spec.ts:123:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/inventory-grid-e2e-Invento-fe2f0-card-dimensions-and-spacing-emergency-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/inventory-grid-e2e-Invento-fe2f0-card-dimensions-and-spacing-emergency-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/inventory-grid-e2e-Invento-fe2f0-card-dimensions-and-spacing-emergency-desktop-chrome/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[Visible cards: 0 out of 4
+
+[[ATTACHMENT|inventory-grid-e2e-Invento-fe2f0-card-dimensions-and-spacing-emergency-desktop-chrome/test-failed-1.png]]
+
+[[ATTACHMENT|inventory-grid-e2e-Invento-fe2f0-card-dimensions-and-spacing-emergency-desktop-chrome/video.webm]]
+
+[[ATTACHMENT|inventory-grid-e2e-Invento-fe2f0-card-dimensions-and-spacing-emergency-desktop-chrome/error-context.md]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

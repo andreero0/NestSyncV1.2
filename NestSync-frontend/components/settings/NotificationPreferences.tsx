@@ -15,12 +15,12 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
-  StyleSheet
+  StyleSheet,
+  Platform
 } from 'react-native';
 import { useQuery, useMutation } from '@apollo/client';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -48,6 +48,34 @@ import {
   TestNotificationMutationVariables
 } from '@/lib/graphql/mutations';
 
+// Conditional import for expo-notifications
+// This module is not available in Expo Go for Android SDK 53+
+// Platform-based module exclusion prevents ERROR logs during module evaluation
+/* eslint-disable @typescript-eslint/no-require-imports */
+
+// Check if running in Expo Go on Android BEFORE requiring the module
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
+const shouldLoadNotifications = !(isExpoGo && Platform.OS === 'android');
+
+let Notifications: any = null;
+let isNotificationsAvailable = false;
+
+if (shouldLoadNotifications) {
+  try {
+    Notifications = require('expo-notifications');
+    isNotificationsAvailable = true;
+    console.log('[NotificationPreferences] expo-notifications loaded successfully');
+  } catch {
+    console.log('[NotificationPreferences] expo-notifications not available in current environment');
+    console.log('[NotificationPreferences] Push notifications require a Development Build');
+  }
+} else {
+  console.log('[NotificationPreferences] Skipping expo-notifications load (Expo Go on Android)');
+  console.log('[NotificationPreferences] Push notifications require a Development Build');
+}
+
+/* eslint-enable @typescript-eslint/no-require-imports */
+
 interface NotificationPreferencesProps {
   onClose?: () => void;
 }
@@ -64,7 +92,6 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
 
   // State management
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
   const [timePicker, setTimePicker] = useState<TimePickerState>({
     visible: false,
     type: 'start',
@@ -79,7 +106,7 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
     GET_NOTIFICATION_PREFERENCES_QUERY,
     {
       errorPolicy: 'all',
-      fetchPolicy: 'cache-and-network'
+      fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     }
   );
 
@@ -88,7 +115,7 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
     UpdateNotificationPreferencesMutationVariables
   >(UPDATE_NOTIFICATION_PREFERENCES_MUTATION);
 
-  const [registerDeviceToken, { loading: registeringDevice }] = useMutation<
+  const [registerDeviceToken] = useMutation<
     RegisterDeviceTokenMutationData,
     RegisterDeviceTokenMutationVariables
   >(REGISTER_DEVICE_TOKEN_MUTATION);
@@ -102,16 +129,22 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
   useEffect(() => {
     if (data?.getNotificationPreferences) {
       setPreferences(data.getNotificationPreferences);
-      setHasChanges(false);
     }
   }, [data]);
 
   // Register for push notifications on mount
   useEffect(() => {
     registerForPushNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const registerForPushNotifications = async () => {
+    // Check if expo-notifications is available
+    if (!isNotificationsAvailable) {
+      console.log('[NotificationPreferences] Skipping push notification registration - module not available');
+      return;
+    }
+
     if (!Device.isDevice) {
       Alert.alert('Push Notifications', 'Push notifications only work on physical devices');
       return;
@@ -173,7 +206,6 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
         if (result.data.updateNotificationPreferences.preferences) {
           setPreferences(result.data.updateNotificationPreferences.preferences);
         }
-        setHasChanges(false);
 
         // Show success feedback
         if (result.data.updateNotificationPreferences.message) {
@@ -195,7 +227,6 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
     if (!preferences) return;
 
     setPreferences(prev => prev ? { ...prev, [field]: value } : prev);
-    setHasChanges(true);
 
     // Immediate update for better UX
     updatePreference({ [field]: value });
@@ -207,18 +238,8 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
     const timeString = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
     setPreferences(prev => prev ? { ...prev, [field]: timeString } : prev);
-    setHasChanges(true);
 
     updatePreference({ [field]: timeString });
-  };
-
-  const handleNumberChange = (field: keyof UpdateNotificationPreferencesInput, value: number) => {
-    if (!preferences) return;
-
-    setPreferences(prev => prev ? { ...prev, [field]: value } : prev);
-    setHasChanges(true);
-
-    updatePreference({ [field]: value });
   };
 
   const handleTestNotification = async () => {
@@ -328,6 +349,22 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
       </ThemedView>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Expo Go Notification Unavailable Notice */}
+        {!isNotificationsAvailable && (
+          <View style={[styles.unavailableNotice, { backgroundColor: colors.warning || '#FFA500', borderColor: colors.border }]}>
+            <IconSymbol name="exclamationmark.triangle.fill" size={24} color="#FFFFFF" />
+            <View style={styles.unavailableNoticeContent}>
+              <Text style={styles.unavailableNoticeTitle}>
+                Push Notifications Unavailable
+              </Text>
+              <Text style={styles.unavailableNoticeDescription}>
+                Push notifications are not available in Expo Go for Android SDK 53+.
+                To enable notifications, create a Development Build using EAS Build.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Global Controls Section */}
         <ThemedView style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -501,22 +538,27 @@ export default function NotificationPreferencesModal({ onClose }: NotificationPr
 
           <View style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.settingIcon}>
-              <IconSymbol name="iphone" size={24} color={colors.tint} />
+              <IconSymbol name="iphone" size={24} color={isNotificationsAvailable ? colors.tint : colors.textSecondary} />
             </View>
             <View style={styles.settingContent}>
               <ThemedText type="defaultSemiBold" style={styles.settingTitle}>
                 Push Notifications
               </ThemedText>
               <ThemedText style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                {deviceToken ? 'Device registered for push notifications' : 'Device not registered'}
+                {!isNotificationsAvailable
+                  ? 'Requires Development Build (unavailable in Expo Go)'
+                  : deviceToken
+                    ? 'Device registered for push notifications'
+                    : 'Device not registered'
+                }
               </ThemedText>
             </View>
             <Switch
-              value={preferences.pushNotifications}
+              value={preferences.pushNotifications && isNotificationsAvailable}
               onValueChange={(value) => handleToggle('pushNotifications', value)}
               trackColor={{ false: colors.border, true: colors.tint }}
               thumbColor={preferences.pushNotifications ? '#FFFFFF' : colors.background}
-              disabled={updating || !preferences.notificationsEnabled}
+              disabled={updating || !preferences.notificationsEnabled || !isNotificationsAvailable}
             />
           </View>
 
@@ -949,6 +991,29 @@ const styles = StyleSheet.create({
   consentDate: {
     fontSize: 12,
     fontStyle: 'italic',
+  },
+  unavailableNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 12,
+  },
+  unavailableNoticeContent: {
+    flex: 1,
+  },
+  unavailableNoticeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  unavailableNoticeDescription: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,

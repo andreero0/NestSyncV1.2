@@ -949,6 +949,9 @@ export const safeQuery = async (query: any, variables?: any): Promise<any> => {
   }
 };
 
+// Export token validation and refresh functions for authStore
+export { isTokenExpiringSoon, performGlobalTokenRefresh };
+
 // Export rate limiting manager for component use
 export const rateLimitingManager = RateLimitFeedbackManager.getInstance();
 

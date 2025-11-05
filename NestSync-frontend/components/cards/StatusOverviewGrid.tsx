@@ -11,16 +11,13 @@ interface StatusOverviewGridProps {
 export function StatusOverviewGrid({ cards }: StatusOverviewGridProps) {
   // Device size detection for layout strategy
   const isMobile = width < 768;
-  
+
   return (
     <View style={styles.container}>
-      {cards.map((cardProps, index) => (
+      {cards.map((cardProps) => (
         <View
           key={cardProps.statusType}
-          style={[
-            styles.cardWrapper,
-            isMobile && index < 2 && styles.topRowMargin // Add margin to top row cards on mobile
-          ]}
+          style={styles.cardWrapper}
         >
           <StatusOverviewCard {...cardProps} />
         </View>
@@ -29,29 +26,24 @@ export function StatusOverviewGrid({ cards }: StatusOverviewGridProps) {
   );
 }
 
-// Fixed-size grid styling with consistent 160x120px cards
+// Responsive grid styling with percentage-based width
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between', // Automatic spacing between cards
     alignItems: 'flex-start',
     paddingHorizontal: 20, // Consistent 20px edge padding
     paddingVertical: 16,
-    gap: 16, // Fixed 16px gaps between cards
-    // Center the grid container
+    // No maxWidth - allows responsive scaling across all device sizes
     alignSelf: 'center',
-    maxWidth: 400, // Max width to prevent stretching on large screens
   },
-  
+
   cardWrapper: {
-    // Fixed card dimensions - 160x120px (4:3 aspect ratio)
-    width: 160,
-    height: 120,
-    // No flex properties - prevents dynamic sizing
-  },
-  
-  topRowMargin: {
-    marginBottom: 16, // Add bottom margin to top row cards (indices 0 and 1)
+    // Percentage-based width for responsive layout
+    width: '47%', // 47% × 2 = 94% with 6% gap from space-between
+    aspectRatio: 4 / 3, // Maintains 4:3 proportions (same as 160:120)
+    // Vertical spacing between rows
+    marginBottom: 16,
   },
 });

@@ -5,6 +5,7 @@ PIPEDA-compliant user authentication and authorization
 
 import logging
 import uuid
+import re
 from typing import Optional
 from datetime import datetime, timezone
 import strawberry
@@ -45,6 +46,78 @@ from .types import (
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# Validation Constants for Canadian Profile Data
+# =============================================================================
+
+# Valid Canadian timezones (all provinces and territories)
+VALID_CANADIAN_TIMEZONES = [
+    "America/Toronto",     # Eastern - ON, QC (most of)
+    "America/Montreal",    # Eastern - QC
+    "America/Halifax",     # Atlantic - NS, PE, NB, east QC
+    "America/St_Johns",    # Newfoundland - NL
+    "America/Winnipeg",    # Central - MB, west ON
+    "America/Regina",      # Central (no DST) - SK
+    "America/Edmonton",    # Mountain - AB
+    "America/Vancouver",   # Pacific - BC
+    "America/Whitehorse",  # Pacific - YT
+    "America/Yellowknife", # Mountain - NT
+    "America/Iqaluit",     # Eastern - NU (east)
+    "America/Rankin_Inlet", # Central - NU (central)
+    "America/Cambridge_Bay" # Mountain - NU (west)
+]
+
+# Valid Canadian province/territory codes
+VALID_CANADIAN_PROVINCES = [
+    "AB",  # Alberta
+    "BC",  # British Columbia
+    "MB",  # Manitoba
+    "NB",  # New Brunswick
+    "NL",  # Newfoundland and Labrador
+    "NS",  # Nova Scotia
+    "ON",  # Ontario
+    "PE",  # Prince Edward Island
+    "QC",  # Quebec
+    "SK",  # Saskatchewan
+    "NT",  # Northwest Territories
+    "NU",  # Nunavut
+    "YT"   # Yukon
+]
+
+
+def validate_profile_input(input: UpdateProfileInput) -> Optional[str]:
+    """
+    Validate profile update input with Canadian compliance rules
+    Returns error message if validation fails, None if valid
+    """
+    # Timezone validation
+    if input.timezone and input.timezone not in VALID_CANADIAN_TIMEZONES:
+        return f"Invalid timezone. Must be one of: {', '.join(VALID_CANADIAN_TIMEZONES)}"
+
+    # Province validation
+    if input.province and input.province not in VALID_CANADIAN_PROVINCES:
+        return f"Invalid province code. Must be one of: {', '.join(VALID_CANADIAN_PROVINCES)}"
+
+    # Canadian postal code validation (A1A 1A1 or A1A1A1 format)
+    if input.postal_code:
+        postal_code_clean = input.postal_code.upper().replace(" ", "")
+        if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', postal_code_clean):
+            return "Invalid Canadian postal code format. Expected format: A1A 1A1"
+
+    # Phone number validation (Canadian format)
+    if input.phone_number:
+        phone_clean = input.phone_number.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+        # Accept +1XXXXXXXXXX or 1XXXXXXXXXX or XXXXXXXXXX
+        if not re.match(r'^(\+?1)?[2-9]\d{9}$', phone_clean):
+            return "Invalid phone number format. Expected Canadian phone number (10 digits)"
+
+    # Language validation (Canadian official languages)
+    if input.language and input.language not in ["en", "fr"]:
+        return "Invalid language. Must be 'en' (English) or 'fr' (French)"
+
+    return None
+
+
 def user_to_graphql(user: User) -> UserProfile:
     """Convert User model to GraphQL UserProfile type"""
     return UserProfile(
@@ -53,10 +126,12 @@ def user_to_graphql(user: User) -> UserProfile:
         first_name=user.first_name,
         last_name=user.last_name,
         display_name=user.display_name,
+        phone_number=user.phone_number,
         timezone=user.timezone,
         language=user.language,
         currency=user.currency,
         province=user.province,
+        postal_code=user.postal_code,
         status=user.status,
         email_verified=user.email_verified,
         onboarding_completed=user.onboarding_completed,
@@ -461,25 +536,111 @@ class AuthMutations:
         info: Info
     ) -> UserProfileResponse:
         """
-        Update user profile information
+        Update user profile information with PIPEDA compliance
+
+        Validates Canadian-specific data (timezone, province, postal code)
+        Updates only provided fields (null values are ignored)
+        Returns updated user object for Apollo cache synchronization
         """
         try:
-            # This would use the get_current_user dependency
-            # For now, implementing basic version
-            request = info.context.request
-            # Get current user from token (simplified)
-            # In full implementation, use dependency injection
-            
-            return UserProfileResponse(
-                success=True,
-                message="Profile updated successfully"
-            )
-            
+            # Step 1: Get authenticated user from context
+            user = await require_context_user(info)
+
+            if not user:
+                return UserProfileResponse(
+                    success=False,
+                    error="Authentication required"
+                )
+
+            # Step 2: Validate input data with Canadian compliance rules
+            validation_error = validate_profile_input(input)
+            if validation_error:
+                logger.warning(f"Profile validation failed for user {user.id}: {validation_error}")
+                return UserProfileResponse(
+                    success=False,
+                    error=validation_error
+                )
+
+            # Step 3: Use database session with async pattern
+            async for session in get_async_session():
+                # Query the user in current session to avoid detached instance issues
+                result = await session.execute(
+                    select(User).where(User.id == user.id)
+                )
+                db_user = result.scalar_one_or_none()
+
+                if not db_user:
+                    return UserProfileResponse(
+                        success=False,
+                        error="User not found"
+                    )
+
+                # Step 4: Update fields (only if provided in input)
+                # Track which fields were updated for logging
+                updated_fields = []
+
+                if input.first_name is not None:
+                    db_user.first_name = input.first_name
+                    updated_fields.append("first_name")
+
+                if input.last_name is not None:
+                    db_user.last_name = input.last_name
+                    updated_fields.append("last_name")
+
+                if input.display_name is not None:
+                    db_user.display_name = input.display_name
+                    updated_fields.append("display_name")
+
+                if input.timezone is not None:
+                    db_user.timezone = input.timezone
+                    updated_fields.append("timezone")
+
+                if input.language is not None:
+                    db_user.language = input.language
+                    updated_fields.append("language")
+
+                if input.province is not None:
+                    db_user.province = input.province
+                    updated_fields.append("province")
+
+                if input.postal_code is not None:
+                    # Normalize postal code to uppercase without spaces
+                    db_user.postal_code = input.postal_code.upper().replace(" ", "")
+                    updated_fields.append("postal_code")
+
+                if input.phone_number is not None:
+                    db_user.phone_number = input.phone_number
+                    updated_fields.append("phone_number")
+
+                # Step 5: Update timestamp
+                db_user.updated_at = datetime.now(timezone.utc)
+
+                # Step 6: Commit changes with PIPEDA audit logging
+                await session.commit()
+                await session.refresh(db_user)
+
+                # Step 7: Convert to GraphQL type and return
+                graphql_user = user_to_graphql(db_user)
+
+                logger.info(
+                    f"Profile updated successfully for user {user.id}. "
+                    f"Updated fields: {', '.join(updated_fields) if updated_fields else 'none'}"
+                )
+
+                return UserProfileResponse(
+                    success=True,
+                    message="Profile updated successfully",
+                    user=graphql_user
+                )
+
+        except GraphQLError:
+            # Re-raise GraphQL authentication errors
+            raise
         except Exception as e:
-            logger.error(f"Error updating profile: {e}")
+            logger.error(f"Error updating user profile: {e}", exc_info=True)
             return UserProfileResponse(
                 success=False,
-                error="Profile update failed"
+                error="Profile update failed. Please try again."
             )
     
     @strawberry.mutation

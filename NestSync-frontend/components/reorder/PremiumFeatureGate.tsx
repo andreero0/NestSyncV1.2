@@ -129,7 +129,7 @@ export function PremiumFeatureGate({
     GET_SUBSCRIPTION_STATUS,
     {
       errorPolicy: 'all',
-      fetchPolicy: 'cache-and-network',
+      fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     }
   );
 

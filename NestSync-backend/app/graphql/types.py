@@ -75,10 +75,12 @@ class UserProfile:
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     display_name: Optional[str] = None
+    phone_number: Optional[str] = None
     timezone: str = "America/Toronto"
     language: str = "en"
     currency: str = "CAD"
     province: Optional[str] = None
+    postal_code: Optional[str] = None
     status: UserStatusType
     email_verified: bool
     onboarding_completed: bool

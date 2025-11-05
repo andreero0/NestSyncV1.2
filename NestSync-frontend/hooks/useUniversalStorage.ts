@@ -136,6 +136,52 @@ export function useUserPreferences() {
   return useAsyncStorage(STORAGE_KEYS.USER_PREFERENCES);
 }
 
+/**
+ * Checks if a JWT token is expired or expiring soon
+ * @param token - JWT token string
+ * @param bufferMinutes - Minutes before expiration to consider token expired (default: 5)
+ * @returns true if token is expired or expiring soon
+ */
+function isJWTExpired(token: string, bufferMinutes: number = 5): boolean {
+  try {
+    // JWT tokens have 3 parts separated by dots: header.payload.signature
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.warn('[StorageHelpers] Invalid JWT format (expected 3 parts), treating as expired');
+      return true;
+    }
+
+    // Decode the payload (second part)
+    const payload = JSON.parse(atob(parts[1]));
+
+    // Check if expiration claim exists
+    if (!payload.exp) {
+      console.warn('[StorageHelpers] JWT missing expiration claim (exp), treating as expired');
+      return true;
+    }
+
+    // Convert Unix timestamp to milliseconds and check expiration with buffer
+    const expiryTime = payload.exp * 1000;
+    const bufferTime = bufferMinutes * 60 * 1000;
+    const isExpired = Date.now() > (expiryTime - bufferTime);
+
+    if (isExpired && __DEV__) {
+      const expiryDate = new Date(expiryTime);
+      console.log('[StorageHelpers] Token expired or expiring soon', {
+        expiryTime: expiryDate.toISOString(),
+        bufferMinutes,
+        now: new Date().toISOString(),
+      });
+    }
+
+    return isExpired;
+  } catch (error) {
+    // If we can't parse the token, treat it as expired for safety
+    console.warn('[StorageHelpers] Failed to parse JWT token, treating as expired:', error);
+    return true;
+  }
+}
+
 // Helper functions for non-reactive storage access (for use outside React components)
 export const StorageHelpers = {
   async setItem(key: string, value: string, secure: boolean = true): Promise<void> {
@@ -191,24 +237,49 @@ export const StorageHelpers = {
   },
 
   async getAccessToken(): Promise<string | null> {
-    // First try individual token storage
-    let token = await this.getItem(STORAGE_KEYS.ACCESS_TOKEN, true);
-    if (token) return token;
-    
-    // Fallback to extracting from user session
     try {
+      // Try getting direct access token
+      let token = await this.getItem(STORAGE_KEYS.ACCESS_TOKEN, true);
+
+      if (token) {
+        // Check if token is expired before returning
+        if (isJWTExpired(token, 5)) {
+          console.log('[StorageHelpers] Access token is expired, clearing and returning null');
+          await this.removeItem(STORAGE_KEYS.ACCESS_TOKEN, true);
+          return null;
+        }
+
+        if (__DEV__) {
+          console.log('[StorageHelpers] Access token validation passed, returning valid token');
+        }
+        return token;
+      }
+
+      // Fallback: Try extracting from session data
       const sessionData = await this.getItem(STORAGE_KEYS.USER_SESSION, true);
       if (sessionData) {
         const session = JSON.parse(sessionData);
-        return session.accessToken || null;
+        const sessionToken = session.accessToken || null;
+
+        if (sessionToken) {
+          // Validate session token before returning
+          if (isJWTExpired(sessionToken, 5)) {
+            console.log('[StorageHelpers] Session token is expired, returning null');
+            return null;
+          }
+
+          if (__DEV__) {
+            console.log('[StorageHelpers] Session token validation passed, returning valid token');
+          }
+          return sessionToken;
+        }
       }
+
+      return null;
     } catch (error) {
-      if (__DEV__) {
-        console.error('Failed to extract access token from session:', error);
-      }
+      console.error('[StorageHelpers] Error getting access token:', error);
+      return null;
     }
-    
-    return null;
   },
 
   async setRefreshToken(token: string): Promise<void> {
@@ -216,24 +287,51 @@ export const StorageHelpers = {
   },
 
   async getRefreshToken(): Promise<string | null> {
-    // First try individual token storage
-    let token = await this.getItem(STORAGE_KEYS.REFRESH_TOKEN, true);
-    if (token) return token;
-    
-    // Fallback to extracting from user session
     try {
+      // Try getting direct refresh token
+      let token = await this.getItem(STORAGE_KEYS.REFRESH_TOKEN, true);
+
+      if (token) {
+        // Basic validation: check if token has valid JWT format
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+          console.warn('[StorageHelpers] Refresh token has invalid JWT format, clearing and returning null');
+          await this.removeItem(STORAGE_KEYS.REFRESH_TOKEN, true);
+          return null;
+        }
+
+        if (__DEV__) {
+          console.log('[StorageHelpers] Refresh token format validation passed');
+        }
+        return token;
+      }
+
+      // Fallback: Try extracting from session data
       const sessionData = await this.getItem(STORAGE_KEYS.USER_SESSION, true);
       if (sessionData) {
         const session = JSON.parse(sessionData);
-        return session.refreshToken || null;
+        const sessionToken = session.refreshToken || null;
+
+        if (sessionToken) {
+          // Basic validation: check if token has valid JWT format
+          const parts = sessionToken.split('.');
+          if (parts.length !== 3) {
+            console.warn('[StorageHelpers] Session refresh token has invalid JWT format, returning null');
+            return null;
+          }
+
+          if (__DEV__) {
+            console.log('[StorageHelpers] Session refresh token format validation passed');
+          }
+          return sessionToken;
+        }
       }
+
+      return null;
     } catch (error) {
-      if (__DEV__) {
-        console.error('Failed to extract refresh token from session:', error);
-      }
+      console.error('[StorageHelpers] Error getting refresh token:', error);
+      return null;
     }
-    
-    return null;
   },
 
   async setUserSession(session: any): Promise<void> {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import { ScrollView, StyleSheet, View, TouchableOpacity, Dimensions, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
 import { useRouter } from 'expo-router';
@@ -26,6 +26,7 @@ import { TrialCountdownBanner } from '@/components/reorder/TrialCountdownBanner'
 import { PremiumUpgradeModal } from '@/components/reorder/PremiumUpgradeModal';
 import { useAnalyticsAccess } from '@/hooks/useFeatureAccess';
 import { useTrialOnboarding } from '@/hooks/useTrialOnboarding';
+import { useAuthStore } from '@/stores/authStore';
 
 const { width } = Dimensions.get('window');
 
@@ -56,7 +57,10 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
   const router = useRouter();
-  
+
+  // Get user from auth store for timezone-aware greeting
+  const { user } = useAuthStore();
+
   // State for selected child with persistence
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
@@ -88,28 +92,30 @@ export default function HomeScreen() {
     pollInterval: 30000 // Poll every 30 seconds for real-time updates
   });
 
-  const { 
-    data: dashboardData, 
-    loading: dashboardLoading, 
-    error: dashboardError 
+  const {
+    data: dashboardData,
+    loading: dashboardLoading,
+    error: dashboardError
   } = useQuery(GET_DASHBOARD_STATS_QUERY, {
     variables: { childId: selectedChildId },
     skip: !selectedChildId,
     pollInterval: 30000, // Poll every 30 seconds for real-time updates
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
   });
 
-  const { 
-    data: usageLogsData, 
-    loading: usageLogsLoading 
+  const {
+    data: usageLogsData,
+    loading: usageLogsLoading
   } = useQuery(GET_USAGE_LOGS_QUERY, {
-    variables: { 
+    variables: {
       childId: selectedChildId,
       usageType: 'DIAPER_CHANGE',
       daysBack: 7,
-      limit: 10 
+      limit: 10
     },
     skip: !selectedChildId,
     pollInterval: 30000, // Poll every 30 seconds
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
   });
 
   // Traffic Light Dashboard Data
@@ -430,7 +436,7 @@ export default function HomeScreen() {
             <View style={styles.headerTop}>
               <View style={styles.headerTextContainer}>
                 <ThemedText type="title" style={styles.headerTitle}>
-                  {getTimeBasedGreeting()}
+                  {getTimeBasedGreeting(user?.timezone)}
                 </ThemedText>
                 <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
                   {childrenLoading ? 'Loading child information...' :

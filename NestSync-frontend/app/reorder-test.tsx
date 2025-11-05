@@ -132,6 +132,18 @@ const urgentMockSuggestion: ReorderSuggestion = {
   },
 };
 
+// Mock suggestion WITHOUT usagePattern to test defensive programming fix
+const mockSuggestionWithoutUsagePattern: ReorderSuggestion = {
+  ...mockReorderSuggestion,
+  id: 'no-usage-pattern',
+  usagePattern: undefined, // Simulates backend data missing usagePattern
+  product: {
+    ...mockReorderSuggestion.product,
+    name: 'Natural Care Wipes',
+    brand: 'Pampers',
+  },
+};
+
 export default function ReorderTestScreen() {
   const backgroundColor = useThemeColor({}, 'background');
 
@@ -195,6 +207,22 @@ export default function ReorderTestScreen() {
             suggestion={mockReorderSuggestion}
             loading={true}
             testID="loading-reorder-card"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+            Missing Usage Pattern Test (Defensive Programming Fix)
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Tests handling of undefined usagePattern - should render without "Daily usage" row
+          </ThemedText>
+          <ReorderSuggestionCard
+            suggestion={mockSuggestionWithoutUsagePattern}
+            onPressReorder={handleReorderPress}
+            onPressCompare={handleComparePress}
+            onDismiss={handleDismiss}
+            testID="no-usage-pattern-card"
           />
         </View>
 

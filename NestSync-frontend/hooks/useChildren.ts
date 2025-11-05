@@ -11,6 +11,7 @@
  */
 
 import { useQuery } from '@apollo/client';
+import { Platform } from 'react-native';
 import { MY_CHILDREN_QUERY } from '@/lib/graphql/queries';
 
 // Child interface matching GraphQL schema
@@ -76,8 +77,8 @@ export function useChildren(options: UseChildrenOptions = {}): UseChildrenResult
     variables: { first },
     skip,
     pollInterval,
-    // Use cache-and-network to ensure fresh data while utilizing cache
-    fetchPolicy: 'cache-and-network',
+    // Use cache-and-network on native for fresh data, cache-first on web for performance
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     // Ensure network status changes are reported for loading states
     notifyOnNetworkStatusChange: true,
     // Clean error handling

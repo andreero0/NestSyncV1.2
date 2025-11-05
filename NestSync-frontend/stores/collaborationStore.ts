@@ -4,8 +4,9 @@
  */
 
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware';
+import { persist, devtools, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/shallow';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Family,
   FamilyMember,
@@ -432,6 +433,7 @@ export const useCollaborationStore = create<CollaborationStore>()(
       }),
       {
         name: 'nestsync-collaboration-store',
+        storage: createJSONStorage(() => AsyncStorage),
         partialize: (state) => ({
           // Only persist essential data, not UI state
           currentFamilyId: state.currentFamilyId,

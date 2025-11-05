@@ -109,7 +109,8 @@ export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLog
 
   // Get current user information for caregiver attribution
   const { data: userData } = useQuery(ME_QUERY, {
-    skip: !visible
+    skip: !visible,
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
   });
 
   // Check inventory for selected child
@@ -119,7 +120,8 @@ export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLog
       productType: 'DIAPER',
       limit: 500
     },
-    skip: !selectedChildId || !visible
+    skip: !selectedChildId || !visible,
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
   });
 
   const [logDiaperChange, { loading: submitLoading }] = useMutation(LOG_DIAPER_CHANGE_MUTATION, {

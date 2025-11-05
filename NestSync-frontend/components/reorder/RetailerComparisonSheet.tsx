@@ -230,7 +230,7 @@ export function RetailerComparisonSheet({
   const { data, loading, error, refetch } = useQuery(GET_RETAILER_COMPARISON, {
     variables: { productId, quantity },
     skip: !visible || !productId,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
     errorPolicy: 'all',
   });
 

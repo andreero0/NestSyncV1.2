@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -138,18 +138,19 @@ export default function PlannerScreen() {
   // } = useEnhancedAnalytics({ childId });
 
   // Fetch inventory data
-  const { 
-    data: inventoryData, 
-    loading: inventoryLoading, 
-    error: inventoryError 
+  const {
+    data: inventoryData,
+    loading: inventoryLoading,
+    error: inventoryError
   } = useQuery(GET_INVENTORY_ITEMS_QUERY, {
-    variables: { 
+    variables: {
       childId,
       productType: 'DIAPER',
       limit: 500
     },
     skip: !childId,
     pollInterval: 30000,
+    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
   });
   
   // Auto-set stored child if we have a valid childId but no stored value

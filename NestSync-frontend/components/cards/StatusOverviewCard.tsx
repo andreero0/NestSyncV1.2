@@ -143,12 +143,12 @@ export function StatusOverviewCard({
   );
 }
 
-// Fixed-size card styling with consistent dimensions (160x120px)
+// Responsive card styling with percentage-based dimensions
 const styles = StyleSheet.create({
   card: {
-    // Fixed dimensions - no responsive sizing
-    width: 160,
-    height: 120,
+    // Responsive dimensions - inherits width from wrapper
+    width: '100%', // Inherits from wrapper (47% of container)
+    aspectRatio: 4 / 3, // Maintains 4:3 proportions (same as 160:120)
     borderWidth: 3,
     borderRadius: 12,
     // Shadow for depth
@@ -158,8 +158,8 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2, // Android shadow
     // Touch target requirements
-    minWidth: 44, // Accessibility minimum (already exceeded by 160px)
-    minHeight: 44, // Accessibility minimum (already exceeded by 120px)
+    minWidth: 44, // Accessibility minimum
+    minHeight: 44, // Accessibility minimum
   },
   
   contentContainer: {

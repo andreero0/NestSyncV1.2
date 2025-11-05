@@ -119,6 +119,9 @@ class Family:
     @classmethod
     def from_orm(cls, family_orm) -> "Family":
         """Convert ORM model to GraphQL type"""
+        # Ensure settings is a dictionary (handle None case)
+        settings_dict = family_orm.settings if family_orm.settings is not None else {}
+
         return cls(
             id=strawberry.ID(str(family_orm.id)),
             name=family_orm.name,
@@ -127,12 +130,12 @@ class Family:
             created_by=strawberry.ID(str(family_orm.created_by)),
             created_at=family_orm.created_at,
             settings=FamilySettings(
-                time_zone=family_orm.settings.get("timezone", "America/Toronto"),
-                language=family_orm.settings.get("language", "en-CA"),
-                privacy_level=family_orm.settings.get("privacy_level", "family_only"),
-                allow_guest_access=family_orm.settings.get("allow_guest_access", False),
-                data_retention_days=family_orm.settings.get("data_retention_days", 2555),
-                notification_settings=family_orm.settings.get("notification_settings", {})
+                time_zone=settings_dict.get("timezone", "America/Toronto"),
+                language=settings_dict.get("language", "en-CA"),
+                privacy_level=settings_dict.get("privacy_level", "family_only"),
+                allow_guest_access=settings_dict.get("allow_guest_access", False),
+                data_retention_days=settings_dict.get("data_retention_days", 2555),
+                notification_settings=settings_dict.get("notification_settings", {})
             )
         )
 

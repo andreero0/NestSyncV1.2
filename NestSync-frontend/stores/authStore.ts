@@ -23,6 +23,7 @@ import {
   BiometricSettings,
 } from '../lib/types/auth';
 import { StorageHelpers, BiometricHelpers } from '../hooks/useUniversalStorage';
+import { isTokenExpiringSoon, performGlobalTokenRefresh } from '../lib/graphql/client';
 
 // Authentication state interface
 interface AuthState {
@@ -99,7 +100,82 @@ export const useAuthStore = create<AuthState>()(
         if (__DEV__) {
           console.log('Starting auth initialization...');
         }
-        
+
+        // PRIORITY 1 FIX: Proactive token validation on app launch
+        // Check if tokens exist and validate expiration BEFORE using them
+        const accessToken = await StorageHelpers.getAccessToken();
+
+        if (!accessToken) {
+          // No token - user needs to login
+          if (__DEV__) {
+            console.log('No access token found, user needs to login');
+          }
+          set({
+            isAuthenticated: false,
+            isInitialized: true,
+            isLoading: false,
+          });
+          return;
+        }
+
+        // Validate token expiration (CRITICAL NEW LOGIC)
+        if (__DEV__) {
+          console.log('Checking token expiration status...');
+        }
+
+        const isExpired = isTokenExpiringSoon(accessToken, 5); // 5 min buffer
+
+        if (isExpired) {
+          if (__DEV__) {
+            console.log('[TOKEN] Token expired/expiring, attempting automatic refresh...');
+          }
+
+          // Attempt automatic token refresh
+          try {
+            const newToken = await performGlobalTokenRefresh();
+
+            if (!newToken) {
+              // Refresh failed - clear everything and force re-login
+              if (__DEV__) {
+                console.log('[TOKEN] Token refresh failed, forcing re-login');
+              }
+              await StorageHelpers.clearTokens();
+              set({
+                isAuthenticated: false,
+                user: null,
+                session: null,
+                isInitialized: true,
+                isLoading: false,
+                error: 'Session expired. Please log in again.',
+              });
+              return;
+            }
+
+            if (__DEV__) {
+              console.log('[TOKEN] Token refreshed successfully');
+            }
+          } catch (refreshError) {
+            // Refresh threw an error - clean state and force re-login
+            if (__DEV__) {
+              console.error('[TOKEN] Token refresh error:', refreshError);
+            }
+            await StorageHelpers.clearTokens();
+            set({
+              isAuthenticated: false,
+              user: null,
+              session: null,
+              isInitialized: true,
+              isLoading: false,
+              error: 'Session expired. Please log in again.',
+            });
+            return;
+          }
+        } else {
+          if (__DEV__) {
+            console.log('[TOKEN] Token is valid, proceeding with normal initialization');
+          }
+        }
+
         // Create a timeout wrapper for the auth service initialization
         const initializeWithTimeout = async (): Promise<boolean> => {
           return new Promise(async (resolve, reject) => {

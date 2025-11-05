@@ -55,7 +55,7 @@ export interface ReorderSuggestion {
   priority: number;
   suggestedQuantity: number;
   currentInventoryLevel: number;
-  usagePattern: {
+  usagePattern?: {
     averageDailyUsage: number;
     weeklyTrend: number;
     seasonalFactors: number[];
@@ -364,12 +364,14 @@ export function ReorderSuggestionCard({
                 </ThemedText>
               </View>
 
-              <View style={styles.insightRow}>
-                <IconSymbol name="leaf" size={14} color={colors.textSecondary} />
-                <ThemedText style={[styles.insightText, { color: colors.textSecondary }]}>
-                  Daily usage: {suggestion.usagePattern.averageDailyUsage.toFixed(1)} diapers
-                </ThemedText>
-              </View>
+              {suggestion.usagePattern?.averageDailyUsage != null && (
+                <View style={styles.insightRow}>
+                  <IconSymbol name="leaf" size={14} color={colors.textSecondary} />
+                  <ThemedText style={[styles.insightText, { color: colors.textSecondary }]}>
+                    Daily usage: {suggestion.usagePattern.averageDailyUsage.toFixed(1)} diapers
+                  </ThemedText>
+                </View>
+              )}
             </View>
           </View>
 
