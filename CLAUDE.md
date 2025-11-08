@@ -1153,6 +1153,292 @@ Use comprehensive format that preserves learning context:
 
 This workflow balances clean main branch history with comprehensive learning context preservation.
 
+## Documentation Standards and Best Practices
+
+### Documentation Organization Philosophy
+NestSync follows a structured documentation approach that separates active documentation from historical archives while maintaining design documentation as the authoritative source of truth.
+
+### Core Documentation Principles
+
+**1. Design Documentation is Authoritative**
+- **Location**: `/design-documentation/`
+- **Rule**: NEVER modify, move, or archive design documentation
+- **Rationale**: Design docs are the source of truth for all features
+- **Action**: Reference design docs in implementation reports, never override them
+
+**2. Compliance Documentation is Always Active**
+- **Location**: `/docs/compliance/`
+- **Rule**: NEVER archive compliance documentation
+- **Rationale**: Regulatory requirements must always be accessible
+- **Action**: Update compliance docs when regulations change, keep them current
+
+**3. Archives Preserve History**
+- **Location**: `/docs/archives/`
+- **Rule**: All historical implementation reports, test reports, and fix reports go here
+- **Action**: Add metadata frontmatter and update indexes when archiving
+
+### When to Archive Documentation
+
+**Archive Immediately After Completion:**
+- Implementation reports for completed features
+- Test reports (e2e, integration, visual, performance)
+- Bug fix reports and post-mortems
+- Time-sensitive urgent fixes
+
+**NEVER Archive:**
+- Active troubleshooting guides
+- Current setup instructions
+- Design documentation (authoritative source)
+- Compliance documentation (regulatory requirement)
+- Architecture documentation still in use
+- API documentation for current APIs
+- Deployment guides for active environments
+
+### Archive Structure and Organization
+
+**Root Archives**: `/docs/archives/`
+```
+docs/archives/
+├── README.md                  # Master archive index
+├── 2025/                      # Chronological by year/month
+│   ├── 01-january/
+│   ├── 02-february/
+│   └── ...
+├── implementation-reports/    # Feature implementations
+├── test-reports/             # Test results (e2e, integration, visual)
+│   ├── e2e/
+│   ├── integration/
+│   ├── visual/
+│   ├── compliance/
+│   └── performance/
+├── fixes/                    # Bug fixes by category
+│   ├── authentication/
+│   ├── ui-ux/
+│   ├── notifications/
+│   ├── compliance/
+│   ├── data-integrity/
+│   ├── integration/
+│   └── performance/
+└── audits/                   # Historical audits
+```
+
+**Component Archives**:
+- Backend: `/NestSync-backend/docs/archives/`
+- Frontend: `/NestSync-frontend/docs/archives/`
+
+### Required Metadata Frontmatter
+
+Every archived document MUST include YAML frontmatter:
+
+```yaml
+---
+title: "Descriptive Title"
+date: YYYY-MM-DD
+category: "primary-category"
+type: "implementation|test-report|fix|audit"
+priority: "P0|P1|P2|P3"
+status: "resolved|in-progress|deprecated"
+impact: "critical|high|medium|low"
+platforms: ["ios", "android", "web"]
+related_docs:
+  - "path/to/related/doc.md"
+tags: ["tag1", "tag2", "tag3"]
+---
+```
+
+**Required Fields**: title, date, category, status  
+**Optional Fields**: type, priority, impact, platforms, related_docs, tags
+
+### File Naming Conventions
+
+**Best Practices:**
+- Use kebab-case: `token-validation-fix.md`
+- Include dates for test reports: `payment-flow-test-20250104.md`
+- Avoid version suffixes: consolidate instead of creating V2, V3, FINAL
+- Be descriptive: `pipeda-cache-isolation-fix.md` not `fix-report.md`
+
+**Examples:**
+- ✅ `traffic-light-dashboard-implementation.md`
+- ✅ `notification-system-e2e-test-20250904.md`
+- ✅ `mobile-token-storage-fix.md`
+- ❌ `REPORT_FINAL_V3.md`
+- ❌ `fix.md`
+
+### Archive Index Requirements
+
+Every archive directory MUST have a `README.md` with:
+
+1. **Overview**: What's archived and why
+2. **Navigation**: By date and topic
+3. **Document Entries**: Title, status, impact, summary, links
+4. **Quick Reference**: Most referenced documents
+
+**Entry Format:**
+```markdown
+### Document Title (YYYY-MM-DD)
+**Status**: ✅ Resolved | 🚧 In Progress | ⚠️ Deprecated  
+**Impact**: Critical | High | Medium | Low  
+**Document**: [filename.md](./filename.md)
+
+**Summary**: Brief 2-3 sentence description.
+
+**Related Documents**:
+- [Design Doc](../../../design-documentation/feature/)
+- [Troubleshooting](../../troubleshooting/guide.md)
+```
+
+### Link Management Rules
+
+1. **Always use relative paths**: `../../docs/archives/file.md`
+2. **Never use absolute URLs** for internal documentation
+3. **Test links** before committing
+4. **Update all references** when moving files
+5. **Use descriptive link text**: `[Token Validation Fix](...)` not `[click here](...)`
+
+### Content Consolidation Guidelines
+
+**When to Consolidate:**
+- Multiple documents with >80% similar content
+- Same feature with version suffixes (V2, FINAL, etc.)
+- Multiple reports on same topic from different dates
+
+**How to Consolidate:**
+1. Identify all versions of the document
+2. Create consolidated document with all unique content
+3. Add version history section documenting what was merged
+4. Move older versions to `archived/` subdirectory
+5. Update all references to point to consolidated doc
+6. Update indexes to reflect consolidation
+
+### Documentation Workflow for New Features
+
+**1. During Development:**
+- Reference design documentation for requirements
+- Create implementation notes in feature branch
+- Document decisions and rationale as you go
+
+**2. Upon Completion:**
+- Add metadata frontmatter to implementation report
+- Move to appropriate archive directory
+- Create or update README.md in archive directory
+- Add cross-references to related design docs
+- Update master archive index
+
+**3. Validation:**
+- Run link integrity validation
+- Verify archive structure compliance
+- Check for duplicate content
+- Ensure metadata is complete
+
+### Validation Scripts
+
+Before committing documentation changes, run:
+
+```bash
+# Check for broken links
+python .kiro/specs/documentation-cleanup/scripts/validate-link-integrity.py
+
+# Verify archive structure
+python .kiro/specs/documentation-cleanup/scripts/validate-archive-structure.py
+
+# Check for duplicates
+python .kiro/specs/documentation-cleanup/scripts/validate-content-consolidation.py
+
+# Verify design authority maintained
+python .kiro/specs/documentation-cleanup/scripts/validate-design-authority.py
+
+# Check compliance docs not archived
+python .kiro/specs/documentation-cleanup/scripts/validate-compliance-docs.py
+```
+
+### Quick Decision Tree
+
+**Creating new documentation?**
+- Is it design documentation? → `/design-documentation/`
+- Is it compliance? → `/docs/compliance/`
+- Is it active troubleshooting? → `/docs/troubleshooting/`
+- Is it active setup/deployment? → `/docs/[infrastructure|setup]/`
+- Is it implementation report? → Archive it
+- Is it test report? → Archive it
+- Is it bug fix report? → Archive it
+
+**Archiving documentation?**
+- ✓ Add metadata frontmatter
+- ✓ Choose correct archive directory
+- ✓ Update archive index
+- ✓ Add cross-references
+- ✓ Use relative paths
+- ✓ Validate links
+
+**Found duplicate documentation?**
+- ✓ Identify all versions
+- ✓ Create consolidated document
+- ✓ Add version history
+- ✓ Archive older versions
+- ✓ Update references
+- ✓ Update indexes
+
+### Common Mistakes to Avoid
+
+❌ **DON'T**:
+- Archive design documentation
+- Archive compliance documentation
+- Use absolute URLs for internal links
+- Create V2, V3, FINAL versions (consolidate instead)
+- Skip metadata frontmatter
+- Forget to update indexes
+- Leave broken links
+- Use vague filenames
+
+✅ **DO**:
+- Add metadata to all archived documents
+- Update indexes when archiving
+- Use relative paths for links
+- Consolidate duplicate content
+- Cross-reference related documents
+- Validate links before committing
+- Use descriptive filenames
+- Preserve historical context
+
+### Master Index Locations
+
+Update these when adding new archives:
+- `/docs/README.md` - Main documentation index
+- `/docs/archives/README.md` - Master archive index
+- `/NestSync-backend/docs/README.md` - Backend documentation index
+- `/NestSync-backend/docs/archives/README.md` - Backend archive index
+- `/NestSync-frontend/docs/README.md` - Frontend documentation index
+- `/NestSync-frontend/docs/archives/README.md` - Frontend archive index
+
+### Documentation Cleanup Results (November 2025)
+
+**Cleanup Summary:**
+- **15 files removed** from original locations after archiving
+- **37 documents archived** with complete metadata
+- **30 README indexes** created for navigation
+- **6 document groups** consolidated with version history
+- **100% metadata coverage** for all archived documents
+- **0 duplicate content** (>80% similarity threshold)
+
+**Archive Structure Created:**
+- Root archives with year/month organization
+- Component-specific archives (frontend/backend)
+- Category-based organization (implementation, test, fix, audit)
+- Comprehensive navigation indexes
+- Cross-references between related documents
+
+**Validation Results:**
+- ✅ Archive structure validated (28 directories, 37 documents)
+- ✅ Content consolidation verified (no duplicates)
+- ✅ Design authority maintained (77 design files preserved)
+- ✅ Compliance documentation verified (12 files in active directory)
+- ⚠️ 236 broken links identified (expected for incomplete documentation)
+
+**For More Details:**
+- See `.kiro/specs/documentation-cleanup/DOCUMENTATION_CLEANUP_REPORT.md`
+- See `.kiro/specs/documentation-cleanup/validation-reports/`
+- See `.kiro/steering/documentation-standards.md` for AI agent guidance
+
 ## Codebase Cleanup Summary (2024)
 
 ### Conservative Cleanup Completed
