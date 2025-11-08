@@ -8,29 +8,35 @@ export { NestSyncInput } from './NestSyncInput';
 export { WeightInput } from './WeightInput';
 export { NestSyncCard } from './NestSyncCard';
 export { NestSyncThemeToggle } from './NestSyncThemeToggle';
+export { StandardHeader } from './StandardHeader';
 
 // Export types
-export type { 
-  NestSyncButtonProps, 
-  NestSyncButtonVariant, 
-  NestSyncButtonSize 
+export type {
+  NestSyncButtonProps,
+  NestSyncButtonVariant,
+  NestSyncButtonSize
 } from './NestSyncButton';
 
-export type { 
-  NestSyncInputProps 
+export type {
+  NestSyncInputProps
 } from './NestSyncInput';
 
-export type { 
-  WeightInputProps 
+export type {
+  WeightInputProps
 } from './WeightInput';
 
-export type { 
-  NestSyncCardProps, 
-  NestSyncCardVariant, 
-  NestSyncCardPadding 
+export type {
+  NestSyncCardProps,
+  NestSyncCardVariant,
+  NestSyncCardPadding
 } from './NestSyncCard';
 
-export type { 
+export type {
   NestSyncThemeToggleProps,
   ThemeToggleSize
 } from './NestSyncThemeToggle';
+
+export type {
+  StandardHeaderProps,
+  StandardHeaderActionButton
+} from './StandardHeader';

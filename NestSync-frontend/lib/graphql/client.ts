@@ -203,8 +203,8 @@ const isTokenExpiringSoon = (token: string, bufferMinutes: number = 5): boolean 
   }
 };
 
-// Global token refresh function with coordination
-const performGlobalTokenRefresh = async (): Promise<string | null> => {
+// Global token refresh function with coordination and retry logic
+const performGlobalTokenRefresh = async (retryCount: number = 0): Promise<string | null> => {
   // If a refresh is already in progress, wait for it
   if (globalTokenRefreshPromise) {
     if (__DEV__) {
@@ -213,11 +213,14 @@ const performGlobalTokenRefresh = async (): Promise<string | null> => {
     return await globalTokenRefreshPromise;
   }
 
+  const MAX_RETRIES = 2;
+  const RETRY_DELAY_MS = [1000, 3000]; // Exponential backoff: 1s, 3s
+
   // Start a new refresh
   globalTokenRefreshPromise = (async () => {
     try {
       const refreshToken = await getRefreshToken();
-      
+
       if (!refreshToken) {
         if (__DEV__) {
           console.warn('No refresh token available for global refresh');
@@ -227,12 +230,12 @@ const performGlobalTokenRefresh = async (): Promise<string | null> => {
       }
 
       if (__DEV__) {
-        console.log('Performing global token refresh...');
+        console.log(`Performing global token refresh... (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
       }
-      
+
       // Import the mutation here to avoid circular imports
       const { REFRESH_TOKEN_MUTATION } = await import('./queries');
-      
+
       // Create a temporary client for the refresh mutation to avoid circular dependency
       const refreshClient = new ApolloClient({
         link: httpLink,
@@ -240,17 +243,18 @@ const performGlobalTokenRefresh = async (): Promise<string | null> => {
           // Remove deprecated addTypename option - Apollo Client 3.x sets this to true by default
         }),
       });
-      
+
       const { data } = await refreshClient.mutate({
         mutation: REFRESH_TOKEN_MUTATION,
-        variables: { refreshToken }
+        variables: { refreshToken },
+        context: { timeout: 10000 }, // 10 second timeout for refresh
       });
 
       if (data?.refreshToken?.success && data.refreshToken.session) {
         // Update tokens in storage
         await StorageHelpers.setAccessToken(data.refreshToken.session.accessToken);
         await StorageHelpers.setRefreshToken(data.refreshToken.session.refreshToken);
-        
+
         if (__DEV__) {
           console.log('Global token refresh successful');
         }
@@ -258,10 +262,39 @@ const performGlobalTokenRefresh = async (): Promise<string | null> => {
       } else {
         throw new Error((data?.refreshToken as any)?.error || 'Token refresh failed');
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Enhanced error detection and handling
+      const isNetworkError =
+        error?.networkError ||
+        error?.message?.includes('Network request failed') ||
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('timeout');
+
       if (__DEV__) {
-        console.error('Global token refresh error:', error);
+        if (isNetworkError) {
+          console.error(`Network error during token refresh (attempt ${retryCount + 1}):`, error.message || error);
+          console.error('Backend may be unreachable. Check if server is running on:', GRAPHQL_ENDPOINT);
+        } else {
+          console.error('Global token refresh error:', error);
+        }
       }
+
+      // Retry logic for network errors
+      if (isNetworkError && retryCount < MAX_RETRIES) {
+        const delay = RETRY_DELAY_MS[retryCount];
+        if (__DEV__) {
+          console.log(`Retrying token refresh in ${delay}ms...`);
+        }
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay));
+
+        // Clear the promise and retry
+        globalTokenRefreshPromise = null;
+        return await performGlobalTokenRefresh(retryCount + 1);
+      }
+
+      // Clear tokens only after all retries exhausted
       await clearTokens();
       return null;
     } finally {

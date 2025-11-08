@@ -430,7 +430,16 @@ lsof -i :8001 && lsof -i :8082
 
 This proactive approach transforms Playwright automation from frustrating and unreliable to predictable and efficient, eliminating the "fails on first go" experience completely.
 
-## Common Troubleshooting (From bottlenecks.md)
+## Common Troubleshooting
+
+### Finding Solutions
+For current troubleshooting guides, see [`/docs/troubleshooting/`](../docs/troubleshooting/). For historical fixes and context, browse [`/docs/archives/fixes/`](../docs/archives/fixes/) organized by category:
+- [Authentication Fixes](../docs/archives/fixes/authentication/)
+- [UI/UX Fixes](../docs/archives/fixes/ui-ux/)
+- [Notifications Fixes](../docs/archives/fixes/notifications/)
+- [Compliance Fixes](../docs/archives/fixes/compliance/)
+
+### Active Troubleshooting Patterns (From bottlenecks.md)
 
 ### Network Connectivity Issues
 **Problem**: "ApolloError: Network request failed" during authentication
@@ -688,13 +697,102 @@ lsof -ti:8082 | xargs kill -9 2>/dev/null
 - **Stress-Reduction**: Calming colors (blues/greens), gentle animations, supportive microcopy
 - **Canadian Context**: "🇨🇦 Data stored in Canada" trust indicators, PIPEDA compliance UI
 
-## File Structure Patterns
+## Documentation Organization
+
+### Documentation Structure Overview
+NestSync uses a comprehensive documentation organization system designed for easy navigation, maintenance, and team onboarding. All documentation follows a clear hierarchy with centralized indexes and cross-references.
+
+### Main Documentation Hub: `/docs/`
+The central technical documentation directory with organized subdirectories:
+
+```
+docs/
+├── README.md                   # Master documentation index
+├── setup/                      # Setup and onboarding guides
+├── architecture/               # System architecture
+├── troubleshooting/           # Debugging guides (with README.md index)
+├── testing/                   # Active testing guides (with README.md)
+├── compliance/                # PIPEDA and security (NEVER ARCHIVED)
+│   ├── README.md              # Compliance overview
+│   ├── pipeda/                # Canadian privacy compliance
+│   ├── security/              # Security documentation
+│   └── audits/                # Compliance audits
+├── infrastructure/            # Deployment and DevOps
+│   ├── README.md
+│   ├── docker.md
+│   └── environment.md
+└── archives/                  # Historical documentation
+    ├── README.md              # Archive master index
+    ├── 2025/                  # Chronological archives by month
+    ├── implementation-reports/ # Feature implementations
+    ├── test-reports/          # Historical test results (e2e, integration, visual)
+    ├── fixes/                 # Bug fix documentation (by category)
+    └── audits/                # Historical audits
+```
+
+**Key Documentation Principles:**
+- **Design Documentation is Authoritative**: `/design-documentation/` is the source of truth for all features
+- **Compliance Never Archived**: `/docs/compliance/` always remains active and accessible
+- **Archives are Indexed**: Every archive directory has a README.md with navigation
+- **Cross-References**: Related documents link to each other using relative paths
+
+### Component-Specific Documentation
+
+**Backend Documentation**: `/NestSync-backend/docs/`
+```
+NestSync-backend/docs/
+├── README.md                  # Backend docs index
+├── api/                       # API and GraphQL documentation
+├── database/                  # Database schemas and migrations
+├── deployment/                # Backend deployment guides
+│   ├── railway.md
+│   ├── supabase.md
+│   └── environment.md
+└── archives/                  # Backend-specific archives
+```
+
+**Frontend Documentation**: `/NestSync-frontend/docs/`
+```
+NestSync-frontend/docs/
+├── README.md                  # Frontend docs index
+├── components/                # Component documentation
+├── screens/                   # Screen documentation
+├── state-management/         # State patterns
+├── testing/                   # Frontend testing guides
+└── archives/                  # Frontend-specific archives
+```
+
+### Documentation Navigation Tips
+
+**Finding Information Quickly:**
+1. **Start with main index**: [`/docs/README.md`](../docs/README.md)
+2. **Backend-specific**: [`/NestSync-backend/docs/`](../NestSync-backend/docs/)
+3. **Frontend-specific**: [`/NestSync-frontend/docs/`](../NestSync-frontend/docs/)
+4. **Design decisions**: [`/design-documentation/`](../design-documentation/) (authoritative)
+5. **Past fixes**: [`/docs/archives/`](../docs/archives/) (by date or topic)
+6. **Compliance**: [`/docs/compliance/`](../docs/compliance/) (never archived)
+
+**Archive Navigation:**
+- Each archive directory has a `README.md` with indexed navigation
+- Archives organized by date (year/month) and category (fixes, tests, implementations)
+- Cross-references link related documents
+- Metadata frontmatter provides context and search capability
+
+**Quick Reference Links:**
+- [Setup Guide](../docs/setup/) - Get started with development
+- [Architecture Overview](../docs/architecture/) - System design and patterns
+- [Troubleshooting](../docs/troubleshooting/) - Common issues and solutions
+- [PIPEDA Compliance](../docs/compliance/pipeda/) - Canadian privacy compliance
+- [Testing Guide](../docs/testing/) - Testing strategies and tools
+- [Deployment Guide](../NestSync-backend/docs/deployment/) - Production deployment
+- [Archive Index](../docs/archives/) - Historical fixes and reports
 
 ### Project Root Organization (Handover-Ready)
 ```
 NestSync/
 ├── README.md                    # Main project overview
-├── CLAUDE.md                   # Development guide
+├── CLAUDE.md                   # Development guide (this file)
+├── Avatar.md                   # Product management
 ├── tech-stack-pref.md          # Architecture decisions
 ├── .env                        # Environment configuration
 ├── .gitignore                  # Git ignore rules
@@ -711,22 +809,8 @@ NestSync/
 │   ├── verify-environment.sh   # Environment validation
 │   └── work-setup-complete.sh  # Setup completion
 │
-├── docs/                       # Organized documentation
-│   ├── setup/                  # Setup and onboarding guides
-│   │   └── WORK-COMPUTER-SETUP.md
-│   ├── troubleshooting/        # Debugging and solutions
-│   │   ├── TROUBLESHOOTING-GUIDE.md
-│   │   └── bottlenecks.md
-│   ├── audits/                 # Compliance and security audits
-│   │   └── PIPEDA_COMPLIANCE_FIX_AUDIT.md
-│   └── architecture/           # Technical architecture docs
-│       ├── high-level.md
-│       ├── git-navigation-guide.md
-│       ├── custom-animation-roadmap.md
-│       ├── CLAUDE-HANDOFF.md
-│       └── APOLLO_CLIENT_ERROR_HANDLING_SOLUTION.md
-│
-├── design-documentation/       # UX patterns and feature specs
+├── docs/                       # Central technical documentation (see above)
+├── design-documentation/       # UX patterns and feature specs (authoritative)
 ├── project-documentation/      # Business strategy and architecture
 ├── NestSync-frontend/         # React Native application
 ├── NestSync-backend/          # FastAPI backend

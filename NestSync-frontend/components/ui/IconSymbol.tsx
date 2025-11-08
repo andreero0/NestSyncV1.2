@@ -30,6 +30,7 @@ const MAPPING = {
   'checkmark.circle.fill': 'check-circle', // Success/celebration icon
   'checkmark.circle': 'check-circle-outline', // Checkmark circle outline
   'shield.checkered': 'security',         // Privacy/security icon (alternative to 🇨🇦)
+  'shield.checkmark': 'verified',         // Shield with checkmark icon
   'shield.checkmark.fill': 'verified',    // Verified/security icon
   'checkmark.shield.fill': 'verified-user', // Verified user icon
   'star.fill': 'star',                    // Star icon

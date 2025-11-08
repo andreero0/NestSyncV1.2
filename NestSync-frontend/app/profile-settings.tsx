@@ -20,6 +20,7 @@ import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { StandardHeader } from '@/components/ui/StandardHeader';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -87,7 +88,7 @@ export default function ProfileSettingsScreen() {
     province: '',
   });
 
-  const [hasChanges, setHasChanges] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Picker modal states
@@ -110,7 +111,7 @@ export default function ProfileSettingsScreen() {
     {
       onCompleted: (data) => {
         if (data.updateProfile.success) {
-          setHasChanges(false);
+          setHasUnsavedChanges(false);
 
           // CRITICAL: Update Apollo cache immediately with new user data
           if (data.updateProfile.user) {
@@ -181,11 +182,11 @@ export default function ProfileSettingsScreen() {
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    setHasChanges(true);
+    setHasUnsavedChanges(true);
   };
 
   const handleSave = async () => {
-    if (!hasChanges) {
+    if (!hasUnsavedChanges) {
       router.back();
       return;
     }
@@ -213,7 +214,7 @@ export default function ProfileSettingsScreen() {
   };
 
   const handleCancel = () => {
-    if (hasChanges) {
+    if (hasUnsavedChanges) {
       Alert.alert(
         'Discard Changes',
         'You have unsaved changes. Are you sure you want to go back?',
@@ -286,43 +287,17 @@ export default function ProfileSettingsScreen() {
     <SafeAreaProvider>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         {/* Header */}
-        <ThemedView style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleCancel}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <IconSymbol name="chevron.left" size={24} color={colors.tint} />
-          </TouchableOpacity>
-
-          <ThemedText type="title" style={styles.headerTitle}>
-            Profile Settings
-          </ThemedText>
-
-          <TouchableOpacity
-            style={[
-              styles.headerButton,
-              !hasChanges && styles.headerButtonDisabled,
-              isSubmitting && styles.headerButtonDisabled
-            ]}
-            onPress={handleSave}
-            disabled={!hasChanges || isSubmitting}
-            accessibilityRole="button"
-            accessibilityLabel="Save changes"
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={colors.tint} />
-            ) : (
-              <ThemedText style={[
-                styles.saveButtonText,
-                { color: hasChanges ? colors.tint : colors.textSecondary }
-              ]}>
-                Save
-              </ThemedText>
-            )}
-          </TouchableOpacity>
-        </ThemedView>
+        <StandardHeader
+          title="Profile Settings"
+          onBack={handleCancel}
+          actionButton={{
+            label: "Save",
+            onPress: handleSave,
+            disabled: !hasUnsavedChanges,
+            loading: isSubmitting
+          }}
+          showBorder={true}
+        />
 
         <KeyboardAvoidingView
           style={styles.content}

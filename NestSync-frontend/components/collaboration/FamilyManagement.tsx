@@ -44,23 +44,7 @@ interface FamilyManagementProps {
 const { height: screenHeight } = Dimensions.get('window');
 
 /**
- * Custom hook for Dynamic Island safe area calculations
- * Ensures proper spacing for iPhone 14 Pro+ with Dynamic Island
- */
-const useModalSafeArea = () => {
-  const insets = useSafeAreaInsets();
-
-  // Dynamic Island detection - iPhone 14 Pro+ typically has top inset > 50
-  const dynamicIslandHeight = Platform.OS === 'ios' && insets.top > 50 ? 44 : 0;
-
-  // Calculate safe padding with minimum Dynamic Island clearance
-  const safePaddingTop = Math.max(insets.top + 8, dynamicIslandHeight + 12);
-
-  return { safePaddingTop, insets, dynamicIslandHeight };
-};
-
-/**
- * Custom safe slide in animation that respects Dynamic Island
+ * Custom safe slide in animation
  * Uses react-native-reanimated for smooth 60fps animation
  */
 const useSafeSlideInAnimation = (visible: boolean, onAnimationComplete?: () => void) => {
@@ -128,7 +112,6 @@ interface InvitationFormData {
 export default function FamilyManagement({ onClose }: FamilyManagementProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { safePaddingTop } = useModalSafeArea();
 
   // Authentication context - handle missing context gracefully for testing
   let user;
@@ -149,6 +132,7 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
   // UI state
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [modalAnimationComplete, setModalAnimationComplete] = useState(false);
+  const [showMemberDetails, setShowMemberDetails] = useState<string | null>(null);
 
   // Custom animation hook
   const modalAnimatedStyle = useSafeSlideInAnimation(
@@ -802,8 +786,8 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
               modalAnimatedStyle,
             ]}
           >
-            <SafeAreaView style={styles.modalSafeArea} edges={['left', 'right']}>
-              <View style={[styles.modalHeader, { paddingTop: safePaddingTop }]}>
+            <SafeAreaView style={styles.modalSafeArea} edges={['top', 'left', 'right']}>
+              <View style={styles.modalHeader}>
                 <TouchableOpacity
                   onPress={() => setShowInviteModal(false)}
                   style={styles.modalHeaderButton}
@@ -1064,7 +1048,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  // Modal styles with Dynamic Island support
+  // Modal styles
   modalContainer: {
     flex: 1,
   },
@@ -1080,7 +1064,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     minHeight: 60, // Ensure adequate touch target area
-    // Dynamic padding is applied via safePaddingTop prop
   },
   modalHeaderButton: {
     minWidth: 44,

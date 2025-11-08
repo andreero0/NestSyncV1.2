@@ -85,6 +85,25 @@ export const AUTH_ERROR_MAP: Record<string, AuthError> = {
     supportRequired: false
   },
 
+  // Token/session errors
+  'token_expired': {
+    code: 'token_expired',
+    message: 'JWT token expired',
+    userMessage: 'Your session has expired. Please sign in again to continue.',
+    severity: 'medium',
+    showTechnicalDetails: false,
+    supportRequired: false
+  },
+
+  'session_expired': {
+    code: 'session_expired',
+    message: 'Session expired',
+    userMessage: 'Your session has expired. Please sign in again.',
+    severity: 'medium',
+    showTechnicalDetails: false,
+    supportRequired: false
+  },
+
   // Server errors
   'server_error': {
     code: 'server_error',
@@ -120,6 +139,17 @@ export const AUTH_ERROR_MAP: Record<string, AuthError> = {
  */
 export function parseAuthError(rawError: string): AuthError {
   const lowerError = rawError.toLowerCase();
+
+  // Check for JWT token expiration errors (PRIORITY)
+  if (lowerError.includes('signature has expired') ||
+      lowerError.includes('jwt') && lowerError.includes('expired') ||
+      lowerError.includes('token expired')) {
+    return AUTH_ERROR_MAP.token_expired;
+  }
+
+  if (lowerError.includes('session') && lowerError.includes('expired')) {
+    return AUTH_ERROR_MAP.session_expired;
+  }
 
   // Check for Pydantic validation errors (current crisis)
   if (lowerError.includes('identity_id') && lowerError.includes('field required')) {

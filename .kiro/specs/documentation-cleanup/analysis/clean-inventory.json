@@ -1,0 +1,43 @@
+{
+  "generated_at": "2025-11-08T03:12:05.445219",
+  "total_files": 3,
+  "excluded_files": 0,
+  "files": [
+    {
+      "path": "specs/documentation-cleanup/design.md",
+      "size_bytes": 24775,
+      "modified_date": "2025-11-07T16:28:59.225706",
+      "content_hash": "fc64c1bc8c47f762cd2288119a18eb142c2dba284dcd5ad71fa3c0d30e1c0311",
+      "line_count": 718,
+      "word_count": 2791,
+      "has_frontmatter": false,
+      "heading_count": 70,
+      "link_count": 18,
+      "code_block_count": 13
+    },
+    {
+      "path": "specs/documentation-cleanup/requirements.md",
+      "size_bytes": 9937,
+      "modified_date": "2025-11-07T16:26:27.267530",
+      "content_hash": "3e6b9051e86f6ea934775665b626633c63ac16833fbb7e0eb26f1f60d762e787",
+      "line_count": 138,
+      "word_count": 1274,
+      "has_frontmatter": false,
+      "heading_count": 24,
+      "link_count": 0,
+      "code_block_count": 0
+    },
+    {
+      "path": "specs/documentation-cleanup/tasks.md",
+      "size_bytes": 17878,
+      "modified_date": "2025-11-08T01:28:22.877776",
+      "content_hash": "e6bd37f4c191b1a663f638f3283a3d0bbf0a07f52d59eabeb5dae336a16778e7",
+      "line_count": 367,
+      "word_count": 2086,
+      "has_frontmatter": false,
+      "heading_count": 1,
+      "link_count": 0,
+      "code_block_count": 0
+    }
+  ]
+}

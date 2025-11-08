@@ -297,36 +297,35 @@ export function ReorderSuggestionCard({
   }
 
   return (
-    <Animated.View style={[animatedCardStyle, animatedOpacity]}>
-      <TouchableOpacity
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={1}
+    <Animated.View
+      style={[animatedCardStyle, animatedOpacity]}
+      onTouchStart={handlePressIn}
+      onTouchEnd={handlePressOut}
+    >
+      <NestSyncCard
+        variant="elevated"
+        style={styles.card}
         testID={testID}
-        accessibilityRole="button"
-        accessibilityLabel={`Reorder suggestion for ${suggestion.product.name}, ${suggestion.product.size}`}
-        accessibilityHint="Double tap to view reorder options"
       >
-        <NestSyncCard variant="elevated" style={styles.card}>
-          {/* Urgency Banner */}
-          <View style={[styles.urgencyBanner, { backgroundColor: urgencyColors[urgencyLevel].background }]}>
-            <IconSymbol
-              name={urgencyLevel === 'critical' ? 'clock.fill' : urgencyLevel === 'moderate' ? 'clock' : 'checkmark.circle'}
-              size={16}
-              color={urgencyColors[urgencyLevel].text}
-            />
-            <ThemedText style={[styles.urgencyText, { color: urgencyColors[urgencyLevel].text }]}>
-              {urgencyLevel === 'critical' ? 'LOW STOCK' : urgencyLevel === 'moderate' ? 'RUNNING LOW' : 'WELL STOCKED'}
-            </ThemedText>
-            <TouchableOpacity
-              onPress={handleDismiss}
-              style={styles.dismissButton}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss suggestion"
-            >
-              <IconSymbol name="xmark" size={16} color={urgencyColors[urgencyLevel].text} />
-            </TouchableOpacity>
-          </View>
+        {/* Urgency Banner */}
+        <View style={[styles.urgencyBanner, { backgroundColor: urgencyColors[urgencyLevel].background }]}>
+          <IconSymbol
+            name={urgencyLevel === 'critical' ? 'clock.fill' : urgencyLevel === 'moderate' ? 'clock' : 'checkmark.circle'}
+            size={16}
+            color={urgencyColors[urgencyLevel].text}
+          />
+          <ThemedText style={[styles.urgencyText, { color: urgencyColors[urgencyLevel].text }]}>
+            {urgencyLevel === 'critical' ? 'LOW STOCK' : urgencyLevel === 'moderate' ? 'RUNNING LOW' : 'WELL STOCKED'}
+          </ThemedText>
+          <TouchableOpacity
+            onPress={handleDismiss}
+            style={styles.dismissButton}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss suggestion"
+          >
+            <IconSymbol name="xmark" size={16} color={urgencyColors[urgencyLevel].text} />
+          </TouchableOpacity>
+        </View>
 
           {/* Product Information */}
           <View style={styles.productSection}>
@@ -471,8 +470,7 @@ export function ReorderSuggestionCard({
               ML predictions use PIPEDA-compliant data processing • Data retained for {suggestion.dataRetentionDays} days
             </ThemedText>
           </View>
-        </NestSyncCard>
-      </TouchableOpacity>
+      </NestSyncCard>
     </Animated.View>
   );
 }

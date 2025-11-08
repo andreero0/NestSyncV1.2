@@ -27,7 +27,7 @@ import { StorageHelpers, STORAGE_KEYS } from './useUniversalStorage';
 export type FeatureType = 'reorder' | 'analytics' | 'automation' | 'collaboration';
 
 // Subscription status types
-export type SubscriptionStatus = 'free' | 'premium' | 'family';
+export type SubscriptionStatus = 'free' | 'standard' | 'premium' | 'family';
 
 export interface FeatureAccessResult {
   hasAccess: (feature: FeatureType) => boolean;
@@ -149,6 +149,11 @@ export function useFeatureAccess(): FeatureAccessResult {
 
         // Premium plan has access to most features except collaboration
         if (status === 'premium' && feature !== 'collaboration') {
+          return true;
+        }
+
+        // Standard plan has access to analytics (but not automation/collaboration)
+        if (status === 'standard' && feature === 'analytics') {
           return true;
         }
 

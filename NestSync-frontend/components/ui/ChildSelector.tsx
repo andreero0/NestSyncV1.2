@@ -131,7 +131,7 @@ export function ChildSelector({
           >
             {child.name}
           </ThemedText>
-          <ThemedText 
+          <ThemedText
             style={[
               styles.childDetails,
               { color: colors.textSecondary }

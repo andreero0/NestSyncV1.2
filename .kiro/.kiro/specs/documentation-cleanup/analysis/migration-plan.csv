@@ -1,0 +1,6 @@
+source,destination,reason,action,related,similarity
+specs/documentation-cleanup/requirements.md,,Duplicate content (100.0% similar),consolidate,.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/requirements.md,100.0
+specs/documentation-cleanup/tasks.md,,Duplicate content (100.0% similar),consolidate,.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/tasks.md,100.0
+specs/documentation-cleanup/design.md,,Duplicate content (100.0% similar),consolidate,.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/design.md,100.0
+specs/documentation-cleanup/analysis/inventory-summary.md,,Duplicate content (100.0% similar),consolidate,.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/analysis/inventory-summary.md,100.0
+.kiro/specs/documentation-cleanup/analysis/inventory-summary.md,,Duplicate content (100.0% similar),consolidate,.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/.kiro/specs/documentation-cleanup/analysis/inventory-summary.md,100.0

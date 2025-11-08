@@ -309,7 +309,6 @@ export const CHANGE_SUBSCRIPTION_PLAN = gql`
       subscription {
         ...SubscriptionFields
       }
-      message
       error
     }
   }

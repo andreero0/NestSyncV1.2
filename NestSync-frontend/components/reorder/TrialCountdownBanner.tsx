@@ -22,7 +22,7 @@ import { NestSyncColors } from '../../constants/Colors';
 import { useNestSyncTheme } from '../../contexts/ThemeContext';
 import { useAnalyticsAccess, useFeatureAccess } from '../../hooks/useFeatureAccess';
 import { StorageHelpers } from '../../hooks/useUniversalStorage';
-import { useTrialProgress } from '../../lib/hooks/useSubscription';
+import { useTrialProgress, useMySubscription } from '../../lib/hooks/useSubscription';
 
 interface TrialCountdownBannerProps {
   daysRemaining?: number;
@@ -43,6 +43,7 @@ export function TrialCountdownBanner({
   const hasAnalyticsAccess = useAnalyticsAccess();
   const { isLoading: isFeatureAccessLoading } = useFeatureAccess();
   const { trialProgress, loading: trialLoading } = useTrialProgress();
+  const { subscription, loading: subscriptionLoading } = useMySubscription();
   const [isVisible, setIsVisible] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
 
@@ -66,16 +67,20 @@ export function TrialCountdownBanner({
   }, []);
 
   // Don't show banner if:
-  // 1. User already has access (confirmed, not during loading)
-  // 2. Banner was manually dismissed
-  // 3. Still loading access status (prevents flashing)
-  // 4. Trial is not active or data is still loading
-  if (!isVisible || isDismissed || hasAnalyticsAccess || isFeatureAccessLoading || trialLoading) {
+  // 1. Banner was manually dismissed
+  // 2. Still loading data (prevents flashing incorrect data)
+  // NOTE: Don't hide based on hasAnalyticsAccess - show banner during trial regardless of feature access
+  if (!isVisible || isDismissed || isFeatureAccessLoading || trialLoading || subscriptionLoading) {
     return null;
   }
 
-  // Don't show if no trial is active
-  if (!trialProgress?.isActive) {
+  // Only show banner for FREE trial users who haven't subscribed yet
+  // Do NOT show for users with TRIALING subscription (they already subscribed!)
+  // Key distinction: FREE trial = exploring features, TRIALING subscription = already committed
+  const hasPaidSubscription = !!subscription?.stripeSubscriptionId;
+  const isFreeTrialOnly = trialProgress?.isActive && !hasPaidSubscription;
+
+  if (!isFreeTrialOnly) {
     return null;
   }
 
@@ -314,9 +319,17 @@ export function TrialCountdownBanner({
 
       {/* Compact Content */}
       <View style={styles.contentContainer}>
-        <Text style={styles.title}>{`${daysRemaining} days left in trial`}</Text>
+        <Text style={styles.title}>
+          {subscription?.plan?.displayName
+            ? `${daysRemaining} days left in ${subscription.plan.displayName} trial`
+            : `${daysRemaining} days left in trial`}
+        </Text>
         <View style={styles.priceContainer}>
-          <Text style={styles.priceInfo}>$4.99 CAD/month after trial</Text>
+          <Text style={styles.priceInfo}>
+            {subscription?.plan?.displayName
+              ? `Already subscribed - $${subscription.plan.price.toFixed(2)} CAD/month begins after trial`
+              : `$4.99 CAD/month after trial`}
+          </Text>
         </View>
       </View>
 
