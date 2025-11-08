@@ -481,7 +481,7 @@ export default function SettingsScreen() {
       id: 'family-caregivers',
       title: 'Family & Caregivers',
       description: currentFamily
-        ? `${currentFamily.name} • ${pendingInvitationsCount > 0 ? `${pendingInvitationsCount} pending` : 'Manage family'}`
+        ? `${currentFamily.name}${pendingInvitationsCount > 0 ? ` • ${pendingInvitationsCount} pending` : ' • Manage family'}`
         : 'Manage family collaboration',
       icon: 'person.3.fill',
       type: 'navigation',
@@ -581,7 +581,7 @@ export default function SettingsScreen() {
     {
       id: 'emergency-setup',
       title: 'Emergency Profiles Setup',
-      description: `${emergencyProfiles.length} profiles configured • ${emergencySetupProgress}% complete`,
+      description: `${emergencyProfiles.length} profiles configured  •  ${emergencySetupProgress}% complete`,
       icon: 'person.fill.badge.plus',
       type: 'navigation',
       onPress: handleEmergencySetup

@@ -113,8 +113,29 @@ export class AuthService {
     try {
       // Check for stored session
       const storedSession = await StorageHelpers.getUserSession();
-      
+
       if (storedSession) {
+        // Check if token is expired or expiring soon (proactive refresh)
+        const accessToken = storedSession.accessToken;
+        const isExpiringSoon = this.isTokenExpiringSoon(accessToken, 10); // 10 minute buffer
+
+        if (isExpiringSoon) {
+          console.log('Token expiring soon, attempting proactive refresh...');
+          const refreshResult = await this.refreshTokenProactively();
+
+          if (refreshResult.success && refreshResult.session) {
+            this.currentUser = refreshResult.user as UserProfile;
+            this.currentSession = refreshResult.session;
+            this.isInitialized = true;
+            return true;
+          } else {
+            console.log('Proactive token refresh failed, clearing session');
+            await this.clearSession();
+            this.isInitialized = true;
+            return false;
+          }
+        }
+
         // Verify session is still valid by querying current user
         try {
           const { data } = await apolloClient.query<MeQueryData>({
@@ -132,7 +153,20 @@ export class AuthService {
             this.isInitialized = true;
             return true;
           }
-        } catch (error) {
+        } catch (error: any) {
+          // Check if error is token expiration
+          if (this.isTokenExpirationError(error)) {
+            console.log('Token expired during initialization, attempting refresh...');
+            const refreshResult = await this.refreshTokenProactively();
+
+            if (refreshResult.success && refreshResult.session) {
+              this.currentUser = refreshResult.user as UserProfile;
+              this.currentSession = refreshResult.session;
+              this.isInitialized = true;
+              return true;
+            }
+          }
+
           console.log('Stored session is invalid, clearing...', error);
           await this.clearSession();
         }
@@ -1034,6 +1068,167 @@ export class AuthService {
     };
 
     return timezoneMap[province] || 'America/Toronto';
+  }
+
+  /**
+   * Check if JWT token is expired or expiring soon
+   */
+  private isTokenExpiringSoon(token: string, bufferMinutes: number = 5): boolean {
+    try {
+      // JWT token format: header.payload.signature
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiryTime = payload.exp * 1000; // Convert to milliseconds
+      const bufferTime = bufferMinutes * 60 * 1000;
+      const isExpiring = Date.now() > (expiryTime - bufferTime);
+
+      if (isExpiring) {
+        console.log(`Token expires at ${new Date(expiryTime).toISOString()}, expiring within ${bufferMinutes} minutes`);
+      }
+
+      return isExpiring;
+    } catch (error) {
+      console.error('Failed to parse JWT token for expiry check:', error);
+      return true; // If we can't parse, assume it's expired
+    }
+  }
+
+  /**
+   * Check if error is a token expiration error
+   */
+  private isTokenExpirationError(error: any): boolean {
+    const errorMessage = error?.message || error?.toString() || '';
+    const lowerError = errorMessage.toLowerCase();
+
+    return (
+      lowerError.includes('signature has expired') ||
+      lowerError.includes('jwt') && lowerError.includes('expired') ||
+      lowerError.includes('token expired') ||
+      lowerError.includes('session') && lowerError.includes('expired')
+    );
+  }
+
+  /**
+   * Proactively refresh authentication token using refresh token
+   * Enhanced with network connectivity checks and graceful degradation
+   */
+  async refreshTokenProactively(): Promise<AuthResponse> {
+    try {
+      // STEP 1: Check network connectivity BEFORE attempting token refresh
+      // This prevents unnecessary token refresh attempts when offline
+      console.log('Checking network connectivity before token refresh...');
+      const connectivityCheck = await this.checkServerConnectivity();
+
+      if (!connectivityCheck.connected) {
+        // Network is unavailable - provide clear feedback
+        const errorMessage = connectivityCheck.error || 'Unable to connect to server. Please check your internet connection.';
+        console.warn('Token refresh aborted: Network unavailable');
+
+        return {
+          success: false,
+          error: errorMessage,
+          // Don't clear session yet - user might come back online
+          // The retry logic in client.ts will handle retries
+        };
+      }
+
+      console.log('Network connectivity confirmed, proceeding with token refresh...');
+
+      // STEP 2: Attempt token refresh with retry logic (handled by client.ts)
+      // Import the client's global token refresh function
+      const { ensureValidToken } = await import('../graphql/client');
+
+      const newAccessToken = await ensureValidToken(10); // 10 minute buffer
+
+      if (newAccessToken) {
+        // Fetch updated user profile with new token
+        const { data } = await apolloClient.query<MeQueryData>({
+          query: ME_QUERY,
+          fetchPolicy: 'network-only',
+        });
+
+        if (data?.me) {
+          // Get refresh token from storage
+          const refreshToken = await StorageHelpers.getRefreshToken();
+
+          if (!refreshToken) {
+            console.warn('No refresh token available after successful access token refresh');
+            return {
+              success: false,
+              error: 'No refresh token available',
+            };
+          }
+
+          const newSession: UserSession = {
+            accessToken: newAccessToken,
+            refreshToken,
+            expiresIn: 3600, // Default 1 hour
+          };
+
+          // Store updated session
+          await this.storeSession(data.me as UserProfile, newSession);
+
+          console.log('Token refresh completed successfully');
+          return {
+            success: true,
+            message: 'Token refreshed successfully',
+            user: data.me as UserProfile,
+            session: newSession,
+          };
+        }
+      }
+
+      // STEP 3: Handle refresh failure with graceful degradation
+      console.warn('Token refresh failed: No new access token received');
+
+      // Check if it's a network issue or authentication issue
+      const retryConnectivity = await this.checkServerConnectivity();
+      if (!retryConnectivity.connected) {
+        // Still a network issue - don't clear session yet
+        return {
+          success: false,
+          error: 'Unable to refresh token: Network unavailable. Your session will be preserved until you reconnect.',
+        };
+      }
+
+      // Not a network issue - likely an authentication problem
+      // Clear session since refresh token is likely invalid
+      console.log('Token refresh failed with valid network - clearing session');
+      await this.clearSession();
+
+      return {
+        success: false,
+        error: 'Your session has expired. Please sign in again.',
+        requiresLogin: true,
+      };
+    } catch (error: any) {
+      console.error('Proactive token refresh error:', error);
+
+      // STEP 4: Enhanced error handling with network detection
+      const isNetworkError =
+        error?.networkError ||
+        error?.message?.includes('Network request failed') ||
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('timeout');
+
+      if (isNetworkError) {
+        // Network error - preserve session, user might come back online
+        console.warn('Token refresh failed due to network error - session preserved');
+        return {
+          success: false,
+          error: 'Unable to refresh token due to network issues. Please check your connection and try again.',
+        };
+      }
+
+      // Non-network error - likely authentication issue, clear session
+      console.warn('Token refresh failed due to authentication error - clearing session');
+      await this.clearSession();
+
+      return {
+        success: false,
+        error: 'Your session has expired. Please sign in again.',
+        requiresLogin: true,
+      };
+    }
   }
 }
 

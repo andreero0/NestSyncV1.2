@@ -1,0 +1,211 @@
+{
+  "generated_at": "2025-11-08T02:40:52.646094",
+  "migrations": [
+    {
+      "source": [
+        "specs/documentation-cleanup/requirements.md",
+        "specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/specs/documentation-cleanup/requirements.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/requirements.md",
+        "specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/requirements.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/requirements.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/requirements.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/requirements.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/specs/documentation-cleanup/requirements.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/requirements.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/requirements.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/requirements.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/requirements.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/requirements.md",
+        ".kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/requirements.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/tasks.md",
+        "specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/specs/documentation-cleanup/tasks.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/tasks.md",
+        "specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/tasks.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/tasks.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/tasks.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/tasks.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/specs/documentation-cleanup/tasks.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/tasks.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/tasks.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/tasks.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/tasks.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/tasks.md",
+        ".kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/tasks.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/design.md",
+        "specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/specs/documentation-cleanup/design.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/design.md",
+        "specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/design.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/design.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/design.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/design.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/specs/documentation-cleanup/design.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/design.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/specs/documentation-cleanup/backup/backup_20251107_235924/.kiro/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/design.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    },
+    {
+      "source": [
+        "specs/documentation-cleanup/design.md",
+        ".kiro/specs/documentation-cleanup/backup/20251108_012946/.kiro/specs/documentation-cleanup/backup/backup_20251107_235858/specs/documentation-cleanup/design.md"
+      ],
+      "destination": "TBD - requires manual review",
+      "reason": "Similar documents (100.0% similar) - consolidation candidate",
+      "priority": "review",
+      "action": "consolidate"
+    }
+  ],
+  "summary": {
+    "total_migrations": 20,
+    "high_priority": 0,
+    "medium_priority": 0,
+    "needs_review": 20
+  }
+}

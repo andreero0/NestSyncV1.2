@@ -731,7 +731,7 @@ export default function PlannerScreen() {
                       <ThemedText type="defaultSemiBold" style={styles.inventoryTitle}>
                         {item.brand} {formatDiaperSize(item.size)}
                       </ThemedText>
-                      <ThemedText style={[styles.inventoryQuantity, { color: colors.textSecondary }]}>
+                      <ThemedText style={[styles.inventoryQuantity, { color: colors.text }]}>
                         {item.quantityRemaining} diapers remaining
                       </ThemedText>
                     </View>
@@ -837,13 +837,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 6,
     letterSpacing: -0.5,
     lineHeight: 36,
   },
   subtitle: {
-    fontSize: 17,
+    fontSize: 18,
     marginBottom: 24,
     lineHeight: 24,
     fontWeight: '400',
@@ -867,11 +867,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   filterText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
   filterCount: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
   },
   viewToggle: {
@@ -903,11 +903,11 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '600',
     marginBottom: 20,
-    letterSpacing: -0.3,
-    lineHeight: 28,
+    letterSpacing: -0.01,
+    lineHeight: 32,
   },
   plannerItem: {
     flexDirection: 'row',
@@ -996,16 +996,19 @@ const styles = StyleSheet.create({
   inventoryTitle: {
     fontSize: 16,
     marginBottom: 4,
+    lineHeight: 24,
   },
   inventoryQuantity: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 24,
   },
   inventoryStatus: {
     alignItems: 'flex-end',
   },
   inventoryDays: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    lineHeight: 24,
   },
   inventoryChevron: {
     marginLeft: 12,
@@ -1037,8 +1040,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   summaryStatLabel: {
-    fontSize: 12,
+    fontSize: 14,
     textAlign: 'center',
+    lineHeight: 20,
   },
   summaryStatDivider: {
     width: 1,
@@ -1102,9 +1106,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   plannerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontStyle: 'italic',
     marginTop: 4,
+    lineHeight: 24,
   },
   plannerCard: {
     marginBottom: 12,
@@ -1139,14 +1144,15 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   plannerCardDescription: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 16,
+    lineHeight: 24,
     opacity: 0.9,
   },
   plannerCardDate: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
     marginTop: 2,
+    lineHeight: 20,
   },
   plannerStatusBadge: {
     paddingHorizontal: 8,
@@ -1156,7 +1162,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   plannerStatusText: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
@@ -1191,8 +1197,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   insightMessage: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 24,
   },
   chartSpacing: {
     height: 20,
@@ -1584,7 +1590,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '600',
     textAlign: 'center',
   },
   efficiencyBadge: {

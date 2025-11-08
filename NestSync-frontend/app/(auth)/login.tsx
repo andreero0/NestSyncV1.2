@@ -65,10 +65,14 @@ export default function LoginScreen() {
     },
   });
 
-  // Clear error when component mounts
+  // Clear error when component mounts and check for expired session
   useEffect(() => {
     clearError();
-    
+
+    // Check if we were redirected here due to expired token
+    // The AuthService will have already cleared the expired session
+    // so we just need to ensure we're starting fresh
+
     // Attempt biometric authentication if enabled and not attempted
     if (biometricsAvailable && biometricsEnabled && !biometricAttempted) {
       setBiometricAttempted(true);

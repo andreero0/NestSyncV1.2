@@ -1,0 +1,93 @@
+[
+  {
+    "path": "specs/documentation-cleanup/requirements.md",
+    "absolute_path": "/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.kiro/specs/documentation-cleanup/requirements.md",
+    "name": "requirements.md",
+    "size": 9937,
+    "modified": "2025-11-07T16:26:27.267530",
+    "created": "2025-11-07T16:26:27.267530",
+    "content_hash": "3e6b9051e86f6ea934775665b626633c63ac16833fbb7e0eb26f1f60d762e787",
+    "line_count": 138,
+    "word_count": 1274,
+    "has_frontmatter": false,
+    "category": "compliance"
+  },
+  {
+    "path": "specs/documentation-cleanup/tasks.md",
+    "absolute_path": "/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.kiro/specs/documentation-cleanup/tasks.md",
+    "name": "tasks.md",
+    "size": 17878,
+    "modified": "2025-11-07T16:33:08.629483",
+    "created": "2025-11-07T16:33:08.629483",
+    "content_hash": "e6bd37f4c191b1a663f638f3283a3d0bbf0a07f52d59eabeb5dae336a16778e7",
+    "line_count": 367,
+    "word_count": 2086,
+    "has_frontmatter": false,
+    "category": "implementation-report"
+  },
+  {
+    "path": "specs/documentation-cleanup/design.md",
+    "absolute_path": "/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.kiro/specs/documentation-cleanup/design.md",
+    "name": "design.md",
+    "size": 24775,
+    "modified": "2025-11-07T16:28:59.225706",
+    "created": "2025-11-07T16:28:59.225706",
+    "content_hash": "fc64c1bc8c47f762cd2288119a18eb142c2dba284dcd5ad71fa3c0d30e1c0311",
+    "line_count": 718,
+    "word_count": 2791,
+    "has_frontmatter": false,
+    "category": "test-report"
+  },
+  {
+    "path": ".kiro/specs/documentation-cleanup/analysis/inventory-summary.md",
+    "absolute_path": "/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.kiro/.kiro/specs/documentation-cleanup/analysis/inventory-summary.md",
+    "name": "inventory-summary.md",
+    "size": 1140,
+    "modified": "2025-11-07T16:34:40.009278",
+    "created": "2025-11-07T16:34:40.009278",
+    "content_hash": "d04a14b78985ac8736ee4b9f0fafa5c4a75017dadb1a14b6369e6bcd680e219a",
+    "line_count": 48,
+    "word_count": 128,
+    "has_frontmatter": false,
+    "category": "test-report"
+  },
+  {
+    "path": "specs/documentation-cleanup/requirements.md",
+    "absolute_path": "/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.kiro/specs/documentation-cleanup/requirements.md",
+    "name": "requirements.md",
+    "size": 9937,
+    "modified": "2025-11-07T16:26:27.267530",
+    "created": "2025-11-07T16:26:27.267530",
+    "content_hash": "3e6b9051e86f6ea934775665b626633c63ac16833fbb7e0eb26f1f60d762e787",
+    "line_count": 138,
+    "word_count": 1274,
+    "has_frontmatter": false,
+    "category": "compliance"
+  },
+  {
+    "path": "specs/documentation-cleanup/tasks.md",
+    "absolute_path": "/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.kiro/specs/documentation-cleanup/tasks.md",
+    "name": "tasks.md",
+    "size": 17878,
+    "modified": "2025-11-07T16:33:08.629483",
+    "created": "2025-11-07T16:33:08.629483",
+    "content_hash": "e6bd37f4c191b1a663f638f3283a3d0bbf0a07f52d59eabeb5dae336a16778e7",
+    "line_count": 367,
+    "word_count": 2086,
+    "has_frontmatter": false,
+    "category": "implementation-report"
+  },
+  {
+    "path": "specs/documentation-cleanup/design.md",
+    "absolute_path": "/Users/mayenikhalo/Public/From aEroPartition/Dev/NestSyncv1.2/.kiro/specs/documentation-cleanup/design.md",
+    "name": "design.md",
+    "size": 24775,
+    "modified": "2025-11-07T16:28:59.225706",
+    "created": "2025-11-07T16:28:59.225706",
+    "content_hash": "fc64c1bc8c47f762cd2288119a18eb142c2dba284dcd5ad71fa3c0d30e1c0311",
+    "line_count": 718,
+    "word_count": 2791,
+    "has_frontmatter": false,
+    "category": "test-report"
+  }
+]

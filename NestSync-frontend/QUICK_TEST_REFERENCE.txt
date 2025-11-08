@@ -1,0 +1,182 @@
+================================================================================
+TRIAL BANNER VISIBILITY FIX - QUICK TEST REFERENCE
+================================================================================
+
+🎯 PRIMARY TEST: Dashboard Banner Visibility
+
+PASS ✓                                  FAIL ✗
+┌────────────────────────────────┐     ┌────────────────────────────────┐
+│  Dashboard (Clean UI)          │     │  Dashboard (Banner Visible)    │
+├────────────────────────────────┤     ├────────────────────────────────┤
+│                                │     │ ┌────────────────────────────┐ │
+│  [Welcome Back!]               │     │ │ 🛡️ 9 days left in trial    │ │
+│                                │     │ │ $4.99 CAD/month after      │ │
+│  [Quick Actions]               │     │ │          [Upgrade] [✕]     │ │
+│  - Log Diaper Change           │     │ └────────────────────────────┘ │
+│  - Add to Inventory            │     │                                │
+│                                │     │  [Welcome Back!]               │
+│  [Recent Activity]             │     │                                │
+│  - Today: 3 changes            │     │  [Quick Actions]               │
+│  - This week: 24 changes       │     │  - Log Diaper Change           │
+│                                │     │                                │
+│  [Analytics]                   │     │  [Recent Activity]             │
+│  - View trends →               │     │  - Today: 3 changes            │
+│                                │     │                                │
+└────────────────────────────────┘     └────────────────────────────────┘
+
+Expected: LEFT (No Banner) ✓            If you see: RIGHT (Banner) ✗
+
+
+================================================================================
+🏷️ SECONDARY TEST: Subscription Badge
+================================================================================
+
+PASS ✓                                  FAIL ✗
+┌────────────────────────────────┐     ┌────────────────────────────────┐
+│  Subscription Management       │     │  Subscription Management       │
+├────────────────────────────────┤     ├────────────────────────────────┤
+│                                │     │                                │
+│  Standard Plan                 │     │  Standard Plan                 │
+│  [TRIAL] ← Blue badge          │     │  [CURRENT] ← Teal badge        │
+│                                │     │                                │
+│  $4.99 CAD/month               │     │  $4.99 CAD/month               │
+│  Trial ends: Nov 15, 2025      │     │  Next billing: Nov 15, 2025    │
+│  Billing begins after trial    │     │  Payment active                │
+│                                │     │                                │
+└────────────────────────────────┘     └────────────────────────────────┘
+
+Expected: LEFT (Blue TRIAL) ✓           If you see: RIGHT (Teal CURRENT) ✗
+
+
+================================================================================
+📊 TERTIARY TEST: Analytics Access
+================================================================================
+
+PASS ✓                                  FAIL ✗
+┌────────────────────────────────┐     ┌────────────────────────────────┐
+│  Analytics Dashboard           │     │  Analytics Upgrade Gate        │
+├────────────────────────────────┤     ├────────────────────────────────┤
+│                                │     │                                │
+│  Weekly Usage Trends           │     │  🔒 Analytics Locked           │
+│  ━━━━━━━━━━━━━━━━━━━━          │     │                                │
+│  Mon ████████ 8 changes        │     │  Subscribe to unlock:          │
+│  Tue ██████ 6 changes          │     │  - Weekly usage trends         │
+│  Wed ████████████ 10 changes   │     │  - Cost analysis               │
+│                                │     │  - Predictive insights         │
+│  Cost Analysis                 │     │                                │
+│  This week: $12.47             │     │  [Upgrade Now]                 │
+│  Last week: $15.23             │     │                                │
+│                                │     │                                │
+└────────────────────────────────┘     └────────────────────────────────┘
+
+Expected: LEFT (Access Granted) ✓       If you see: RIGHT (Paywall) ✗
+
+
+================================================================================
+🔍 QUATERNARY TEST: Console Logs
+================================================================================
+
+PASS ✓                                  FAIL ✗
+
+Console (DevTools)                      Console (DevTools)
+────────────────────────────            ────────────────────────────
+[Info] User authenticated               [Error] Failed to fetch subscription
+[Info] Subscription loaded              [Error] stripeSubscriptionId undefined
+[Info] Trial progress loaded            [Error] Banner rendering error
+[Info] Analytics access granted         [Error] Network request failed
+[Info] Dashboard rendered               [Error] GraphQL query failed
+
+No red error messages ✓                 Red error messages present ✗
+
+
+================================================================================
+⏱️ QUICK TEST SEQUENCE (5 minutes)
+================================================================================
+
+Step 1: Open http://localhost:8082                              (30 sec)
+Step 2: Login → Verify NO banner on dashboard                   (30 sec) ✓
+Step 3: Settings → Check blue TRIAL badge                       (1 min)  ✓
+Step 4: Dashboard → Test Analytics access                       (1 min)  ✓
+Step 5: DevTools → Review console logs                          (1 min)  ✓
+Step 6: Capture screenshots                                     (1 min)  ✓
+
+
+================================================================================
+📸 SCREENSHOT EVIDENCE CHECKLIST
+================================================================================
+
+Required Screenshots:
+□ test-1-login-screen.png
+□ test-2-dashboard-no-banner.png        ← MOST IMPORTANT
+□ test-3-subscription-badge.png
+□ test-4-analytics-access.png
+□ test-5-console-logs.png
+
+
+================================================================================
+✅ SUCCESS CRITERIA SUMMARY
+================================================================================
+
+Primary Success:
+  ✓ Dashboard has NO trial banner for TRIALING subscriber
+
+Secondary Success:
+  ✓ Subscription badge shows "TRIAL" in blue (not teal "CURRENT")
+  ✓ Analytics screen accessible without upgrade gate
+  ✓ Console logs clean with no subscription errors
+
+Overall Success:
+  ✓ All 4 tests meet PASS criteria
+  ✓ Screenshot evidence captured
+  ✓ No regressions in other functionality
+
+
+================================================================================
+🚀 QUICK COMMANDS
+================================================================================
+
+Open frontend:
+  open http://localhost:8082
+
+Check backend health:
+  curl http://localhost:8001/graphql -H "Content-Type: application/json" \
+    -d '{"query":"{ __schema { types { name } } }"}'
+
+Run verification script:
+  node verify-trial-banner-fix.js
+
+Clear Metro cache (if banner still appears):
+  npx expo start --clear
+
+
+================================================================================
+📞 TEST CREDENTIALS
+================================================================================
+
+Email:    parents@nestsync.com
+Password: Shazam11#
+
+Status:   TRIALING subscription (already subscribed)
+Expected: NO banner on dashboard
+
+
+================================================================================
+🎯 KEY TAKEAWAY
+================================================================================
+
+If you see:
+  ✓ Clean dashboard WITHOUT trial banner
+  ✓ Blue "TRIAL" badge in subscription settings
+  ✓ Analytics screen accessible
+  ✓ Console logs clean
+
+Then:
+  ✓ TEST PASSES - Fix is verified and working correctly!
+
+
+================================================================================
+Generated: 2025-11-06
+Test Type: Manual Visual Verification
+Est. Time: 5 minutes
+Priority: HIGH (User Experience Fix)
+================================================================================

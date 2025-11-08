@@ -33,6 +33,7 @@ import {
   useCancellationPreview,
 } from '@/lib/hooks/useSubscription';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { StandardHeader } from '@/components/ui/StandardHeader';
 import {
   groupPlansByTier,
   formatFeatureName,
@@ -57,17 +58,25 @@ export default function SubscriptionManagementScreen() {
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [selectedBillingInterval, setSelectedBillingInterval] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
 
+  // Helper function to calculate days remaining in trial
+  const getDaysRemaining = (endDate: string): number => {
+    const now = new Date();
+    const end = new Date(endDate);
+    const diffTime = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  };
+
   const handleChangePlan = async (newPlanId: string) => {
     try {
       const result = await changePlan({
         newPlanId,
-        effectiveDate: 'immediate', // or 'next_billing_cycle'
       });
 
       if (result.success) {
         Alert.alert(
           'Plan Changed',
-          result.message || 'Your subscription plan has been updated successfully.',
+          'Your subscription plan has been updated successfully.',
           [{ text: 'OK', onPress: () => refetchSubscription() }]
         );
       }
@@ -172,9 +181,7 @@ export default function SubscriptionManagementScreen() {
     <>
       <Stack.Screen
         options={{
-          headerShown: true,
-          headerTitle: "Subscription",
-          headerBackTitle: "Settings"
+          headerShown: false
         }}
       />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
@@ -184,23 +191,10 @@ export default function SubscriptionManagementScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.backButton,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <IconSymbol name="chevron.left" size={24} color={colors.tint} />
-          </Pressable>
-
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            My Subscription
-          </Text>
-        </View>
+        <StandardHeader
+          title="My Subscription"
+          onBack={() => router.back()}
+        />
 
         {/* Current Subscription Card */}
         <View style={[styles.currentSubscriptionCard, { backgroundColor: colors.surface }]}>
@@ -231,12 +225,15 @@ export default function SubscriptionManagementScreen() {
             </View>
           </View>
 
-          {/* Trial Banner */}
-          {subscription.isOnTrial && subscription.trialEnd && (
+          {/* Trial Banner - Only show when actually on trial */}
+          {subscription.isOnTrial &&
+           subscription.status === 'TRIALING' &&
+           subscription.trialEnd && (
             <View style={[styles.trialBanner, { backgroundColor: colors.info + '20' }]}>
               <IconSymbol name="clock.fill" size={20} color={colors.info || '#3B82F6'} />
               <Text style={[styles.trialText, { color: colors.info || '#3B82F6' }]}>
-                Trial ends {format(new Date(subscription.trialEnd), 'MMM d, yyyy')}
+                {getDaysRemaining(subscription.trialEnd)} days left in trial
+                {' '}(ends {format(new Date(subscription.trialEnd), 'MMM d, yyyy')})
               </Text>
             </View>
           )}
@@ -384,8 +381,10 @@ export default function SubscriptionManagementScreen() {
                           {tierInfo.name}
                         </Text>
                         {isCurrent && (
-                          <View style={[styles.currentBadge, { backgroundColor: colors.tint }]}>
-                            <Text style={styles.currentBadgeText}>CURRENT</Text>
+                          <View style={[styles.currentBadge, { backgroundColor: subscription.status === 'TRIALING' ? colors.info || '#3B82F6' : colors.tint }]}>
+                            <Text style={styles.currentBadgeText}>
+                              {subscription.status === 'TRIALING' ? 'TRIAL' : 'CURRENT'}
+                            </Text>
                           </View>
                         )}
                       </View>
@@ -595,14 +594,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
+    minHeight: 44,
   },
   backButton: {
-    padding: 8,
-    marginRight: 12,
+    padding: 10,
+    marginRight: 8,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '600',
+    lineHeight: 36,
+    letterSpacing: -0.01,
   },
   currentSubscriptionCard: {
     padding: 20,
@@ -632,8 +638,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
+    lineHeight: 20,
   },
   trialBanner: {
     flexDirection: 'row',
@@ -644,8 +651,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   trialText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    lineHeight: 24,
   },
   coolingOffBanner: {
     flexDirection: 'row',
@@ -656,8 +664,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   coolingOffText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    lineHeight: 24,
   },
   detailsContainer: {
     gap: 12,
@@ -725,8 +734,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   tierDescription: {
-    fontSize: 14,
+    fontSize: 16,
     marginBottom: 12,
+    lineHeight: 24,
   },
   priceRow: {
     flexDirection: 'row',
@@ -803,8 +813,8 @@ const styles = StyleSheet.create({
   },
   featureText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 24,
   },
   cancelSection: {
     marginTop: 16,

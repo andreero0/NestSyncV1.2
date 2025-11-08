@@ -20,13 +20,20 @@ import {
   Pressable,
   Alert,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Platform-specific Stripe import
+// Platform-specific Stripe imports
 let CardField: any = null;
 let useConfirmSetupIntent: any = null;
+let loadStripe: any = null;
+let Elements: any = null;
+let CardElement: any = null;
+let useStripe: any = null;
+let useElements: any = null;
+
 if (Platform.OS !== 'web') {
   try {
     const StripeModule = require('@stripe/stripe-react-native');
@@ -34,6 +41,18 @@ if (Platform.OS !== 'web') {
     useConfirmSetupIntent = StripeModule.useConfirmSetupIntent;
   } catch (error) {
     console.warn('Stripe React Native not available:', error);
+  }
+} else {
+  try {
+    const StripeJS = require('@stripe/stripe-js');
+    const StripeReact = require('@stripe/react-stripe-js');
+    loadStripe = StripeJS.loadStripe;
+    Elements = StripeReact.Elements;
+    CardElement = StripeReact.CardElement;
+    useStripe = StripeReact.useStripe;
+    useElements = StripeReact.useElements;
+  } catch (error) {
+    console.warn('Stripe.js not available:', error);
   }
 }
 
@@ -49,6 +68,100 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { stripeService } from '@/lib/services/stripeService';
 import { useAccessToken } from '@/hooks/useUniversalStorage';
 
+// Initialize Stripe for web platform
+const stripePromise = Platform.OS === 'web' && loadStripe
+  ? loadStripe(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+  : null;
+
+// Web Card Input Component
+function WebCardInputForm({
+  onCardChange,
+  onCardholderNameChange,
+  cardholderName,
+  theme,
+  colors,
+  onSubmit,
+  isSubmitting,
+  cardComplete,
+}: any) {
+  const stripe = useStripe ? useStripe() : null;
+  const elements = useElements ? useElements() : null;
+
+  const handleSubmit = async () => {
+    if (onSubmit) {
+      await onSubmit(stripe, elements);
+    }
+  };
+
+  return (
+    <View>
+      <View style={[styles.inputContainer, { backgroundColor: colors.background }]}>
+        {CardElement && (
+          <CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: colors.text,
+                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto',
+                  '::placeholder': {
+                    color: colors.textSecondary,
+                  },
+                },
+                invalid: {
+                  color: colors.error || '#EF4444',
+                },
+              },
+            }}
+            onChange={(event) => {
+              onCardChange(event.complete, event.error);
+            }}
+          />
+        )}
+      </View>
+      <TextInput
+        style={[
+          styles.textInput,
+          {
+            backgroundColor: colors.background,
+            borderColor: colors.border,
+            color: colors.text,
+          },
+        ]}
+        placeholder="Cardholder Name"
+        placeholderTextColor={colors.textSecondary}
+        value={cardholderName}
+        onChangeText={onCardholderNameChange}
+        autoCapitalize="words"
+        autoCorrect={false}
+      />
+      <Pressable
+        onPress={handleSubmit}
+        disabled={!cardComplete || !cardholderName.trim() || isSubmitting}
+        style={({ pressed }) => [
+          styles.submitButton,
+          {
+            backgroundColor: colors.tint,
+            opacity: pressed
+              ? 0.8
+              : !cardComplete || !cardholderName.trim() || isSubmitting
+              ? 0.5
+              : 1,
+          },
+        ]}
+        accessibilityLabel="Add payment method"
+        accessibilityRole="button"
+      >
+        {isSubmitting ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.submitButtonText}>Add Card</Text>
+        )}
+      </Pressable>
+    </View>
+  );
+}
+
 export default function PaymentMethodsScreen() {
   const theme = useNestSyncTheme();
   const colors = Colors[theme];
@@ -62,6 +175,7 @@ export default function PaymentMethodsScreen() {
   const [showAddCard, setShowAddCard] = useState(false);
   const [cardComplete, setCardComplete] = useState(false);
   const [cardholderName, setCardholderName] = useState('');
+  const [cardError, setCardError] = useState<string | null>(null);
 
   // Get authentication token for backend API calls
   const [accessToken] = useAccessToken();
@@ -69,19 +183,10 @@ export default function PaymentMethodsScreen() {
   // Stripe hooks (only on native platforms)
   const confirmSetupIntent = Platform.OS !== 'web' && useConfirmSetupIntent ? useConfirmSetupIntent() : null;
 
-  const handleAddPaymentMethod = async () => {
-    if (Platform.OS === 'web') {
-      Alert.alert('Not Available', 'Payment method management is only available on mobile devices.');
-      return;
-    }
-
+  const handleAddPaymentMethod = async (stripe?: any, elements?: any) => {
+    // Validation
     if (!cardComplete || !cardholderName.trim()) {
       Alert.alert('Incomplete', 'Please fill in all card details and cardholder name.');
-      return;
-    }
-
-    if (!confirmSetupIntent?.confirmSetupIntent) {
-      Alert.alert('Error', 'Stripe setup not initialized. Please try again.');
       return;
     }
 
@@ -104,25 +209,71 @@ export default function PaymentMethodsScreen() {
         return;
       }
 
-      // Step 2: Confirm setup intent with Stripe SDK
       const billingDetails = {
         name: cardholderName.trim(),
       };
 
-      const confirmResult = await stripeService.confirmCardSetup(
-        setupIntentResult.clientSecret,
-        billingDetails,
-        confirmSetupIntent.confirmSetupIntent
-      );
+      let paymentMethodId: string;
 
-      if (!confirmResult.success || !confirmResult.paymentMethodId) {
-        Alert.alert('Error', confirmResult.error || 'Failed to save payment method');
-        return;
+      // Step 2: Platform-specific card confirmation
+      if (Platform.OS === 'web') {
+        // Web platform - use Stripe.js
+        if (!stripe || !elements) {
+          Alert.alert('Error', 'Stripe not initialized. Please refresh the page.');
+          return;
+        }
+
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          Alert.alert('Error', 'Card element not found. Please try again.');
+          return;
+        }
+
+        const { setupIntent, error } = await stripe.confirmCardSetup(
+          setupIntentResult.clientSecret,
+          {
+            payment_method: {
+              card: cardElement,
+              billing_details: billingDetails,
+            },
+          }
+        );
+
+        if (error) {
+          Alert.alert('Error', error.message || 'Failed to save payment method');
+          return;
+        }
+
+        if (!setupIntent?.payment_method) {
+          Alert.alert('Error', 'No payment method returned from Stripe');
+          return;
+        }
+
+        paymentMethodId = setupIntent.payment_method;
+      } else {
+        // Native platforms - use Stripe React Native
+        if (!confirmSetupIntent?.confirmSetupIntent) {
+          Alert.alert('Error', 'Stripe setup not initialized. Please try again.');
+          return;
+        }
+
+        const confirmResult = await stripeService.confirmCardSetup(
+          setupIntentResult.clientSecret,
+          billingDetails,
+          confirmSetupIntent.confirmSetupIntent
+        );
+
+        if (!confirmResult.success || !confirmResult.paymentMethodId) {
+          Alert.alert('Error', confirmResult.error || 'Failed to save payment method');
+          return;
+        }
+
+        paymentMethodId = confirmResult.paymentMethodId;
       }
 
       // Step 3: Save payment method to backend via GraphQL
       const result = await addPaymentMethod({
-        paymentMethodId: confirmResult.paymentMethodId,
+        paymentMethodId,
         paymentMethodType: 'Card',
         isDefault: paymentMethods?.length === 0, // Make first card default
       });
@@ -137,6 +288,8 @@ export default function PaymentMethodsScreen() {
               onPress: () => {
                 setShowAddCard(false);
                 setCardholderName('');
+                setCardComplete(false);
+                setCardError(null);
                 refetchMethods();
               },
             },
@@ -331,51 +484,79 @@ export default function PaymentMethodsScreen() {
           </View>
         )}
 
-        {/* Add Card Section */}
-        {Platform.OS !== 'web' && (
-          <View style={styles.addCardSection}>
-            {!showAddCard ? (
-              <Pressable
-                onPress={() => setShowAddCard(true)}
-                style={({ pressed }) => [
-                  styles.addCardButton,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.tint,
-                    borderWidth: 2,
-                    borderStyle: 'dashed',
-                    opacity: pressed ? 0.8 : 1,
-                  },
-                ]}
-                accessibilityLabel="Add new payment method"
-                accessibilityRole="button"
-              >
-                <IconSymbol name="plus.circle.fill" size={32} color={colors.tint} />
-                <Text style={[styles.addCardText, { color: colors.tint }]}>
-                  Add Payment Method
+        {/* Add Card Section - Universal (Web + Native) */}
+        <View style={styles.addCardSection}>
+          {!showAddCard ? (
+            <Pressable
+              onPress={() => setShowAddCard(true)}
+              style={({ pressed }) => [
+                styles.addCardButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.tint,
+                  borderWidth: 2,
+                  borderStyle: 'dashed',
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+              accessibilityLabel="Add new payment method"
+              accessibilityRole="button"
+            >
+              <IconSymbol name="plus.circle.fill" size={32} color={colors.tint} />
+              <Text style={[styles.addCardText, { color: colors.tint }]}>
+                Add Payment Method
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={[styles.addCardForm, { backgroundColor: colors.surface }]}>
+              <View style={styles.formHeader}>
+                <Text style={[styles.formTitle, { color: colors.text }]}>
+                  Add New Card
                 </Text>
-              </Pressable>
-            ) : (
-              <View style={[styles.addCardForm, { backgroundColor: colors.surface }]}>
-                <View style={styles.formHeader}>
-                  <Text style={[styles.formTitle, { color: colors.text }]}>
-                    Add New Card
-                  </Text>
-                  <Pressable
-                    onPress={() => {
-                      setShowAddCard(false);
-                      setCardholderName('');
-                    }}
-                    style={({ pressed }) => [
-                      styles.closeButton,
-                      { opacity: pressed ? 0.6 : 1 },
-                    ]}
-                  >
-                    <IconSymbol name="xmark" size={20} color={colors.textSecondary} />
-                  </Pressable>
-                </View>
+                <Pressable
+                  onPress={() => {
+                    setShowAddCard(false);
+                    setCardholderName('');
+                    setCardComplete(false);
+                    setCardError(null);
+                  }}
+                  style={({ pressed }) => [
+                    styles.closeButton,
+                    { opacity: pressed ? 0.6 : 1 },
+                  ]}
+                >
+                  <IconSymbol name="xmark" size={20} color={colors.textSecondary} />
+                </Pressable>
+              </View>
 
-                {CardField ? (
+              {Platform.OS === 'web' ? (
+                // Web platform - Stripe Elements
+                Elements && stripePromise ? (
+                  <Elements stripe={stripePromise}>
+                    <WebCardInputForm
+                      onCardChange={(complete: boolean, error: any) => {
+                        setCardComplete(complete);
+                        setCardError(error?.message || null);
+                      }}
+                      onCardholderNameChange={setCardholderName}
+                      cardholderName={cardholderName}
+                      theme={theme}
+                      colors={colors}
+                      onSubmit={handleAddPaymentMethod}
+                      isSubmitting={addingMethod}
+                      cardComplete={cardComplete}
+                    />
+                  </Elements>
+                ) : (
+                  <View style={styles.webFallback}>
+                    <Text style={[styles.webFallbackText, { color: colors.textSecondary }]}>
+                      Stripe is not available. Please check your configuration.
+                    </Text>
+                  </View>
+                )
+              ) : (
+                // Native platforms - CardField
+                CardField ? (
                   <>
                     <CardField
                       postalCodeEnabled={true}
@@ -396,16 +577,33 @@ export default function PaymentMethodsScreen() {
                       }}
                     />
 
+                    <TextInput
+                      style={[
+                        styles.textInput,
+                        {
+                          backgroundColor: colors.background,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
+                      placeholder="Cardholder Name"
+                      placeholderTextColor={colors.textSecondary}
+                      value={cardholderName}
+                      onChangeText={setCardholderName}
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                    />
+
                     <Pressable
-                      onPress={handleAddPaymentMethod}
-                      disabled={!cardComplete || addingMethod}
+                      onPress={() => handleAddPaymentMethod()}
+                      disabled={!cardComplete || !cardholderName.trim() || addingMethod}
                       style={({ pressed }) => [
                         styles.submitButton,
                         {
                           backgroundColor: colors.tint,
                           opacity: pressed
                             ? 0.8
-                            : !cardComplete || addingMethod
+                            : !cardComplete || !cardholderName.trim() || addingMethod
                             ? 0.5
                             : 1,
                         },
@@ -423,29 +621,17 @@ export default function PaymentMethodsScreen() {
                 ) : (
                   <View style={styles.webFallback}>
                     <Text style={[styles.webFallbackText, { color: colors.textSecondary }]}>
-                      Card input is only available on mobile devices.
-                      Please use the mobile app to add payment methods.
+                      Stripe React Native is not available. Please check your configuration.
                     </Text>
                   </View>
-                )}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Web Platform Notice */}
-        {Platform.OS === 'web' && (
-          <View style={[styles.platformNotice, { backgroundColor: colors.surface }]}>
-            <IconSymbol name="info.circle" size={24} color={colors.info || '#3B82F6'} />
-            <Text style={[styles.platformNoticeText, { color: colors.textSecondary }]}>
-              Payment method management is only available on iOS and Android devices.
-              Please use the mobile app to manage your payment methods.
-            </Text>
-          </View>
-        )}
+                )
+              )}
+            </View>
+          )}
+        </View>
 
         {/* Empty State */}
-        {(!paymentMethods || paymentMethods.length === 0) && Platform.OS !== 'web' && !showAddCard && (
+        {(!paymentMethods || paymentMethods.length === 0) && !showAddCard && (
           <View style={styles.emptyState}>
             <IconSymbol name="creditcard" size={64} color={colors.textSecondary} />
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -622,6 +808,20 @@ const styles = StyleSheet.create({
   cardField: {
     width: '100%',
     height: 50,
+    marginBottom: 20,
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  textInput: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
     marginBottom: 20,
   },
   submitButton: {

@@ -7,6 +7,30 @@ Document development obstacles, debugging discoveries, and solutions to prevent 
 
 ---
 
+## Historical Critical Fixes (Archived)
+
+For detailed documentation of resolved P0 critical issues, see the [Documentation Archives](../archives/README.md):
+
+### Authentication & Token Management
+- **[Token Validation Implementation](../archives/2025/01-january/token-validation-fix.md)** (2025-01-04)
+  - Fixed empty data on native platforms due to expired JWT tokens
+  - Implemented proactive token validation with automatic refresh
+  - Impact: Resolved critical authentication issue affecting all native users
+
+### Payment & Revenue
+- **[Payment Method Blocker Fix](../archives/2025/01-january/payment-blocker-fix.md)** (2025-01-04)
+  - Unblocked web payment method addition (zero revenue issue)
+  - Implemented cross-platform Stripe integration
+  - Impact: Enabled web monetization and subscription revenue
+
+### Backend / GraphQL
+- **[My Families GraphQL Error Handling](../archives/2025/01-january/my-families-error-fix.md)** (2025-11-04)
+  - Fixed iOS native client empty results from family queries
+  - Enhanced error handling with comprehensive logging
+  - Impact: Proper error messages instead of silent failures
+
+---
+
 ## Critical Schema Naming Convention Issues
 
 ### 1. snake_case vs camelCase GraphQL Schema Mismatch (P0 - Critical)
