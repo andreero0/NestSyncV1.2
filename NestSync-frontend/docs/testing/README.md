@@ -6,11 +6,18 @@ NestSync frontend uses a comprehensive testing strategy covering unit tests, com
 
 ## Contents
 
+### Automated Testing
 - [Playwright](./playwright.md) - End-to-end testing with Playwright
 - [Unit Tests](./unit-tests.md) - Unit testing patterns
 - [Component Tests](./component-tests.md) - Component testing strategies
-- [Visual Regression](./visual-regression.md) - Visual testing and screenshots
+- [Visual Regression](./VISUAL_REGRESSION_IMPLEMENTATION.md) - Visual testing and screenshots
 - [Accessibility](./accessibility.md) - Accessibility testing
+
+### Manual Testing
+- **[Start Here](./MANUAL_TESTING_START_HERE.md)** - Quick start guide for manual device testing
+- [Manual Device Testing Guide](./MANUAL_DEVICE_TESTING_GUIDE.md) - Comprehensive manual testing checklist
+- [Quick Checklist](./MANUAL_TESTING_QUICK_CHECKLIST.md) - Printable quick reference
+- [Results Template](./MANUAL_TESTING_RESULTS_TEMPLATE.md) - Template for recording test results
 
 ## Testing Strategy
 
@@ -56,6 +63,11 @@ NestSync frontend uses a comprehensive testing strategy covering unit tests, com
 **Purpose**: Ensure accessibility compliance
 **Tools**: React Native Testing Library, axe
 **Coverage**: WCAG 2.1 AA compliance
+
+#### Manual Device Tests
+**Purpose**: Verify functionality on physical devices
+**Tools**: Physical iOS and Android devices
+**Coverage**: Critical user flows, subscription states, design consistency, accessibility
 
 ## Test Organization
 
@@ -117,6 +129,18 @@ npm run test:visual
 
 # Update snapshots
 npm run test:visual -- --update-snapshots
+```
+
+### Manual Device Tests
+```bash
+# Build for iOS device
+npx expo run:ios --device
+
+# Build for Android device
+npx expo run:android --device
+
+# See manual testing guide for detailed instructions
+# docs/testing/MANUAL_TESTING_START_HERE.md
 ```
 
 ## Writing Tests

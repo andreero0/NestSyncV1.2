@@ -24,7 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 
 import { useNestSyncTheme } from '@/contexts/ThemeContext';
-import { Colors } from '@/constants/Colors';
+import { Colors, NestSyncColors } from '@/constants/Colors';
 import {
   useMySubscription,
   useSubscriptionPlans,
@@ -34,6 +34,7 @@ import {
 } from '@/lib/hooks/useSubscription';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { StandardHeader } from '@/components/ui/StandardHeader';
+import { Button, ButtonGroup } from '@/components/ui/Button';
 import {
   groupPlansByTier,
   formatFeatureName,
@@ -53,7 +54,7 @@ export default function SubscriptionManagementScreen() {
   const { plans: availablePlans, loading: plansLoading } = useSubscriptionPlans();
   const { changePlan, loading: changingPlan } = useChangeSubscriptionPlan();
   const { cancelSubscriptionPremium, loading: cancellingSubscription } = useCancelSubscriptionPremium();
-  const { cancellationPreview, loading: previewLoading } = useCancellationPreview();
+  const { preview: cancellationPreview, loading: previewLoading } = useCancellationPreview();
 
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [selectedBillingInterval, setSelectedBillingInterval] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
@@ -89,11 +90,13 @@ export default function SubscriptionManagementScreen() {
   const handleCancelSubscription = async () => {
     try {
       const result = await cancelSubscriptionPremium({
-        immediate: false, // Cancel at period end
-        reason: 'USER_REQUESTED',
+        input: {
+          immediate: false, // Cancel at period end
+          reason: 'USER_REQUESTED',
+        },
       });
 
-      if (result.success) {
+      if (result?.success) {
         Alert.alert(
           'Subscription Cancelled',
           result.message || 'Your subscription will remain active until the end of your billing period.',
@@ -107,10 +110,28 @@ export default function SubscriptionManagementScreen() {
             },
           ]
         );
+      } else {
+        // Handle case where mutation succeeded but returned success: false
+        Alert.alert(
+          'Cancellation Failed',
+          result?.error || result?.message || 'Unable to cancel subscription. Please try again.'
+        );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to cancel subscription:', error);
-      Alert.alert('Error', 'Failed to cancel subscription. Please try again.');
+      
+      // Provide more detailed error messages
+      let errorMessage = 'Failed to cancel subscription. Please try again.';
+      
+      if (error.networkError) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        errorMessage = error.graphQLErrors[0].message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -152,26 +173,24 @@ export default function SubscriptionManagementScreen() {
           <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
             Start a free trial to unlock premium features
           </Text>
-          <Pressable
+          <Button
+            title="Start Free Trial"
             onPress={() => router.push('/(subscription)/trial-activation')}
-            style={({ pressed }) => [
-              styles.startTrialButton,
-              { backgroundColor: colors.tint, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Text style={styles.startTrialButtonText}>Start Free Trial</Text>
-          </Pressable>
+            variant="primary"
+            size="large"
+            fullWidth
+          />
         </View>
       </>
     );
   }
 
   const statusColors = {
-    ACTIVE: colors.success || '#10B981',
-    TRIALING: colors.info || '#3B82F6',
-    PAST_DUE: colors.warning || '#F59E0B',
+    ACTIVE: colors.success || NestSyncColors.semantic.success,
+    TRIALING: colors.info || NestSyncColors.primary.blue,
+    PAST_DUE: colors.warning || NestSyncColors.accent.amber,
     CANCELLED: colors.error,
-    INCOMPLETE: colors.warning || '#F59E0B',
+    INCOMPLETE: colors.warning || NestSyncColors.accent.amber,
   };
 
   const currentPlan = availablePlans?.find(p => p.id === subscription.plan.id);
@@ -206,6 +225,15 @@ export default function SubscriptionManagementScreen() {
               <Text style={[styles.planPrice, { color: colors.textSecondary }]}>
                 ${subscription.amount.toFixed(2)} CAD/{subscription.billingInterval.toLowerCase()}
               </Text>
+              <Text style={[styles.taxInfo, { color: colors.textSecondary }]}>
+                (includes {subscription.province === 'ON' ? '13% HST' : 
+                          subscription.province === 'BC' ? '12% GST + PST' :
+                          subscription.province === 'AB' ? '5% GST' :
+                          subscription.province === 'QC' ? '14.975% GST + QST' :
+                          ['NB', 'NS', 'PE', 'NL'].includes(subscription.province) ? '15% HST' :
+                          ['YT', 'NT', 'NU'].includes(subscription.province) ? '5% GST' :
+                          '13% HST'})
+              </Text>
             </View>
 
             <View
@@ -230,20 +258,20 @@ export default function SubscriptionManagementScreen() {
            subscription.status === 'TRIALING' &&
            subscription.trialEnd && (
             <View style={[styles.trialBanner, { backgroundColor: colors.info + '20' }]}>
-              <IconSymbol name="clock.fill" size={20} color={colors.info || '#3B82F6'} />
-              <Text style={[styles.trialText, { color: colors.info || '#3B82F6' }]}>
+              <IconSymbol name="clock.fill" size={20} color={colors.info || NestSyncColors.semantic.info} />
+              <Text style={[styles.trialText, { color: colors.info || NestSyncColors.semantic.info }]}>
                 {getDaysRemaining(subscription.trialEnd)} days left in trial
                 {' '}(ends {format(new Date(subscription.trialEnd), 'MMM d, yyyy')})
               </Text>
             </View>
           )}
 
-          {/* Cooling-Off Period */}
+          {/* Money-Back Guarantee Period */}
           {subscription.isInCoolingOffPeriod && subscription.coolingOffEnd && (
             <View style={[styles.coolingOffBanner, { backgroundColor: colors.success + '20' }]}>
-              <IconSymbol name="shield.checkmark.fill" size={20} color={colors.success || '#10B981'} />
-              <Text style={[styles.coolingOffText, { color: colors.success || '#10B981' }]}>
-                Cooling-off period ends {format(new Date(subscription.coolingOffEnd), 'MMM d, yyyy')}
+              <IconSymbol name="shield.checkmark.fill" size={20} color={colors.success || NestSyncColors.semantic.success} />
+              <Text style={[styles.coolingOffText, { color: colors.success || NestSyncColors.semantic.success }]}>
+                Money-back guarantee until {format(new Date(subscription.coolingOffEnd), 'MMM d, yyyy')}
               </Text>
             </View>
           )}
@@ -381,7 +409,7 @@ export default function SubscriptionManagementScreen() {
                           {tierInfo.name}
                         </Text>
                         {isCurrent && (
-                          <View style={[styles.currentBadge, { backgroundColor: subscription.status === 'TRIALING' ? colors.info || '#3B82F6' : colors.tint }]}>
+                          <View style={[styles.currentBadge, { backgroundColor: subscription.status === 'TRIALING' ? colors.info || NestSyncColors.semantic.info : colors.tint }]}>
                             <Text style={styles.currentBadgeText}>
                               {subscription.status === 'TRIALING' ? 'TRIAL' : 'CURRENT'}
                             </Text>
@@ -401,7 +429,7 @@ export default function SubscriptionManagementScreen() {
                       </View>
                       {showSavingsBadge && savingsPercent > 0 && (
                         <View style={[styles.savingsBadge, { backgroundColor: colors.success + '20' }]}>
-                          <Text style={[styles.savingsText, { color: colors.success || '#10B981' }]}>
+                          <Text style={[styles.savingsText, { color: colors.success || NestSyncColors.semantic.success }]}>
                             Save {savingsPercent}% with annual billing
                           </Text>
                         </View>
@@ -409,23 +437,15 @@ export default function SubscriptionManagementScreen() {
                     </View>
 
                     {!isCurrent && (
-                      <Pressable
+                      <Button
+                        title={isUpgrade ? 'Upgrade' : isDowngrade ? 'Downgrade' : 'Switch'}
                         onPress={() => handleChangePlan(planForInterval.id)}
+                        variant="primary"
+                        size="small"
                         disabled={changingPlan}
-                        style={({ pressed }) => [
-                          styles.changePlanButton,
-                          {
-                            backgroundColor: colors.tint,
-                            opacity: pressed ? 0.8 : changingPlan ? 0.6 : 1,
-                          },
-                        ]}
+                        loading={changingPlan}
                         accessibilityLabel={`Switch to ${tierInfo.name} plan`}
-                        accessibilityRole="button"
-                      >
-                        <Text style={styles.changePlanButtonText}>
-                          {isUpgrade ? 'Upgrade' : isDowngrade ? 'Downgrade' : 'Switch'}
-                        </Text>
-                      </Pressable>
+                      />
                     )}
                   </View>
 
@@ -453,23 +473,14 @@ export default function SubscriptionManagementScreen() {
         {/* Cancel Subscription */}
         {subscription.status !== 'CANCELLED' && (
           <View style={styles.cancelSection}>
-            <Pressable
+            <Button
+              title="Cancel Subscription"
               onPress={() => setShowCancelConfirmation(true)}
-              style={({ pressed }) => [
-                styles.cancelButton,
-                {
-                  borderColor: colors.error,
-                  borderWidth: 1,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
+              variant="danger"
+              size="medium"
+              fullWidth
               accessibilityLabel="Cancel subscription"
-              accessibilityRole="button"
-            >
-              <Text style={[styles.cancelButtonText, { color: colors.error }]}>
-                Cancel Subscription
-              </Text>
-            </Pressable>
+            />
 
             {cancellationPreview && (
               <Text style={[styles.cancelInfo, { color: colors.textSecondary }]}>
@@ -495,44 +506,26 @@ export default function SubscriptionManagementScreen() {
                 Are you sure you want to cancel your subscription? You&apos;ll lose access to premium features at the end of your billing period.
               </Text>
 
-              <View style={styles.modalButtons}>
-                <Pressable
+              <ButtonGroup direction="row" gap={12}>
+                <Button
+                  title="Keep Subscription"
                   onPress={() => setShowCancelConfirmation(false)}
-                  style={({ pressed }) => [
-                    styles.modalButton,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                      borderWidth: 1,
-                      opacity: pressed ? 0.8 : 1,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.modalButtonText, { color: colors.text }]}>
-                    Keep Subscription
-                  </Text>
-                </Pressable>
+                  variant="secondary"
+                  size="medium"
+                  style={{ flex: 1 }}
+                />
 
-                <Pressable
+                <Button
+                  title="Cancel Subscription"
                   onPress={handleCancelSubscription}
+                  variant="danger"
+                  size="medium"
                   disabled={cancellingSubscription}
-                  style={({ pressed }) => [
-                    styles.modalButton,
-                    {
-                      backgroundColor: colors.error,
-                      opacity: pressed ? 0.8 : cancellingSubscription ? 0.6 : 1,
-                    },
-                  ]}
-                >
-                  {cancellingSubscription ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
-                      Cancel Subscription
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
+                  loading={cancellingSubscription}
+                  style={{ flex: 1, backgroundColor: colors.error, borderColor: colors.error }}
+                  textStyle={{ color: '#FFFFFF' }}
+                />
+              </ButtonGroup>
             </View>
           </View>
         )}
@@ -587,8 +580,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 20, // 5 × 4px base unit
+    paddingBottom: 40, // 10 × 4px base unit
   },
   header: {
     flexDirection: 'row',
@@ -597,10 +590,10 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   backButton: {
-    padding: 10,
-    marginRight: 8,
-    width: 44,
-    height: 44,
+    padding: 12, // 3 × 4px base unit (updated from 10px for better touch target)
+    marginRight: 12, // 3 × 4px base unit (updated from 8px)
+    minHeight: 48, // WCAG AA minimum touch target
+    minWidth: 48, // WCAG AA minimum touch target
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -611,9 +604,15 @@ const styles = StyleSheet.create({
     letterSpacing: -0.01,
   },
   currentSubscriptionCard: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 24,
+    padding: 20, // 5 × 4px base unit
+    borderRadius: 16, // XLarge border radius for large cards
+    marginBottom: 24, // 6 × 4px base unit
+    // Shadow for depth and elevation
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2, // Android shadow
   },
   subscriptionHeader: {
     flexDirection: 'row',
@@ -632,10 +631,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 4,
   },
+  taxInfo: {
+    fontSize: 12,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 12, // 3 × 4px base unit
+    paddingVertical: 6, // 1.5 × 4px base unit (acceptable for badges)
+    borderRadius: 12, // Large border radius
+    minHeight: 32, // Adequate for badge, not a primary touch target
   },
   statusText: {
     fontSize: 14,
@@ -645,10 +650,10 @@ const styles = StyleSheet.create({
   trialBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
+    padding: 12, // 3 × 4px base unit
+    borderRadius: 12, // Large border radius (updated from 8px)
+    marginBottom: 12, // 3 × 4px base unit
+    gap: 8, // 2 × 4px base unit
   },
   trialText: {
     fontSize: 16,
@@ -658,10 +663,10 @@ const styles = StyleSheet.create({
   coolingOffBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
+    padding: 12, // 3 × 4px base unit
+    borderRadius: 12, // Large border radius (updated from 8px)
+    marginBottom: 12, // 3 × 4px base unit
+    gap: 8, // 2 × 4px base unit
   },
   coolingOffText: {
     fontSize: 16,
@@ -693,25 +698,32 @@ const styles = StyleSheet.create({
   },
   billingToggleContainer: {
     flexDirection: 'row',
-    padding: 4,
-    borderRadius: 10,
-    marginBottom: 20,
+    padding: 4, // 1 × 4px base unit
+    borderRadius: 12, // Large border radius (updated from 10px)
+    marginBottom: 20, // 5 × 4px base unit
   },
   billingToggleButton: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 12, // 3 × 4px base unit (updated from 10px)
+    paddingHorizontal: 16, // 4 × 4px base unit
+    borderRadius: 8, // Medium border radius
     alignItems: 'center',
+    minHeight: 48, // WCAG AA minimum touch target
   },
   billingToggleText: {
-    fontSize: 15,
+    fontSize: 14, // Body size (updated from 15px to match design system)
     fontWeight: '600',
   },
   tierCard: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 16,
+    padding: 20, // 5 × 4px base unit
+    borderRadius: 16, // XLarge border radius for large cards
+    marginBottom: 16, // 4 × 4px base unit
+    // Shadow for depth and elevation
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2, // Android shadow
   },
   tierCardHeader: {
     flexDirection: 'row',
@@ -726,11 +738,11 @@ const styles = StyleSheet.create({
   tierNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 6,
+    gap: 12, // 3 × 4px base unit
+    marginBottom: 8, // 2 × 4px base unit (updated from 6px)
   },
   tierName: {
-    fontSize: 22,
+    fontSize: 20, // Title size (updated from 22px to match design system)
     fontWeight: 'bold',
   },
   tierDescription: {
@@ -752,19 +764,19 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   savingsBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingHorizontal: 12, // 3 × 4px base unit (updated from 10px)
+    paddingVertical: 6, // 1.5 × 4px base unit (updated from 5px)
+    borderRadius: 6, // Small border radius for badges
     alignSelf: 'flex-start',
   },
   savingsText: {
-    fontSize: 13,
+    fontSize: 12, // Small size (updated from 13px to match design system)
     fontWeight: '600',
   },
   planCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 16, // 4 × 4px base unit
+    borderRadius: 12, // Large border radius for cards
+    marginBottom: 12, // 3 × 4px base unit
   },
   planCardHeader: {
     flexDirection: 'row',
@@ -784,9 +796,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   currentBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 12, // 3 × 4px base unit
+    paddingVertical: 6, // 1.5 × 4px base unit (acceptable for badges)
+    borderRadius: 12, // Large border radius
   },
   currentBadgeText: {
     color: '#FFFFFF',
@@ -794,9 +806,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   changePlanButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 16, // 4 × 4px base unit
+    paddingVertical: 12, // 3 × 4px base unit (updated from 8px for better touch target)
+    borderRadius: 12, // Large border radius (updated from 8px)
+    minHeight: 48, // WCAG AA minimum touch target
   },
   changePlanButtonText: {
     color: '#FFFFFF',
@@ -809,7 +822,7 @@ const styles = StyleSheet.create({
   featureRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 8, // 2 × 4px base unit (updated from 10px)
   },
   featureText: {
     flex: 1,
@@ -820,9 +833,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   cancelButton: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 16, // 4 × 4px base unit
+    borderRadius: 12, // Large border radius for buttons
     alignItems: 'center',
+    minHeight: 48, // WCAG AA minimum touch target
   },
   cancelButtonText: {
     fontSize: 16,
@@ -843,9 +857,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    margin: 20,
-    padding: 24,
-    borderRadius: 16,
+    margin: 20, // 5 × 4px base unit
+    padding: 24, // 6 × 4px base unit
+    borderRadius: 16, // XLarge border radius for modals
     maxWidth: 400,
     width: '100%',
   },
@@ -865,9 +879,10 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    padding: 16, // 4 × 4px base unit
+    borderRadius: 12, // Large border radius for buttons
     alignItems: 'center',
+    minHeight: 48, // WCAG AA minimum touch target
   },
   modalButtonText: {
     fontSize: 16,

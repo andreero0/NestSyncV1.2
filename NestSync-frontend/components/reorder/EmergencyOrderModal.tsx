@@ -156,8 +156,8 @@ export function EmergencyOrderModal({
     },
     modalContent: {
       maxHeight: '90%',
-      backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
-      borderTopLeftRadius: 24,
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[800] : NestSyncColors.neutral[100],
+      borderTopLeftRadius: 24, // xxl radius (6 * 4px)
       borderTopRightRadius: 24,
       paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     },
@@ -165,24 +165,24 @@ export function EmergencyOrderModal({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: 20,
+      padding: 20, // xl spacing
       borderBottomWidth: 1,
-      borderBottomColor: theme === 'dark' ? '#374151' : '#E5E7EB',
+      borderBottomColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[200],
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
+      fontSize: 20, // title from design system
+      fontWeight: '700', // bold
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
     },
     headerSubtitle: {
-      fontSize: 13,
-      color: theme === 'dark' ? '#9CA3AF' : '#6B7280',
-      marginTop: 2,
+      fontSize: 12, // small from design system
+      color: theme === 'dark' ? NestSyncColors.neutral[400] : NestSyncColors.neutral[500],
+      marginTop: 4, // xs spacing
     },
     closeButton: {
-      padding: 8,
-      minWidth: 48,
-      minHeight: 48,
+      padding: 8, // sm spacing
+      minWidth: 48, // WCAG AA minimum
+      minHeight: 48, // WCAG AA minimum
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -192,24 +192,24 @@ export function EmergencyOrderModal({
 
     // Category Selection
     sectionTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
-      marginBottom: 12,
+      fontSize: 16, // subtitle from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
+      marginBottom: 12, // md spacing
     },
     categoryGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 12,
-      marginBottom: 24,
+      gap: 12, // md spacing
+      marginBottom: 24, // xxl spacing
     },
     categoryCard: {
       width: '30%',
       minWidth: 100,
       minHeight: 80,
-      backgroundColor: theme === 'dark' ? '#374151' : '#F9FAFB',
-      borderRadius: 12,
-      padding: 12,
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[50],
+      borderRadius: 12, // lg radius
+      padding: 12, // md spacing
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
@@ -217,7 +217,7 @@ export function EmergencyOrderModal({
     },
     categoryCardSelected: {
       borderColor: NestSyncColors.primary.blue,
-      backgroundColor: theme === 'dark' ? '#1E3A8A' : '#DBEAFE',
+      backgroundColor: theme === 'dark' ? NestSyncColors.primary.blueDark + '40' : NestSyncColors.primary.blueLight,
     },
     categoryIconContainer: {
       width: 40,
@@ -228,9 +228,9 @@ export function EmergencyOrderModal({
       marginBottom: 8,
     },
     categoryName: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#D1D5DB' : '#374151',
+      fontSize: 12, // small from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[300] : NestSyncColors.neutral[600],
       textAlign: 'center',
     },
     categoryNameSelected: {
@@ -239,21 +239,21 @@ export function EmergencyOrderModal({
 
     // Product Details
     label: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#D1D5DB' : '#374151',
-      marginBottom: 8,
+      fontSize: 14, // body from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[300] : NestSyncColors.neutral[600],
+      marginBottom: 8, // sm spacing
     },
     input: {
-      backgroundColor: theme === 'dark' ? '#374151' : '#F9FAFB',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[50],
       borderWidth: 1,
-      borderColor: theme === 'dark' ? '#4B5563' : '#D1D5DB',
-      borderRadius: 8,
+      borderColor: theme === 'dark' ? NestSyncColors.neutral[600] : NestSyncColors.neutral[300],
+      borderRadius: 8, // md radius
       padding: 14,
-      fontSize: 16,
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
-      marginBottom: 16,
-      minHeight: 48,
+      fontSize: 16, // subtitle from design system
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
+      marginBottom: 16, // lg spacing
+      minHeight: 48, // WCAG AA minimum
     },
     inputMultiline: {
       minHeight: 80,
@@ -291,41 +291,41 @@ export function EmergencyOrderModal({
 
     // Delivery Options
     deliveryOptions: {
-      gap: 8,
-      marginBottom: 20,
+      gap: 8, // sm spacing
+      marginBottom: 20, // xl spacing
     },
     deliveryOption: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: theme === 'dark' ? '#374151' : '#F9FAFB',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[50],
       borderWidth: 2,
       borderColor: 'transparent',
-      borderRadius: 12,
-      padding: 16,
-      minHeight: 64,
+      borderRadius: 12, // lg radius
+      padding: 16, // lg spacing
+      minHeight: 64, // Comfortable touch target
     },
     deliveryOptionSelected: {
       borderColor: NestSyncColors.primary.blue,
-      backgroundColor: theme === 'dark' ? '#1E3A8A' : '#DBEAFE',
+      backgroundColor: theme === 'dark' ? NestSyncColors.primary.blueDark + '40' : NestSyncColors.primary.blueLight,
     },
     deliveryLeft: {
       flex: 1,
     },
     deliveryLabel: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
-      marginBottom: 2,
+      fontSize: 16, // subtitle from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
+      marginBottom: 4, // xs spacing
     },
     deliverySubtitle: {
-      fontSize: 13,
-      color: theme === 'dark' ? '#9CA3AF' : '#6B7280',
+      fontSize: 12, // small from design system
+      color: theme === 'dark' ? NestSyncColors.neutral[400] : NestSyncColors.neutral[500],
     },
     deliveryPrice: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
+      fontSize: 16, // subtitle from design system
+      fontWeight: '700', // bold
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
     },
 
     // Retailer Picker
@@ -397,32 +397,32 @@ export function EmergencyOrderModal({
     // Action Buttons
     buttonContainer: {
       flexDirection: 'row',
-      gap: 12,
-      marginTop: 8,
+      gap: 12, // md spacing
+      marginTop: 8, // sm spacing
     },
     button: {
       flex: 1,
       paddingVertical: 16,
-      borderRadius: 12,
+      borderRadius: 12, // lg radius
       alignItems: 'center',
-      minHeight: 56,
+      minHeight: 56, // Extra comfortable touch target for primary actions
       justifyContent: 'center',
     },
     cancelButton: {
-      backgroundColor: theme === 'dark' ? '#374151' : '#E5E7EB',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[200],
     },
     submitButton: {
-      backgroundColor: '#DC2626',
+      backgroundColor: NestSyncColors.semantic.error,
     },
     submitButtonDisabled: {
-      backgroundColor: theme === 'dark' ? '#4B5563' : '#D1D5DB',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[600] : NestSyncColors.neutral[300],
     },
     buttonText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 16, // subtitle from design system
+      fontWeight: '700', // bold
     },
     cancelText: {
-      color: theme === 'dark' ? '#FFFFFF' : '#374151',
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
     },
     submitText: {
       color: '#FFFFFF',

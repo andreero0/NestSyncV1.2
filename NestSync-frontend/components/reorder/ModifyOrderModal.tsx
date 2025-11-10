@@ -57,14 +57,14 @@ export function ModifyOrderModal({
     modalContent: {
       width: '90%',
       maxWidth: 400,
-      backgroundColor: theme === 'dark' ? '#374151' : '#FFFFFF',
-      borderRadius: 16,
-      padding: 24,
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[100],
+      borderRadius: 16, // xl radius
+      padding: 24, // xxl spacing
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
+      shadowOffset: { width: 0, height: 4 }, // lg shadow
+      shadowOpacity: 0.15,
       shadowRadius: 8,
-      elevation: 5,
+      elevation: 4,
     },
     header: {
       flexDirection: 'row',
@@ -73,57 +73,64 @@ export function ModifyOrderModal({
       marginBottom: 20,
     },
     title: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
+      fontSize: 20, // title from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
     },
     closeButton: {
-      padding: 4,
+      padding: 8, // sm spacing
+      minWidth: 48, // WCAG AA minimum
+      minHeight: 48, // WCAG AA minimum
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     productName: {
-      fontSize: 14,
-      color: theme === 'dark' ? '#D1D5DB' : '#6B7280',
-      marginBottom: 20,
+      fontSize: 14, // body from design system
+      color: theme === 'dark' ? NestSyncColors.neutral[300] : NestSyncColors.neutral[500],
+      marginBottom: 20, // xl spacing
     },
     label: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: theme === 'dark' ? '#D1D5DB' : '#374151',
-      marginBottom: 8,
+      fontSize: 14, // body from design system
+      fontWeight: '500', // medium
+      color: theme === 'dark' ? NestSyncColors.neutral[300] : NestSyncColors.neutral[600],
+      marginBottom: 8, // sm spacing
     },
     input: {
-      backgroundColor: theme === 'dark' ? '#4B5563' : '#F9FAFB',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[600] : NestSyncColors.neutral[50],
       borderWidth: 1,
-      borderColor: theme === 'dark' ? '#6B7280' : '#D1D5DB',
-      borderRadius: 8,
-      padding: 12,
-      fontSize: 16,
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
-      marginBottom: 16,
+      borderColor: theme === 'dark' ? NestSyncColors.neutral[500] : NestSyncColors.neutral[300],
+      borderRadius: 8, // md radius
+      padding: 12, // md spacing
+      fontSize: 16, // subtitle from design system
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
+      marginBottom: 16, // lg spacing
+      minHeight: 48, // WCAG AA minimum
     },
     buttonContainer: {
       flexDirection: 'row',
-      gap: 12,
-      marginTop: 8,
+      gap: 12, // md spacing
+      marginTop: 8, // sm spacing
     },
     button: {
       flex: 1,
-      paddingVertical: 12,
-      borderRadius: 8,
+      paddingVertical: 14, // Increased for better touch target
+      borderRadius: 12, // lg radius
       alignItems: 'center',
+      minHeight: 48, // WCAG AA minimum
+      justifyContent: 'center',
     },
     cancelButton: {
-      backgroundColor: theme === 'dark' ? '#4B5563' : '#E5E7EB',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[600] : NestSyncColors.neutral[200],
     },
     saveButton: {
       backgroundColor: NestSyncColors.primary.blue,
     },
     buttonText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 16, // subtitle from design system
+      fontWeight: '600', // semibold
     },
     cancelText: {
-      color: theme === 'dark' ? '#FFFFFF' : '#374151',
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
     },
     saveText: {
       color: '#FFFFFF',

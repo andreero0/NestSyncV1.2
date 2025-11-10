@@ -209,7 +209,8 @@ interface SizeGuideScreenProps {}
 
 export default function SizeGuideScreen({}: SizeGuideScreenProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const theme = (colorScheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
+  const colors = Colors[theme];
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -318,6 +319,7 @@ export default function SizeGuideScreen({}: SizeGuideScreenProps) {
             options={{
               title: 'Size Guide',
               headerShown: true,
+              headerBackTitle: 'Back',
               headerStyle: { backgroundColor: colors.background },
               headerTintColor: colors.text,
               headerTitleStyle: { fontWeight: '600' },
@@ -354,6 +356,7 @@ export default function SizeGuideScreen({}: SizeGuideScreenProps) {
             options={{
               title: 'Size Guide',
               headerShown: true,
+              headerBackTitle: 'Back',
               headerStyle: { backgroundColor: colors.background },
               headerTintColor: colors.text,
               headerTitleStyle: { fontWeight: '600' },
@@ -408,6 +411,7 @@ export default function SizeGuideScreen({}: SizeGuideScreenProps) {
             options={{
               title: 'Size Guide',
               headerShown: true,
+              headerBackTitle: 'Back',
               headerStyle: { backgroundColor: colors.background },
               headerTintColor: colors.text,
               headerTitleStyle: { fontWeight: '600' },
@@ -498,14 +502,16 @@ export default function SizeGuideScreen({}: SizeGuideScreenProps) {
         <View style={[styles.tabContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <ScrollView
             horizontal
-            showsHorizontalScrollIndicator={false}
+            showsHorizontalScrollIndicator={true}
+            persistentScrollbar={true}
             contentContainerStyle={styles.tabScrollContent}
+            indicatorStyle={colorScheme === 'dark' ? 'white' : 'black'}
           >
             {[
-              { key: 'calculator', label: 'Calculator', icon: 'function' },
-              { key: 'chart', label: 'Size Chart', icon: 'chart.bar.fill' },
-              { key: 'fit', label: 'Fit Guide', icon: 'checkmark.circle.fill' },
-              { key: 'brands', label: 'Brands', icon: 'tag.fill' },
+              { key: 'calculator', label: 'Calculator' },
+              { key: 'chart', label: 'Size Chart' },
+              { key: 'fit', label: 'Fit Guide' },
+              { key: 'brands', label: 'Brands' },
             ].map((tab) => (
               <NestSyncButton
                 key={tab.key}
@@ -513,11 +519,7 @@ export default function SizeGuideScreen({}: SizeGuideScreenProps) {
                 onPress={() => setSelectedSection(tab.key as any)}
                 variant={selectedSection === tab.key ? 'primary' : 'outline'}
                 size="small"
-                style={[
-                  styles.tabButton,
-                  selectedSection === tab.key && { backgroundColor: colors.tint }
-                ]}
-                icon={tab.icon}
+                style={styles.tabButton}
               />
             ))}
           </ScrollView>
@@ -640,7 +642,7 @@ export default function SizeGuideScreen({}: SizeGuideScreenProps) {
                   style={[styles.fitCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
                   <View style={styles.fitHeader}>
-                    <IconSymbol name={indicator.icon} size={24} color={indicator.color} />
+                    <IconSymbol name={indicator.icon as any} size={24} color={indicator.color} />
                     <ThemedText type="defaultSemiBold" style={[styles.fitTitle, { color: colors.text }]}>
                       {indicator.title}
                     </ThemedText>
@@ -825,13 +827,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: NestSyncColors.neutral[200],
   },
   headerContent: {
     marginBottom: 12,
   },
   screenTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     marginBottom: 4,
   },
@@ -856,15 +858,24 @@ const styles = StyleSheet.create({
 
   // Navigation Tabs
   tabContainer: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 8,
+    borderBottomWidth: 1,
+    paddingVertical: 12,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tabScrollContent: {
     paddingHorizontal: 20,
     gap: 8,
+    paddingVertical: 4,
   },
   tabButton: {
-    marginRight: 8,
+    minWidth: 100,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
 
   // Content
@@ -888,6 +899,10 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   calculatorHeader: {
     flexDirection: 'row',
@@ -937,6 +952,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     gap: 16,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sizeNumber: {
     width: 40,
@@ -974,6 +993,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 12,
     borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   fitHeader: {
     flexDirection: 'row',
@@ -995,6 +1018,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 12,
     borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   brandHeader: {
     flexDirection: 'row',
@@ -1027,6 +1054,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     gap: 12,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tipContent: {
     flex: 1,

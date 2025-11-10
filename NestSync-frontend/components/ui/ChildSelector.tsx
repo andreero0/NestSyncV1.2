@@ -7,7 +7,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
-  Text, 
   TouchableOpacity, 
   StyleSheet, 
   Dimensions,
@@ -17,6 +16,12 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -25,7 +30,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 
-const { width } = Dimensions.get('window');
+const { width, height: screenHeight } = Dimensions.get('window');
 
 // Child data interface matching GraphQL schema
 interface Child {
@@ -56,10 +61,15 @@ export function ChildSelector({
   disabled = false 
 }: ChildSelectorProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
   
   const [modalVisible, setModalVisible] = useState(false);
   const [storedChildId, setStoredChildId] = useAsyncStorage(STORAGE_KEY);
+
+  // Animation values
+  const modalScale = useSharedValue(0.9);
+  const modalOpacity = useSharedValue(0);
+  const backdropOpacity = useSharedValue(0);
 
   // Don't render if only one child or no children
   if (!children || children.length <= 1) {
@@ -67,6 +77,29 @@ export function ChildSelector({
   }
 
   const selectedChild = children.find(child => child.id === selectedChildId);
+
+  // Animate modal in
+  useEffect(() => {
+    if (modalVisible) {
+      modalScale.value = withSpring(1, { damping: 20, stiffness: 300 });
+      modalOpacity.value = withTiming(1, { duration: 200 });
+      backdropOpacity.value = withTiming(1, { duration: 200 });
+    } else {
+      modalScale.value = withTiming(0.9, { duration: 150 });
+      modalOpacity.value = withTiming(0, { duration: 150 });
+      backdropOpacity.value = withTiming(0, { duration: 150 });
+    }
+  }, [modalVisible]);
+
+  // Animated styles
+  const animatedModalStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: modalScale.value }],
+    opacity: modalOpacity.value,
+  }));
+
+  const animatedBackdropStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
   
   const handleChildSelect = async (childId: string) => {
     onChildSelect(childId);
@@ -84,7 +117,7 @@ export function ChildSelector({
     }
   };
 
-  const getChildIcon = (gender?: string) => {
+  const getChildIcon = (gender?: string): any => {
     switch (gender) {
       case 'BOY':
         return 'person.fill';
@@ -128,6 +161,8 @@ export function ChildSelector({
               styles.childName,
               { color: isSelected ? colors.tint : colors.text }
             ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
           >
             {child.name}
           </ThemedText>
@@ -156,7 +191,7 @@ export function ChildSelector({
     return (
       <View style={[styles.selectorButton, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <ActivityIndicator size="small" color={colors.tint} />
-        <ThemedText style={[styles.selectorText, { color: colors.textSecondary }]}>
+        <ThemedText style={[styles.selectedChildName, { color: colors.textSecondary }]}>
           Loading children...
         </ThemedText>
       </View>
@@ -165,7 +200,7 @@ export function ChildSelector({
 
   return (
     <>
-      {/* Main Selector Button */}
+      {/* Main Selector Button - Compact Design */}
       <TouchableOpacity
         style={[
           styles.selectorButton,
@@ -184,30 +219,27 @@ export function ChildSelector({
         <View style={[styles.selectedChildIcon, { backgroundColor: colors.background }]}>
           <IconSymbol 
             name={getChildIcon(selectedChild?.gender)} 
-            size={16} 
+            size={14} 
             color={colors.tint} 
           />
         </View>
         
-        <View style={styles.selectedChildInfo}>
-          <ThemedText 
-            type="defaultSemiBold" 
-            style={[styles.selectedChildName, { color: colors.text }]}
-          >
-            {selectedChild?.name || 'Select Child'}
-          </ThemedText>
-          {selectedChild && (
-            <ThemedText 
-              style={[styles.selectedChildAge, { color: colors.textSecondary }]}
-            >
-              {formatAge(selectedChild)}
-            </ThemedText>
-          )}
-        </View>
+        <ThemedText 
+          type="defaultSemiBold" 
+          style={[styles.compactText, { color: colors.text }]}
+        >
+          {selectedChild ? `${selectedChild.name.substring(0, 4)}${selectedChild.name.length > 4 ? '...' : ''}` : 'Select'}
+        </ThemedText>
+        
+        <ThemedText 
+          style={[styles.compactAge, { color: colors.textSecondary }]}
+        >
+          {selectedChild ? formatAge(selectedChild) : ''}
+        </ThemedText>
         
         <IconSymbol 
           name="chevron.down" 
-          size={14} 
+          size={12} 
           color={colors.textSecondary} 
         />
       </TouchableOpacity>
@@ -216,54 +248,68 @@ export function ChildSelector({
       <Modal
         visible={modalVisible}
         transparent
-        animationType="slide"
+        animationType="none"
         onRequestClose={() => setModalVisible(false)}
         accessibilityViewIsModal
       >
-        <Pressable 
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}
-        >
-          <BlurView intensity={20} style={styles.modalOverlay}>
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                {/* Modal Header */}
-                <View style={styles.modalHeader}>
-                  <ThemedText type="title" style={styles.modalTitle}>
-                    Select Child
-                  </ThemedText>
-                  <TouchableOpacity
-                    onPress={() => setModalVisible(false)}
-                    style={[styles.closeButton, { backgroundColor: colors.surface }]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Close child selection"
-                  >
-                    <IconSymbol name="xmark" size={16} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+        <Animated.View style={[styles.modalOverlay, animatedBackdropStyle]}>
+          <Pressable 
+            style={styles.modalOverlayPressable}
+            onPress={() => setModalVisible(false)}
+          >
+            <BlurView intensity={20} style={StyleSheet.absoluteFill}>
+              <View style={styles.modalCenteredContainer}>
+                <Pressable onPress={(e) => e.stopPropagation()}>
+                  <Animated.View style={[animatedModalStyle]}>
+                    <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                      {/* Modal Header */}
+                      <View style={styles.modalHeader}>
+                        <ThemedText type="title" style={styles.modalTitle}>
+                          Select Child
+                        </ThemedText>
+                        <TouchableOpacity
+                          onPress={() => setModalVisible(false)}
+                          style={[styles.closeButton, { backgroundColor: colors.surface }]}
+                          accessibilityRole="button"
+                          accessibilityLabel="Close child selection"
+                        >
+                          <IconSymbol name="xmark" size={16} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      </View>
 
-                {/* Children List */}
-                <FlatList
-                  data={children}
-                  keyExtractor={(item) => item.id}
-                  renderItem={renderChildItem}
-                  style={styles.childrenList}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.childrenListContent}
-                />
+                      {/* Children List */}
+                      {children.length === 0 ? (
+                        <View style={styles.emptyState}>
+                          <ThemedText style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+                            No children available
+                          </ThemedText>
+                        </View>
+                      ) : (
+                        <FlatList
+                          data={children}
+                          keyExtractor={(item) => item.id}
+                          renderItem={renderChildItem}
+                          style={styles.childrenList}
+                          showsVerticalScrollIndicator={false}
+                          contentContainerStyle={styles.childrenListContent}
+                        />
+                      )}
 
-                {/* Footer */}
-                <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
-                  <ThemedText 
-                    style={[styles.footerText, { color: colors.textSecondary }]}
-                  >
-                    Data and preferences are tracked separately for each child
-                  </ThemedText>
-                </View>
-              </ThemedView>
-            </Pressable>
-          </BlurView>
-        </Pressable>
+                      {/* Footer */}
+                      <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
+                        <ThemedText 
+                          style={[styles.footerText, { color: colors.textSecondary }]}
+                        >
+                          Data and preferences are tracked separately for each child
+                        </ThemedText>
+                      </View>
+                    </ThemedView>
+                  </Animated.View>
+                </Pressable>
+              </View>
+            </BlurView>
+          </Pressable>
+        </Animated.View>
       </Modal>
     </>
   );
@@ -273,45 +319,68 @@ const styles = StyleSheet.create({
   selectorButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
-    minHeight: 44,
-    gap: 8,
+    gap: 6,
+    alignSelf: 'flex-start',
   },
   disabledButton: {
     opacity: 0.6,
   },
   selectedChildIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  compactText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  compactAge: {
+    fontSize: 12,
+  },
   selectedChildInfo: {
     flex: 1,
-    minWidth: 0,
+    minWidth: 120,
+    maxWidth: 200,
   },
   selectedChildName: {
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 1,
+    flexShrink: 1,
   },
   selectedChildAge: {
     fontSize: 12,
   },
   modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalOverlayPressable: {
     flex: 1,
-    justifyContent: 'flex-end',
+  },
+  modalCenteredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 40,
-    maxHeight: '60%',
-    minHeight: 300,
+    borderRadius: 20,
+    paddingBottom: 20,
+    width: width - 40,
+    maxWidth: 400,
+    maxHeight: screenHeight * 0.7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -333,10 +402,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   childrenList: {
-    flex: 1,
+    maxHeight: screenHeight * 0.5,
   },
   childrenListContent: {
     paddingHorizontal: 20,
+    paddingVertical: 8,
     gap: 8,
   },
   childItem: {
@@ -359,11 +429,13 @@ const styles = StyleSheet.create({
   },
   childInfo: {
     flex: 1,
-    minWidth: 0,
+    minWidth: 120,
+    maxWidth: 200,
   },
   childName: {
     fontSize: 16,
     marginBottom: 2,
+    flexShrink: 1,
   },
   childDetails: {
     fontSize: 14,
@@ -378,6 +450,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
 

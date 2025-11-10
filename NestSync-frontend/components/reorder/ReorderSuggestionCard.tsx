@@ -500,15 +500,15 @@ const styles = StyleSheet.create({
   urgencyBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginBottom: 16,
+    paddingHorizontal: 16, // lg spacing
+    paddingVertical: 8, // sm spacing
+    marginBottom: 16, // lg spacing
   },
   urgencyText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 12, // small from design system
+    fontWeight: '700', // bold
     letterSpacing: 0.5,
-    marginLeft: 6,
+    marginLeft: 8, // sm spacing (adjusted from 6px to 8px for 4px base unit)
     flex: 1,
   },
   dismissButton: {
@@ -517,85 +517,85 @@ const styles = StyleSheet.create({
 
   // Product Section
   productSection: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingHorizontal: 16, // lg spacing
+    marginBottom: 16, // lg spacing
   },
   productHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 12, // md spacing
   },
   productInfo: {
     flex: 1,
   },
   productName: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 20, // title from design system
+    fontWeight: '600', // semibold
+    marginBottom: 4, // xs spacing
   },
   productSize: {
-    fontSize: 14,
+    fontSize: 14, // body from design system
     lineHeight: 20,
   },
   predictionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: NestSyncColors.accent.purple + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 12,
+    paddingHorizontal: 8, // sm spacing
+    paddingVertical: 4, // xs spacing
+    borderRadius: 6, // sm radius (consistent with badges)
+    marginLeft: 12, // md spacing
   },
   predictionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
+    fontSize: 12, // small from design system
+    fontWeight: '600', // semibold
+    marginLeft: 4, // xs spacing
   },
 
   // Insights Section
   insightsSection: {
-    gap: 8,
+    gap: 8, // sm spacing
   },
   insightRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   insightText: {
-    fontSize: 14,
-    marginLeft: 8,
+    fontSize: 14, // body from design system
+    marginLeft: 8, // sm spacing
     lineHeight: 20,
   },
 
   // Pricing Section
   pricingSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    marginBottom: 16,
+    paddingHorizontal: 16, // lg spacing
+    paddingTop: 16, // lg spacing
+    marginBottom: 16, // lg spacing
     borderTopWidth: 1,
   },
   pricingHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 12, // md spacing
   },
   pricingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 16, // subtitle from design system
+    fontWeight: '600', // semibold
     flex: 1,
   },
   canadianBadge: {
     backgroundColor: NestSyncColors.canadian.trust + '20',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingHorizontal: 8, // sm spacing
+    paddingVertical: 4, // xs spacing
+    borderRadius: 6, // sm radius (consistent with badges)
   },
   canadianText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 12, // small from design system
+    fontWeight: '600', // semibold
   },
 
   priceDetails: {
-    gap: 8,
+    gap: 8, // sm spacing
   },
   priceRow: {
     flexDirection: 'row',
@@ -603,34 +603,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   retailerName: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 14, // body from design system
+    fontWeight: '500', // medium
   },
   priceGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 8, // sm spacing
   },
   originalPrice: {
-    fontSize: 14,
+    fontSize: 14, // body from design system
     textDecorationLine: 'line-through',
   },
   finalPrice: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20, // title from design system
+    fontWeight: '700', // bold
   },
 
   taxBreakdown: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 4, // xs spacing
   },
   taxLabel: {
-    fontSize: 12,
+    fontSize: 12, // small from design system
   },
   taxAmount: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 12, // small from design system
+    fontWeight: '500', // medium
   },
 
   deliveryRow: {
@@ -638,30 +638,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deliveryText: {
-    fontSize: 12,
-    marginLeft: 6,
+    fontSize: 12, // small from design system
+    marginLeft: 8, // sm spacing
   },
 
   savingsHighlight: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginTop: 12,
+    paddingHorizontal: 12, // md spacing
+    paddingVertical: 8, // sm spacing
+    borderRadius: 8, // md radius
+    marginTop: 12, // md spacing
   },
   savingsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
+    fontSize: 14, // body from design system
+    fontWeight: '600', // semibold
+    marginLeft: 8, // sm spacing
   },
 
   // Action Section
   actionSection: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 16,
+    paddingHorizontal: 16, // lg spacing
+    gap: 12, // md spacing
+    marginBottom: 16, // lg spacing
   },
   reorderButton: {
     flex: 2,
@@ -674,14 +674,15 @@ const styles = StyleSheet.create({
   complianceFooter: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 16, // lg spacing
+    paddingTop: 12, // md spacing
+    paddingBottom: 4, // xs spacing (added for consistent padding)
     borderTopWidth: 1,
-    gap: 6,
+    gap: 8, // sm spacing
   },
   complianceText: {
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 11, // caption from design system
+    lineHeight: 16, // Improved readability (adjusted from 14 to 16)
     flex: 1,
   },
 });

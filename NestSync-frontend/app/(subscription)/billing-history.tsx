@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 
 import { useNestSyncTheme } from '@/contexts/ThemeContext';
-import { Colors } from '@/constants/Colors';
+import { Colors, NestSyncColors } from '@/constants/Colors';
 import {
   useMyBillingHistory,
   useDownloadInvoice,
@@ -49,10 +49,10 @@ export default function BillingHistoryScreen() {
 
   const getStatusColor = (status: string) => {
     const statusColors: { [key: string]: string } = {
-      SUCCEEDED: colors.success || '#10B981',
-      PENDING: colors.warning || '#F59E0B',
+      SUCCEEDED: colors.success || NestSyncColors.semantic.success,
+      PENDING: colors.warning || NestSyncColors.accent.amber,
       FAILED: colors.error,
-      REFUNDED: colors.info || '#3B82F6',
+      REFUNDED: colors.info || NestSyncColors.primary.blue,
     };
     return statusColors[status] || colors.textSecondary;
   };
@@ -240,29 +240,61 @@ export default function BillingHistoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 16, fontSize: 16, fontWeight: '500' },
+  loadingText: { marginTop: 16, fontSize: 16, fontWeight: '500' }, // 4 × 4px base unit
   scrollView: { flex: 1 },
-  contentContainer: { padding: 20, paddingBottom: 40 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  backButton: { padding: 8, marginRight: 12 },
+  contentContainer: { padding: 20, paddingBottom: 40 }, // 5 × 4px, 10 × 4px base unit
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 }, // 6 × 4px base unit
+  backButton: { 
+    padding: 12, // 3 × 4px base unit (updated from 8px)
+    marginRight: 12, // 3 × 4px base unit
+    minHeight: 48, // WCAG AA minimum touch target
+    minWidth: 48, // WCAG AA minimum touch target
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: { fontSize: 24, fontWeight: 'bold' },
-  recordCard: { padding: 16, borderRadius: 12, marginBottom: 12 },
-  recordHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  recordCard: { padding: 16, borderRadius: 12, marginBottom: 12 }, // 4 × 4px, large radius, 3 × 4px base unit
+  recordHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 }, // 3 × 4px base unit
   recordInfo: { flex: 1 },
-  recordDescription: { fontSize: 16, fontWeight: '600' },
-  recordDate: { fontSize: 14, marginTop: 4 },
+  recordDescription: { fontSize: 16, fontWeight: '600' }, // Subtitle size
+  recordDate: { fontSize: 14, marginTop: 4 }, // Body size, 1 × 4px base unit
   recordAmount: { alignItems: 'flex-end' },
   amount: { fontSize: 18, fontWeight: 'bold' },
-  statusBadge: { marginTop: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 11, fontWeight: 'bold' },
-  taxBreakdown: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
-  taxTitle: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
-  taxLine: { fontSize: 12, marginTop: 2 },
-  downloadButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: 12, borderRadius: 8 },
-  downloadText: { fontSize: 14, fontWeight: '600' },
-  loadMoreButton: { padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12 },
-  loadMoreText: { fontSize: 16, fontWeight: '600' },
-  emptyState: { alignItems: 'center', padding: 40 },
-  emptyTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 16 },
-  emptySubtitle: { fontSize: 14, marginTop: 8, textAlign: 'center' },
+  statusBadge: { 
+    marginTop: 4, // 1 × 4px base unit
+    paddingHorizontal: 8, // 2 × 4px base unit
+    paddingVertical: 4, // 1 × 4px base unit
+    borderRadius: 8, // Medium border radius
+  },
+  statusText: { fontSize: 11, fontWeight: 'bold' }, // Caption size
+  taxBreakdown: { 
+    marginTop: 12, // 3 × 4px base unit
+    paddingTop: 12, // 3 × 4px base unit
+    borderTopWidth: 1, 
+    borderTopColor: NestSyncColors.neutral[200], // Design token (updated from hardcoded)
+  },
+  taxTitle: { fontSize: 13, fontWeight: '600', marginBottom: 4 }, // 1 × 4px base unit
+  taxLine: { fontSize: 12, marginTop: 2 }, // Small size
+  downloadButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: 8, // 2 × 4px base unit
+    marginTop: 12, // 3 × 4px base unit
+    padding: 12, // 3 × 4px base unit
+    borderRadius: 12, // Large border radius (updated from 8px)
+    minHeight: 48, // WCAG AA minimum touch target
+  },
+  downloadText: { fontSize: 14, fontWeight: '600' }, // Body size
+  loadMoreButton: { 
+    padding: 16, // 4 × 4px base unit
+    borderRadius: 12, // Large border radius
+    alignItems: 'center', 
+    marginTop: 12, // 3 × 4px base unit
+    minHeight: 48, // WCAG AA minimum touch target
+  },
+  loadMoreText: { fontSize: 16, fontWeight: '600' }, // Subtitle size
+  emptyState: { alignItems: 'center', padding: 40 }, // 10 × 4px base unit
+  emptyTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 16 }, // Title size, 4 × 4px base unit
+  emptySubtitle: { fontSize: 14, marginTop: 8, textAlign: 'center' }, // Body size, 2 × 4px base unit
 });

@@ -8,7 +8,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test:visual": "playwright test --config=playwright.visual-regression.config.ts",
+    "test:visual:mobile": "playwright test --config=playwright.visual-regression.config.ts --project=visual-mobile-chrome",
+    "test:visual:desktop": "playwright test --config=playwright.visual-regression.config.ts --project=visual-desktop-chrome",
+    "test:visual:update": "playwright test --config=playwright.visual-regression.config.ts --update-snapshots",
+    "test:visual:report": "playwright show-report test-results/visual-regression-report"
   },
   "dependencies": {
     "@apollo/client": "^3.14.0",

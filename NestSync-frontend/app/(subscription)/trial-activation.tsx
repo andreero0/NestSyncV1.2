@@ -24,7 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNestSyncTheme } from '@/contexts/ThemeContext';
-import { Colors } from '@/constants/Colors';
+import { Colors, NestSyncColors } from '@/constants/Colors';
 import { useStartTrial, useAvailablePlans } from '@/lib/hooks/useSubscription';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuthStore } from '@/stores/authStore';
@@ -307,8 +307,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 20, // 5 × 4px base unit
+    paddingBottom: 40, // 10 × 4px base unit
   },
   header: {
     flexDirection: 'row',
@@ -316,8 +316,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   backButton: {
-    padding: 8,
-    marginRight: 12,
+    padding: 12, // 3 × 4px base unit (updated from 8px for better touch target)
+    marginRight: 12, // 3 × 4px base unit
+    minHeight: 48, // WCAG AA minimum touch target
+    minWidth: 48, // WCAG AA minimum touch target
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 24,
@@ -325,9 +329,9 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: 'center',
-    padding: 32,
-    borderRadius: 16,
-    marginBottom: 32,
+    padding: 32, // 8 × 4px base unit
+    borderRadius: 16, // XLarge border radius
+    marginBottom: 32, // 8 × 4px base unit
   },
   heroTitle: {
     fontSize: 32,
@@ -340,10 +344,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   canadaBadge: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    marginTop: 16, // 4 × 4px base unit
+    paddingHorizontal: 16, // 4 × 4px base unit
+    paddingVertical: 8, // 2 × 4px base unit
+    borderRadius: 20, // Rounded pill shape (5 × 4px base unit)
   },
   canadaBadgeText: {
     fontSize: 14,
@@ -358,18 +362,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tierCard: {
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 16,
+    padding: 20, // 5 × 4px base unit
+    borderRadius: 12, // Large border radius for cards
+    marginBottom: 16, // 4 × 4px base unit
     position: 'relative',
   },
   recommendedBadge: {
     position: 'absolute',
-    top: -10,
-    right: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    top: -10, // Positioned above card
+    right: 20, // 5 × 4px base unit
+    paddingHorizontal: 12, // 3 × 4px base unit
+    paddingVertical: 4, // 1 × 4px base unit
+    borderRadius: 12, // Large border radius
   },
   recommendedText: {
     color: '#FFFFFF',
@@ -394,9 +398,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   radioButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 28, // 7 × 4px base unit
+    height: 28, // 7 × 4px base unit
+    borderRadius: 14, // Circular (half of width/height)
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
@@ -417,10 +421,10 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    gap: 12,
+    padding: 16, // 4 × 4px base unit
+    borderRadius: 12, // Large border radius (updated from 8px)
+    marginBottom: 16, // 4 × 4px base unit
+    gap: 12, // 3 × 4px base unit
   },
   errorText: {
     flex: 1,
@@ -430,10 +434,10 @@ const styles = StyleSheet.create({
   complianceNotice: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
-    gap: 12,
+    padding: 16, // 4 × 4px base unit
+    borderRadius: 12, // Large border radius (updated from 8px)
+    marginBottom: 24, // 6 × 4px base unit
+    gap: 12, // 3 × 4px base unit
   },
   complianceText: {
     flex: 1,
@@ -444,12 +448,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 8,
-    // Psychology-driven design: adequate touch target
-    minHeight: 56,
+    paddingHorizontal: 20, // 5 × 4px base unit
+    paddingVertical: 16, // 4 × 4px base unit
+    borderRadius: 12, // Large border radius for buttons
+    marginBottom: 16, // 4 × 4px base unit
+    gap: 8, // 2 × 4px base unit
+    // WCAG AA minimum touch target
+    minHeight: 56, // Exceeds 48px minimum for primary CTA
   },
   startButtonText: {
     color: '#FFFFFF',
