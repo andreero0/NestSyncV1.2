@@ -20,12 +20,15 @@ import {
   TouchableOpacity,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@apollo/client';
 import { NestSyncColors } from '../constants/Colors';
 import { useNestSyncTheme } from '../contexts/ThemeContext';
+import { Button } from '../components/ui/Button';
+import { NoOrdersEmptyState } from '../components/ui/EmptyState';
 import { TrialCountdownBanner } from '../components/reorder/TrialCountdownBanner';
 import { ModifyOrderModal } from '../components/reorder/ModifyOrderModal';
 import { SkipOrderModal, SkipOrderData } from '../components/reorder/SkipOrderModal';
@@ -207,17 +210,17 @@ export default function ReorderSuggestionsSimple() {
     },
     // Quick Stats Card - Design Spec Compliant
     statsCard: {
-      backgroundColor: theme === 'dark' ? '#374151' : '#FFFFFF',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[100],
       marginHorizontal: 16,
       marginTop: 16,
       marginBottom: 12,
-      padding: 16,
-      borderRadius: 12,
+      padding: 16, // lg spacing
+      borderRadius: 12, // lg radius
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 1 }, // sm shadow
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
     },
     statsRow: {
       flexDirection: 'row',
@@ -226,14 +229,14 @@ export default function ReorderSuggestionsSimple() {
       marginBottom: 12,
     },
     statsLabel: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: theme === 'dark' ? '#D1D5DB' : '#6B7280',
+      fontSize: 14, // body from design system
+      fontWeight: '500', // medium
+      color: theme === 'dark' ? NestSyncColors.neutral[300] : NestSyncColors.neutral[500],
     },
     statsValue: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
+      fontSize: 16, // subtitle from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
     },
     statsValueHighlight: {
       color: NestSyncColors.primary.blue,
@@ -242,7 +245,7 @@ export default function ReorderSuggestionsSimple() {
     automationStatus: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 8, // sm spacing (4px base unit)
     },
     activeIndicator: {
       width: 8,
@@ -252,25 +255,25 @@ export default function ReorderSuggestionsSimple() {
     },
     // Section Header
     sectionHeader: {
-      fontSize: 18,
+      fontSize: 20, // title from design system
       fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[600],
       marginHorizontal: 16,
       marginTop: 24,
       marginBottom: 12,
     },
     // Order Card - Design Spec Compliant (72px height)
     orderCard: {
-      backgroundColor: theme === 'dark' ? '#374151' : '#FFFFFF',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[100],
       marginHorizontal: 16,
-      marginBottom: 12,
-      padding: 16,
-      borderRadius: 12,
+      marginBottom: 12, // md spacing
+      padding: 16, // lg spacing
+      borderRadius: 12, // lg radius
       flexDirection: 'row',
       alignItems: 'center',
       minHeight: 72,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
+      shadowOffset: { width: 0, height: 1 }, // sm shadow
       shadowOpacity: 0.05,
       shadowRadius: 2,
       elevation: 1,
@@ -278,9 +281,9 @@ export default function ReorderSuggestionsSimple() {
     orderImagePlaceholder: {
       width: 48,
       height: 48,
-      borderRadius: 8,
-      backgroundColor: theme === 'dark' ? '#4B5563' : '#E5E7EB',
-      marginRight: 12,
+      borderRadius: 8, // md radius
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[600] : NestSyncColors.neutral[200],
+      marginRight: 12, // md spacing
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -288,101 +291,103 @@ export default function ReorderSuggestionsSimple() {
       flex: 1,
     },
     orderName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
-      marginBottom: 4,
+      fontSize: 16, // subtitle from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
+      marginBottom: 4, // xs spacing
     },
     orderMeta: {
-      fontSize: 14,
-      color: theme === 'dark' ? '#D1D5DB' : '#6B7280',
-      marginBottom: 4,
+      fontSize: 14, // body from design system
+      color: theme === 'dark' ? NestSyncColors.neutral[300] : NestSyncColors.neutral[500],
+      marginBottom: 4, // xs spacing
     },
     orderRetailer: {
-      fontSize: 13,
-      color: theme === 'dark' ? '#9CA3AF' : '#9CA3AF',
+      fontSize: 12, // small from design system
+      color: NestSyncColors.neutral[400],
     },
     orderActions: {
       flexDirection: 'row',
       gap: 8,
     },
     modifyButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
+      paddingHorizontal: 12, // md spacing
+      paddingVertical: 8, // sm spacing (increased for better touch target)
+      borderRadius: 8, // md radius
       borderWidth: 1,
       borderColor: NestSyncColors.primary.blue,
+      minHeight: 36, // Comfortable touch target for small buttons
     },
     modifyButtonText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 12, // small from design system
+      fontWeight: '600', // semibold
       color: NestSyncColors.primary.blue,
     },
     skipButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
+      paddingHorizontal: 12, // md spacing
+      paddingVertical: 8, // sm spacing
+      borderRadius: 8, // md radius
       borderWidth: 1,
-      borderColor: theme === 'dark' ? '#6B7280' : '#D1D5DB',
+      borderColor: theme === 'dark' ? NestSyncColors.neutral[500] : NestSyncColors.neutral[300],
+      minHeight: 36, // Comfortable touch target for small buttons
     },
     skipButtonText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#D1D5DB' : '#6B7280',
+      fontSize: 12, // small from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[300] : NestSyncColors.neutral[500],
     },
     // Action Buttons Section
     actionsContainer: {
       marginHorizontal: 16,
-      marginTop: 24,
-      gap: 12,
+      marginTop: 24, // xxl spacing
+      gap: 12, // md spacing
     },
     actionButton: {
       backgroundColor: NestSyncColors.primary.blue,
       paddingVertical: 14,
-      paddingHorizontal: 16,
-      borderRadius: 12,
+      paddingHorizontal: 16, // lg spacing
+      borderRadius: 12, // lg radius
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
-      minHeight: 48,
+      gap: 8, // sm spacing
+      minHeight: 48, // WCAG AA minimum
     },
     actionButtonSecondary: {
-      backgroundColor: theme === 'dark' ? '#374151' : '#FFFFFF',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[700] : NestSyncColors.neutral[100],
       borderWidth: 1,
-      borderColor: theme === 'dark' ? '#4B5563' : '#D1D5DB',
+      borderColor: theme === 'dark' ? NestSyncColors.neutral[600] : NestSyncColors.neutral[200],
     },
     actionButtonEmergency: {
-      backgroundColor: '#DC2626',
+      backgroundColor: NestSyncColors.semantic.error,
     },
     actionButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 16, // subtitle from design system
+      fontWeight: '600', // semibold
       color: '#FFFFFF',
     },
     actionButtonTextSecondary: {
-      color: theme === 'dark' ? '#FFFFFF' : '#374151',
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
     },
     // Empty State
     emptyState: {
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 48,
-      paddingHorizontal: 24,
+      paddingHorizontal: 24, // xxl spacing
     },
     emptyStateIcon: {
-      marginBottom: 16,
+      marginBottom: 16, // lg spacing
     },
     emptyStateTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
-      marginBottom: 8,
+      fontSize: 20, // title from design system
+      fontWeight: '600', // semibold
+      color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
+      marginBottom: 8, // sm spacing
       textAlign: 'center',
     },
     emptyStateDescription: {
-      fontSize: 14,
-      color: theme === 'dark' ? '#D1D5DB' : '#6B7280',
+      fontSize: 14, // body from design system
+      color: theme === 'dark' ? NestSyncColors.neutral[300] : NestSyncColors.neutral[500],
       textAlign: 'center',
       lineHeight: 20,
     },
@@ -419,14 +424,30 @@ export default function ReorderSuggestionsSimple() {
           headerTintColor: theme === 'dark' ? '#FFFFFF' : '#111827',
           headerRight: () => (
             <View style={{ flexDirection: 'row', gap: 16, marginRight: 8 }}>
-              <TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    'Reorder Help',
+                    'This dashboard shows AI-powered reorder suggestions based on your usage patterns.\n\n• Modify: Adjust quantity or delivery date\n• Skip: Postpone this order\n• Emergency Order: Place an urgent order\n\nAll predictions are based on your tracking data.',
+                    [{ text: 'Got it', style: 'default' }]
+                  );
+                }}
+                accessibilityLabel="Help"
+                accessibilityHint="Shows help information about reorder suggestions"
+              >
                 <Ionicons
                   name="help-circle-outline"
                   size={24}
                   color={theme === 'dark' ? '#FFFFFF' : '#111827'}
                 />
               </TouchableOpacity>
-              <TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  router.push('/settings');
+                }}
+                accessibilityLabel="Settings"
+                accessibilityHint="Opens app settings"
+              >
                 <Ionicons
                   name="settings-outline"
                   size={24}
@@ -485,18 +506,7 @@ export default function ReorderSuggestionsSimple() {
         )}
 
         {!isLoadingData && suggestions.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="cube-outline"
-              size={64}
-              color="#D1D5DB"
-              style={styles.emptyStateIcon}
-            />
-            <Text style={styles.emptyStateTitle}>No Upcoming Orders</Text>
-            <Text style={styles.emptyStateDescription}>
-              Start tracking diaper changes to get AI-powered reorder suggestions
-            </Text>
-          </View>
+          <NoOrdersEmptyState onCreateOrder={handleEmergencyOrder} />
         )}
 
         {suggestions.map((suggestion) => {
@@ -524,19 +534,21 @@ export default function ReorderSuggestionsSimple() {
               </View>
 
               <View style={styles.orderActions}>
-                <TouchableOpacity
-                  style={styles.modifyButton}
+                <Button
+                  title="Modify"
                   onPress={() => handleModifyOrder(suggestion.id)}
-                >
-                  <Text style={styles.modifyButtonText}>Modify</Text>
-                </TouchableOpacity>
+                  variant="secondary"
+                  size="small"
+                  style={{ borderColor: NestSyncColors.primary.blue }}
+                  textStyle={{ color: NestSyncColors.primary.blue }}
+                />
 
-                <TouchableOpacity
-                  style={styles.skipButton}
+                <Button
+                  title="Skip"
                   onPress={() => handleSkipOrder(suggestion.id)}
-                >
-                  <Text style={styles.skipButtonText}>Skip</Text>
-                </TouchableOpacity>
+                  variant="secondary"
+                  size="small"
+                />
               </View>
             </View>
           );
@@ -544,55 +556,47 @@ export default function ReorderSuggestionsSimple() {
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.actionButtonEmergency]}
+          <Button
+            title="Emergency Order"
             onPress={handleEmergencyOrder}
-          >
-            <Ionicons name="flash" size={20} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Emergency Order</Text>
-          </TouchableOpacity>
+            variant="danger"
+            size="medium"
+            fullWidth
+            icon={<Ionicons name="flash" size={20} color="#FFFFFF" />}
+            iconPosition="left"
+            style={{ backgroundColor: '#DC2626', borderColor: '#DC2626' }}
+            textStyle={{ color: '#FFFFFF' }}
+          />
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.actionButtonSecondary]}
+          <Button
+            title="View All Items"
             onPress={handleViewAllItems}
-          >
-            <Ionicons
-              name="list"
-              size={20}
-              color={theme === 'dark' ? '#FFFFFF' : '#374151'}
-            />
-            <Text style={[styles.actionButtonText, styles.actionButtonTextSecondary]}>
-              View All Items
-            </Text>
-          </TouchableOpacity>
+            variant="secondary"
+            size="medium"
+            fullWidth
+            icon={<Ionicons name="list" size={20} color={theme === 'dark' ? '#FFFFFF' : '#374151'} />}
+            iconPosition="left"
+          />
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.actionButtonSecondary]}
+          <Button
+            title="Setup New Item"
             onPress={handleSetupNewItem}
-          >
-            <Ionicons
-              name="add-circle-outline"
-              size={20}
-              color={theme === 'dark' ? '#FFFFFF' : '#374151'}
-            />
-            <Text style={[styles.actionButtonText, styles.actionButtonTextSecondary]}>
-              Setup New Item
-            </Text>
-          </TouchableOpacity>
+            variant="secondary"
+            size="medium"
+            fullWidth
+            icon={<Ionicons name="add-circle-outline" size={20} color={theme === 'dark' ? '#FFFFFF' : '#374151'} />}
+            iconPosition="left"
+          />
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.actionButtonSecondary]}
+          <Button
+            title="Order History"
             onPress={handleOrderHistory}
-          >
-            <Ionicons
-              name="time-outline"
-              size={20}
-              color={theme === 'dark' ? '#FFFFFF' : '#374151'}
-            />
-            <Text style={[styles.actionButtonText, styles.actionButtonTextSecondary]}>
-              Order History
-            </Text>
-          </TouchableOpacity>
+            variant="secondary"
+            size="medium"
+            fullWidth
+            icon={<Ionicons name="time-outline" size={20} color={theme === 'dark' ? '#FFFFFF' : '#374151'} />}
+            iconPosition="left"
+          />
         </View>
 
         {/* Canadian Trust Badge */}

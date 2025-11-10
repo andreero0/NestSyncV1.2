@@ -97,7 +97,15 @@ export default function AddInventoryItem() {
       <Stack.Screen
         options={{
           title: 'Add Item',
+          headerShown: true,
           headerBackTitle: 'Back',
+          headerStyle: {
+            backgroundColor: theme === 'dark' ? NestSyncColors.neutral[900] : '#FFFFFF',
+          },
+          headerTintColor: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[800],
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
         }}
       />
       <ScrollView>

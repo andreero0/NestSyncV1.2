@@ -1,0 +1,15 @@
+{
+  "name": "design-audit-scripts",
+  "version": "1.0.0",
+  "description": "Design system audit automation scripts",
+  "scripts": {
+    "audit": "node run-full-audit.js",
+    "capture-reference": "node capture-reference-screens.js",
+    "capture-inconsistent": "node capture-inconsistent-screens.js",
+    "extract-tokens": "node extract-design-tokens.js",
+    "generate-report": "node generate-audit-report.js"
+  },
+  "dependencies": {
+    "playwright": "^1.55.1"
+  }
+}

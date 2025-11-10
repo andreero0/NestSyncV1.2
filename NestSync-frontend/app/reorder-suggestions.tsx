@@ -525,35 +525,35 @@ const styles = StyleSheet.create({
 
   // Screen Header
   screenHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 20, // xl spacing
+    paddingVertical: 16, // lg spacing
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: NestSyncColors.neutral[200],
   },
   headerContent: {
-    marginBottom: 12,
+    marginBottom: 12, // md spacing
   },
   screenTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 28, // largeTitle from design system
+    fontWeight: '700', // bold
+    marginBottom: 4, // xs spacing
   },
   screenSubtitle: {
-    fontSize: 14,
+    fontSize: 14, // body from design system
     lineHeight: 20,
   },
   trustBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 8, // sm spacing
+    paddingVertical: 4, // xs spacing
+    borderRadius: 8, // md radius
     borderWidth: 1,
-    gap: 4,
+    gap: 4, // xs spacing
   },
   trustText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 11, // caption from design system
+    fontWeight: '500', // medium
   },
 });

@@ -399,9 +399,9 @@ export function useCancelSubscription() {
     refetchQueries: [{ query: GET_MY_SUBSCRIPTION }],
   });
 
-  const cancelSubscription = async (input: CancelSubscriptionInput) => {
+  const cancelSubscriptionPremium = async (variables: { input: CancelSubscriptionInput }) => {
     try {
-      const result = await cancelMutation({ variables: { input } });
+      const result = await cancelMutation({ variables });
       return result.data?.cancelSubscriptionPremium;
     } catch (err) {
       throw err;
@@ -409,7 +409,7 @@ export function useCancelSubscription() {
   };
 
   return {
-    cancelSubscription,
+    cancelSubscriptionPremium,
     data: data?.cancelSubscriptionPremium,
     loading,
     error,

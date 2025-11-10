@@ -1,0 +1,111 @@
+{
+  "timestamp": "2025-11-09T22:52:37.295Z",
+  "referenceScreens": [
+    {
+      "name": "home",
+      "path": "/",
+      "description": "Dashboard Home Screen"
+    },
+    {
+      "name": "settings",
+      "path": "/profile-settings",
+      "description": "Settings Screen"
+    }
+  ],
+  "inconsistentScreens": [
+    {
+      "name": "subscription-management",
+      "path": "/subscription-management",
+      "description": "Premium Upgrade Flow"
+    },
+    {
+      "name": "reorder-suggestions",
+      "path": "/reorder-suggestions-simple",
+      "description": "Reorder Flow"
+    },
+    {
+      "name": "size-guide",
+      "path": "/size-guide",
+      "description": "Size Prediction Interface"
+    }
+  ],
+  "designTokens": {
+    "colors": {
+      "primary": {
+        "blue": "#0891B2",
+        "blueDark": "#0E7490",
+        "blueLight": "#E0F2FE"
+      },
+      "secondary": {
+        "green": "#059669",
+        "greenLight": "#D1FAE5",
+        "greenPale": "#F0FDF4"
+      },
+      "accent": {
+        "orange": "#EA580C",
+        "amber": "#D97706",
+        "purple": "#7C3AED"
+      },
+      "neutral": {
+        "50": "#F9FAFB",
+        "100": "#F3F4F6",
+        "200": "#E5E7EB",
+        "300": "#D1D5DB",
+        "400": "#9CA3AF",
+        "500": "#6B7280",
+        "600": "#4B5563",
+        "700": "#374151",
+        "800": "#1F2937",
+        "900": "#111827"
+      }
+    },
+    "typography": {
+      "sizes": {
+        "caption": 11,
+        "small": 12,
+        "body": 14,
+        "subtitle": 16,
+        "title": 20,
+        "largeTitle": 28
+      },
+      "weights": {
+        "regular": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "spacing": {
+      "baseUnit": 4,
+      "xs": 4,
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 20,
+      "xxl": 24
+    },
+    "borderRadius": {
+      "sm": 6,
+      "md": 8,
+      "lg": 12,
+      "xl": 16
+    },
+    "touchTargets": {
+      "minimum": 48
+    }
+  },
+  "instructions": {
+    "step1": "Capture screenshots of reference screens (home, settings)",
+    "step2": "Capture screenshots of inconsistent screens (subscription, reorder, size guide)",
+    "step3": "Extract design tokens from reference screens",
+    "step4": "Compare inconsistent screens against design tokens",
+    "step5": "Calculate compliance scores for each metric",
+    "step6": "Document specific visual gaps and inconsistencies"
+  },
+  "complianceMetrics": {
+    "colorCompliance": "Percentage of colors matching design tokens",
+    "typographyCompliance": "Percentage of text using correct sizes/weights",
+    "spacingCompliance": "Percentage of spacing using 4px base unit",
+    "touchTargetCompliance": "Percentage of buttons meeting 48px minimum"
+  }
+}

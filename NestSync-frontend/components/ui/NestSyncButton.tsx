@@ -189,14 +189,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44, // Minimum touch target for accessibility
+    minHeight: 48, // WCAG AA minimum touch target
   },
 
   // Size variants
   small: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    minHeight: 36,
+    minHeight: 48, // WCAG AA minimum touch target
   },
   medium: {
     paddingVertical: 14,

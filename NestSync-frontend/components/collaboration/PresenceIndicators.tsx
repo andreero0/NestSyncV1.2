@@ -187,7 +187,8 @@ export default function PresenceIndicators({
           </ThemedText>
         </View>
 
-        {lastUpdate > 0 && (
+        {/* Last update timestamp hidden - background refresh is silent */}
+        {false && lastUpdate > 0 && (
           <ThemedText style={[styles.lastUpdate, { color: colors.textSecondary }]}>
             Updated {formatLastSeen(new Date(lastUpdate).toISOString())}
           </ThemedText>
@@ -256,8 +257,8 @@ export default function PresenceIndicators({
         </View>
       )}
 
-      {/* Loading state */}
-      {isLoading && (
+      {/* Loading state - Hidden for better UX, background refresh is silent */}
+      {false && isLoading && (
         <View style={styles.loadingContainer}>
           <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
             Updating presence...

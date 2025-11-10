@@ -9,6 +9,8 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { ChildSelector } from '@/components/ui/ChildSelector';
 import { StatusOverviewGrid } from '@/components/cards/StatusOverviewGrid';
+import { Button } from '@/components/ui/Button';
+import { NoChildrenEmptyState, NoActivityEmptyState } from '@/components/ui/EmptyState';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
@@ -473,24 +475,7 @@ export default function HomeScreen() {
 
           {/* No Children State */}
           {noChildrenState && (
-            <ThemedView style={[styles.noChildrenContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <IconSymbol name="figure.2.and.child.holdinghands" size={48} color={colors.textSecondary} />
-              <ThemedText type="title" style={[styles.noChildrenTitle, { color: colors.text }]}>
-                No Children Added
-              </ThemedText>
-              <ThemedText style={[styles.noChildrenText, { color: colors.textSecondary }]}>
-                You haven't added any children to your account yet. Complete the onboarding process to add your first child and start tracking diaper usage.
-              </ThemedText>
-              <TouchableOpacity
-                style={[styles.noChildrenButton, { backgroundColor: colors.tint }]}
-                onPress={() => setAddChildModalVisible(true)}
-              >
-                <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-                <ThemedText style={styles.noChildrenButtonText}>
-                  Add Child
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
+            <NoChildrenEmptyState onAddChild={() => setAddChildModalVisible(true)} />
           )}
 
           {/* Presence Indicators - show active caregivers when collaboration is enabled */}
@@ -511,13 +496,11 @@ export default function HomeScreen() {
                 Inventory Status
               </ThemedText>
               
-              {/* Loading state for traffic light data */}
+              {/* Loading state for traffic light data - Hidden for better UX */}
               {(childrenLoading || trafficLightLoading) && (
                 <View style={[styles.loadingContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <ActivityIndicator size="small" color={colors.tint} />
-                  <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-                    Loading inventory status...
-                  </ThemedText>
+                  {/* Loading text hidden - background refresh is silent */}
                 </View>
               )}
               
@@ -633,15 +616,7 @@ export default function HomeScreen() {
             
             {/* Empty state */}
             {showEmptyState && (
-              <View style={[styles.emptyActivityContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <IconSymbol name="clock.fill" size={24} color={colors.textSecondary} />
-                <ThemedText type="defaultSemiBold" style={[styles.emptyActivityTitle, { color: colors.text }]}>
-                  No recent activity
-                </ThemedText>
-                <ThemedText style={[styles.emptyActivityText, { color: colors.textSecondary }]}>
-                  Start logging diaper changes to see activity here
-                </ThemedText>
-              </View>
+              <NoActivityEmptyState onLogChange={() => setQuickLogModalVisible(true)} />
             )}
             
             {/* Activity items - Optimized rendering with map */}

@@ -1,6 +1,6 @@
-# NestSync Onboarding Validation Framework
+# NestSync Validation Documentation
 
-Comprehensive validation system for assessing the NestSync onboarding implementation against design specifications, with focus on Canadian trust-building psychology and persona-specific experiences.
+Comprehensive validation system for assessing NestSync implementation against design specifications, including onboarding validation, design system compliance, accessibility testing, and visual regression testing.
 
 ---
 title: Validation Framework Overview
@@ -31,7 +31,116 @@ This validation framework provides a systematic approach for validating the Nest
 - **Persona Experience Assessment** - Each user persona's journey effectiveness
 - **Implementation Gap Identification** - Systematic process for finding and prioritizing issues
 
-## Framework Components
+## Documentation Overview
+
+This directory contains comprehensive validation documentation for the NestSync application, organized into two main categories:
+
+1. **Onboarding Validation** - Validation framework for onboarding implementation
+2. **Design System Compliance** - Design system audit, compliance checklist, and usage guidelines
+
+## Design System Compliance Documentation
+
+### 1. Design System Compliance Checklist
+**File**: `design-system-compliance-checklist.md`
+
+**Comprehensive reference for all NestSync design system tokens:**
+- Complete color token reference with usage guidelines
+- Typography tokens with sizes, weights, and line heights
+- Spacing tokens with 4px base unit system
+- Border radius, shadow, and touch target standards
+- Glass UI tokens and presets
+- Validation checklist for component review
+- Quick reference for common patterns
+
+**Key Features:**
+- 45 color tokens across 7 categories
+- 6 font sizes and 4 font weights
+- 6 spacing values (4px base unit)
+- 4 border radius values
+- 3 shadow presets
+- 48px minimum touch target standard
+- Code examples for all tokens
+
+### 2. Component Usage Guidelines
+**File**: `component-usage-guidelines.md`
+
+**Practical guidelines and code examples for implementing design system compliant components:**
+- Button components (primary, secondary, icon)
+- Card components (standard, glass)
+- Typography components (heading, body, caption)
+- Input components (text input, validation)
+- Badge and alert components
+- List components
+- Best practices and testing checklists
+
+**Key Features:**
+- Complete code examples for all components
+- Do's and don'ts for each pattern
+- Accessibility implementation examples
+- Testing checklists (visual, accessibility, responsive)
+- Platform-specific considerations
+
+### 3. Design System Audit Report
+**File**: `design-system-audit-report.md`
+
+**Comprehensive audit of design system compliance across the application:**
+- Executive summary with key findings
+- Audit methodology and process
+- Detailed findings by screen (premium upgrade, reorder, size prediction, payments)
+- Before/after compliance scores
+- Accessibility improvements (WCAG AA compliance)
+- Canadian tax display implementation
+- Trial banner implementation
+- Automated testing implementation
+- Lessons learned and recommendations
+
+**Key Achievements:**
+- 87% overall compliance (up from 62%)
+- 100% design token adoption
+- 98% WCAG AA compliance (up from 69%)
+- 98% touch target compliance (up from 62%)
+- 31 visual regression tests
+- 27 design compliance tests
+- 23 accessibility tests
+
+### 4. Lessons Learned: Design Consistency
+**File**: `lessons-learned-design-consistency.md`
+
+**Key lessons learned during design consistency implementation:**
+- Design system implementation lessons
+- Accessibility implementation lessons
+- Automated testing lessons
+- Component architecture lessons
+- Team collaboration lessons
+- Platform-specific considerations
+- Canadian context lessons
+- Future recommendations
+
+**Key Takeaways:**
+- Centralize design tokens early
+- Enforce 4px base unit spacing
+- Use standard typography
+- Ensure 48px minimum touch targets
+- Validate color contrast
+- Include accessibility attributes
+- Implement visual regression testing
+- Automate design compliance testing
+- Test on physical devices
+- Separate logic from presentation
+
+### 5. Screenshot Documentation
+**Directory**: `.playwright-mcp/`
+
+**Before and after screenshots for visual comparison:**
+- Dashboard home screen
+- Planner reorder suggestions
+- Settings privacy (PIPEDA)
+- Subscription management (CAD pricing)
+- Inventory management
+- Children profiles management
+- Mobile responsive views
+
+## Onboarding Validation Documentation
 
 ### 1. Core Validation Framework
 **File**: `onboarding-validation-framework.md`
@@ -334,3 +443,87 @@ Target Score: 8.5/10
 - [ ] Long-term strategy alignment verification
 
 This comprehensive validation framework ensures that the NestSync onboarding implementation achieves its design goals of building trust with Canadian parents while providing persona-optimized experiences that reduce stress and increase successful app adoption. The systematic approach enables efficient identification and resolution of gaps while maintaining high quality standards throughout the development process.
+
+## Related Test Documentation
+
+### Automated Test Suites
+
+**Visual Regression Tests**:
+- **File**: `NestSync-frontend/tests/visual-regression.spec.ts`
+- **Config**: `NestSync-frontend/playwright.visual-regression.config.ts`
+- **Documentation**: `NestSync-frontend/tests/VISUAL_REGRESSION_TESTS.md`
+- **Coverage**: 31 tests across 5 viewports (mobile, tablet, desktop)
+
+**Design Compliance Tests**:
+- **File**: `NestSync-frontend/tests/design-system-compliance.spec.ts`
+- **Config**: `NestSync-frontend/playwright.design-compliance.config.ts`
+- **Documentation**: `NestSync-frontend/tests/DESIGN_COMPLIANCE_TESTS_SUMMARY.md`
+- **Coverage**: 27 tests for colors, typography, spacing, touch targets, Canadian tax
+
+**Accessibility Compliance Tests**:
+- **File**: `NestSync-frontend/tests/accessibility-compliance.spec.ts`
+- **Config**: `NestSync-frontend/playwright.accessibility.config.ts`
+- **Documentation**: `NestSync-frontend/tests/ACCESSIBILITY_COMPLIANCE_TESTS.md`
+- **Coverage**: 23 tests for WCAG AA compliance
+
+### Running Tests
+
+```bash
+# Visual regression tests
+cd NestSync-frontend
+npx playwright test --config=playwright.visual-regression.config.ts
+
+# Design compliance tests
+npx playwright test --config=playwright.design-compliance.config.ts
+
+# Accessibility compliance tests
+npx playwright test --config=playwright.accessibility.config.ts
+
+# All tests
+npx playwright test
+```
+
+### Test Results
+
+Test results are saved to:
+- **Visual Regression**: `test-results/visual-regression/`
+- **Design Compliance**: `test-results/design-compliance/`
+- **Accessibility**: `test-results/accessibility/`
+
+View HTML reports:
+```bash
+npx playwright show-report test-results/visual-regression-report
+npx playwright show-report test-results/design-compliance-report
+npx playwright show-report test-results/accessibility-report
+```
+
+## Quick Links
+
+### Design System Documentation
+- [Design System Compliance Checklist](./design-system-compliance-checklist.md)
+- [Component Usage Guidelines](./component-usage-guidelines.md)
+- [Design System Audit Report](./design-system-audit-report.md)
+- [Lessons Learned: Design Consistency](./lessons-learned-design-consistency.md)
+
+### Onboarding Validation Documentation
+- [Onboarding Validation Framework](./onboarding-validation-framework.md)
+- [Psychology Validation Criteria](./psychology-validation-criteria.md)
+- [Canadian Context Validation](./canadian-context-validation.md)
+- [Persona Experience Validation](./persona-experience-validation.md)
+- [Gap Identification Methodology](./gap-identification-methodology.md)
+
+### Test Documentation
+- [Visual Regression Tests](../../NestSync-frontend/tests/VISUAL_REGRESSION_TESTS.md)
+- [Design Compliance Tests](../../NestSync-frontend/tests/DESIGN_COMPLIANCE_TESTS_SUMMARY.md)
+- [Accessibility Compliance Tests](../../NestSync-frontend/tests/ACCESSIBILITY_COMPLIANCE_TESTS.md)
+- [Comprehensive Test Documentation](../../NestSync-frontend/tests/COMPREHENSIVE_TEST_DOCUMENTATION.md)
+
+### Design System Reference
+- [Colors.ts](../../NestSync-frontend/constants/Colors.ts)
+- [GlassUI.ts](../../NestSync-frontend/constants/GlassUI.ts)
+
+---
+
+**Last Updated**: November 10, 2025  
+**Version**: 2.0.0  
+**Maintained By**: NestSync Design Team

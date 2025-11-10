@@ -72,18 +72,18 @@ export default function OrderHistory({}: OrderHistoryProps) {
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case 'DELIVERED':
-        return NestSyncColors.secondary.green;
+        return NestSyncColors.secondary.green; // Success state
       case 'SHIPPED':
       case 'IN_TRANSIT':
-        return NestSyncColors.primary.blue;
+        return NestSyncColors.primary.blue; // Active state
       case 'PENDING':
       case 'PROCESSING':
-        return NestSyncColors.accent.orange;
+        return NestSyncColors.accent.amber; // Warning/attention state (design system)
       case 'CANCELLED':
       case 'FAILED':
-        return NestSyncColors.semantic.error;
+        return NestSyncColors.semantic.error; // Error state
       default:
-        return NestSyncColors.neutral[500];
+        return NestSyncColors.neutral[500]; // Neutral state
     }
   };
 
@@ -154,9 +154,10 @@ export default function OrderHistory({}: OrderHistoryProps) {
     },
     retryButton: {
       backgroundColor: NestSyncColors.primary.blue,
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 8,
+      paddingVertical: 12, // md spacing (design system)
+      paddingHorizontal: 24, // xxl spacing (design system)
+      borderRadius: 12, // lg radius for buttons (design system)
+      minHeight: 48, // Touch target minimum (design system)
     },
     retryButtonText: {
       color: '#FFFFFF',
@@ -190,9 +191,10 @@ export default function OrderHistory({}: OrderHistoryProps) {
     },
     startShoppingButton: {
       backgroundColor: NestSyncColors.primary.blue,
-      paddingVertical: 14,
-      paddingHorizontal: 24,
-      borderRadius: 12,
+      paddingVertical: 12, // md spacing (design system)
+      paddingHorizontal: 24, // xxl spacing (design system)
+      borderRadius: 12, // lg radius for buttons (design system)
+      minHeight: 48, // Touch target minimum (design system)
     },
     startShoppingButtonText: {
       color: '#FFFFFF',
@@ -204,13 +206,15 @@ export default function OrderHistory({}: OrderHistoryProps) {
       backgroundColor: theme === 'dark' ? '#374151' : '#FFFFFF',
       marginHorizontal: 16,
       marginTop: 16,
-      borderRadius: 12,
-      padding: 16,
+      borderRadius: 12, // lg radius for cards (design system)
+      padding: 16, // lg spacing (design system)
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? '#4B5563' : NestSyncColors.neutral[200],
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 1 }, // sm shadow (design system)
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
     },
     orderHeader: {
       flexDirection: 'row',
@@ -231,11 +235,11 @@ export default function OrderHistory({}: OrderHistoryProps) {
       alignItems: 'center',
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 12,
+      borderRadius: 6, // sm radius for badges (design system)
       gap: 4,
     },
     statusText: {
-      fontSize: 12,
+      fontSize: 11, // caption size for badges (design system)
       fontWeight: '600',
       color: '#FFFFFF',
     },
@@ -295,8 +299,10 @@ export default function OrderHistory({}: OrderHistoryProps) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 10,
-      borderRadius: 8,
+      paddingVertical: 12, // md spacing (design system)
+      paddingHorizontal: 16, // lg spacing (design system)
+      borderRadius: 12, // lg radius for buttons (design system)
+      minHeight: 48, // Touch target minimum (design system)
       gap: 6,
     },
     primaryActionButton: {
@@ -305,7 +311,7 @@ export default function OrderHistory({}: OrderHistoryProps) {
     secondaryActionButton: {
       backgroundColor: 'transparent',
       borderWidth: 1,
-      borderColor: theme === 'dark' ? '#4B5563' : '#D1D5DB',
+      borderColor: theme === 'dark' ? NestSyncColors.neutral[600] : NestSyncColors.neutral[300],
     },
     actionButtonText: {
       fontSize: 14,
@@ -342,9 +348,12 @@ export default function OrderHistory({}: OrderHistoryProps) {
             headerShown: true,
             headerBackTitle: 'Back',
             headerStyle: {
-              backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
+              backgroundColor: theme === 'dark' ? NestSyncColors.neutral[900] : '#FFFFFF',
             },
-            headerTintColor: theme === 'dark' ? '#FFFFFF' : '#111827',
+            headerTintColor: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[800],
+            headerTitleStyle: {
+              fontWeight: '600',
+            },
           }}
         />
         <View style={styles.loadingContainer}>
@@ -365,9 +374,12 @@ export default function OrderHistory({}: OrderHistoryProps) {
             headerShown: true,
             headerBackTitle: 'Back',
             headerStyle: {
-              backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
+              backgroundColor: theme === 'dark' ? NestSyncColors.neutral[900] : '#FFFFFF',
             },
-            headerTintColor: theme === 'dark' ? '#FFFFFF' : '#111827',
+            headerTintColor: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[800],
+            headerTitleStyle: {
+              fontWeight: '600',
+            },
           }}
         />
         <View style={styles.errorContainer}>
@@ -399,9 +411,12 @@ export default function OrderHistory({}: OrderHistoryProps) {
             headerShown: true,
             headerBackTitle: 'Back',
             headerStyle: {
-              backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
+              backgroundColor: theme === 'dark' ? NestSyncColors.neutral[900] : '#FFFFFF',
             },
-            headerTintColor: theme === 'dark' ? '#FFFFFF' : '#111827',
+            headerTintColor: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[800],
+            headerTitleStyle: {
+              fontWeight: '600',
+            },
           }}
         />
         <View style={styles.emptyContainer}>
@@ -435,9 +450,12 @@ export default function OrderHistory({}: OrderHistoryProps) {
           headerShown: true,
           headerBackTitle: 'Back',
           headerStyle: {
-            backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
+            backgroundColor: theme === 'dark' ? NestSyncColors.neutral[900] : '#FFFFFF',
           },
-          headerTintColor: theme === 'dark' ? '#FFFFFF' : '#111827',
+          headerTintColor: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[800],
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
         }}
       />
 

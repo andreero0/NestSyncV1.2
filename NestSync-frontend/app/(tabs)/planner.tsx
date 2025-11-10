@@ -83,8 +83,17 @@ export default function PlannerScreen() {
   const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
   const params = useLocalSearchParams<{ filter?: FilterType; childId?: string; view?: PlannerView }>();
   
-  const [currentView, setCurrentView] = useState<PlannerView>(params.view || 'planner');
-  const [activeFilter, setActiveFilter] = useState<FilterType>(params.filter || 'all');
+  // Persist planner state across navigation
+  const [storedView, setStoredView] = useAsyncStorage('nestsync_planner_view');
+  const [storedFilter, setStoredFilter] = useAsyncStorage('nestsync_planner_filter');
+  
+  // Initialize state from params OR stored values (params take precedence)
+  const [currentView, setCurrentView] = useState<PlannerView>(
+    params.view || (storedView as PlannerView) || 'planner'
+  );
+  const [activeFilter, setActiveFilter] = useState<FilterType>(
+    params.filter || (storedFilter as FilterType) || 'all'
+  );
   
   // Modal state for editing inventory items
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
@@ -160,6 +169,16 @@ export default function PlannerScreen() {
     }
   }, [childId, storedChildId, setStoredChildId]);
 
+  // Persist view state when it changes
+  useEffect(() => {
+    setStoredView(currentView);
+  }, [currentView, setStoredView]);
+
+  // Persist filter state when it changes
+  useEffect(() => {
+    setStoredFilter(activeFilter);
+  }, [activeFilter, setStoredFilter]);
+
   // Set filter from URL params when component mounts or params change
   useEffect(() => {
     // Always sync activeFilter with URL params when params change
@@ -171,7 +190,14 @@ export default function PlannerScreen() {
         setCurrentView('inventory');
       }
     }
-  }, [params.filter, activeFilter]);
+  }, [params.filter]);
+
+  // Set view from URL params when component mounts or params change
+  useEffect(() => {
+    if (params.view) {
+      setCurrentView(params.view);
+    }
+  }, [params.view]);
 
   // Show analytics discovery tooltip for trial users when they switch to analytics view
   useEffect(() => {
@@ -430,7 +456,10 @@ export default function PlannerScreen() {
                         borderColor: isActive ? getFilterColor(filterType) : colors.border
                       }
                     ]}
-                    onPress={() => setActiveFilter(filterType)}
+                    onPress={() => {
+                      setActiveFilter(filterType);
+                      router.setParams({ filter: filterType });
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={`Filter by ${getFilterLabel(filterType)}`}
                   >

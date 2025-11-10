@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNestSyncTheme } from '@/contexts/ThemeContext';
-import { Colors } from '@/constants/Colors';
+import { Colors, NestSyncColors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useFeatureAccess } from '@/lib/hooks/useSubscription';
 
@@ -200,13 +200,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 20, // 5 × 4px base unit
   },
   content: {
     width: '100%',
     maxWidth: 400,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 20, // 5 × 4px base unit (rounded modal)
+    padding: 24, // 6 × 4px base unit
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -216,36 +216,40 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 16,
-    right: 16,
+    top: 16, // 4 × 4px base unit
+    right: 16, // 4 × 4px base unit
     zIndex: 1,
-    padding: 4,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    padding: 12, // 3 × 4px base unit (updated from 4px for better touch target)
+    minHeight: 48, // WCAG AA minimum touch target
+    minWidth: 48, // WCAG AA minimum touch target
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  iconContainer: {
+    width: 80, // 20 × 4px base unit
+    height: 80, // 20 × 4px base unit
+    borderRadius: 40, // Circular (half of width/height)
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16, // 4 × 4px base unit
   },
   title: {
-    fontSize: 24,
+    fontSize: 24, // Large title size
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 12, // 3 × 4px base unit
   },
   description: {
-    fontSize: 16,
+    fontSize: 16, // Subtitle size
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 20,
+    lineHeight: 24, // 6 × 4px base unit
+    marginBottom: 20, // 5 × 4px base unit
   },
   pricingBadge: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginBottom: 20,
+    paddingHorizontal: 20, // 5 × 4px base unit
+    paddingVertical: 12, // 3 × 4px base unit (updated from 10px)
+    borderRadius: 20, // 5 × 4px base unit (rounded pill)
+    marginBottom: 20, // 5 × 4px base unit
   },
   pricingText: {
     fontSize: 18,
@@ -279,9 +283,10 @@ const styles = StyleSheet.create({
   },
   upgradeButton: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 16, // 4 × 4px base unit
+    borderRadius: 12, // Large border radius for buttons
     alignItems: 'center',
+    minHeight: 56, // Exceeds 48px minimum for primary CTA
   },
   upgradeButtonText: {
     color: '#FFFFFF',
@@ -290,8 +295,9 @@ const styles = StyleSheet.create({
   },
   laterButton: {
     width: '100%',
-    paddingVertical: 12,
+    paddingVertical: 12, // 3 × 4px base unit
     alignItems: 'center',
+    minHeight: 48, // WCAG AA minimum touch target
   },
   laterButtonText: {
     fontSize: 16,

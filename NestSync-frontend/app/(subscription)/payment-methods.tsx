@@ -57,7 +57,7 @@ if (Platform.OS !== 'web') {
 }
 
 import { useNestSyncTheme } from '@/contexts/ThemeContext';
-import { Colors } from '@/constants/Colors';
+import { Colors, NestSyncColors } from '@/constants/Colors';
 import {
   useMyPaymentMethods,
   useAddPaymentMethod,
@@ -683,8 +683,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   backButton: {
-    padding: 8,
-    marginRight: 12,
+    padding: 12, // 3 × 4px base unit (updated from 8px)
+    marginRight: 12, // 3 × 4px base unit
+    minHeight: 48, // WCAG AA minimum touch target
+    minWidth: 48, // WCAG AA minimum touch target
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 24,
@@ -762,16 +766,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 12, // 3 × 4px base unit
+    paddingVertical: 12, // 3 × 4px base unit (updated from 6px for better touch target)
+    borderRadius: 12, // Large border radius (updated from 8px)
+    minHeight: 48, // WCAG AA minimum touch target
   },
   actionButtonText: {
     fontSize: 13,
     fontWeight: '600',
   },
   removeButton: {
-    padding: 8,
+    padding: 12, // 3 × 4px base unit (updated from 8px)
+    minHeight: 48, // WCAG AA minimum touch target
+    minWidth: 48, // WCAG AA minimum touch target
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addCardSection: {
     marginBottom: 24,
@@ -803,7 +812,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   closeButton: {
-    padding: 4,
+    padding: 12, // 3 × 4px base unit (updated from 4px for better touch target)
+    minHeight: 48, // WCAG AA minimum touch target
+    minWidth: 48, // WCAG AA minimum touch target
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardField: {
     width: '100%',
@@ -812,17 +825,18 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 12, // Large border radius (updated from 8px)
+    padding: 16, // 4 × 4px base unit
+    marginBottom: 16, // 4 × 4px base unit
   },
   textInput: {
-    height: 50,
+    minHeight: 48, // WCAG AA minimum touch target (updated from height: 50)
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 20,
+    borderRadius: 12, // Large border radius (updated from 8px)
+    paddingHorizontal: 16, // 4 × 4px base unit
+    paddingVertical: 12, // 3 × 4px base unit
+    fontSize: 16, // Subtitle size
+    marginBottom: 20, // 5 × 4px base unit
   },
   submitButton: {
     padding: 16,
@@ -876,9 +890,9 @@ const styles = StyleSheet.create({
   pipedaNotice: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
+    padding: 12, // 3 × 4px base unit
+    borderRadius: 12, // Large border radius (updated from 8px)
+    gap: 8, // 2 × 4px base unit
   },
   pipedaText: {
     flex: 1,
