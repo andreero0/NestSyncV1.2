@@ -705,10 +705,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -5 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
+        boxShadow: '0px -5px 20px rgba(0, 0, NaN, 0.15)',
       },
       android: {
         elevation: 20,
