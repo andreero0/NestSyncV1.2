@@ -45,16 +45,13 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install dependencies
-      run: |
-        cd NestSync-backend
-        pip install -r requirements.txt
-
     - name: Python syntax check
       run: |
         cd NestSync-backend
+        # Syntax check doesn't require dependencies - just compile bytecode
         # Use find to compile all Python files recursively
         find app -name "*.py" -type f -exec python -m py_compile {} +
+        echo "✓ All Python files compiled successfully"
 
   security-scan:
     name: Security Scan
