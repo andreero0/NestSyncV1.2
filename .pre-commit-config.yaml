@@ -1,0 +1,189 @@
+# Pre-commit hooks for NestSync
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # =============================================================================
+  # General Code Quality
+  # =============================================================================
+  
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix end of files
+      - id: check-yaml
+        name: Check YAML syntax
+        args: ['--unsafe']  # Allow custom tags
+      - id: check-json
+        name: Check JSON syntax
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+      - id: detect-private-key
+        name: Detect private keys
+      - id: mixed-line-ending
+        name: Check line endings
+        args: ['--fix=lf']
+
+  # =============================================================================
+  # Security Scanning - Semgrep
+  # =============================================================================
+  
+  - repo: https://github.com/returntocorp/semgrep
+    rev: v1.99.0
+    hooks:
+      - id: semgrep
+        name: Semgrep Security Scan
+        args:
+          - --config=auto
+          - --config=p/security-audit
+          - --config=p/secrets
+          - --config=p/owasp-top-ten
+          - --error
+          - --skip-unknown-extensions
+        files: \.(py|js|ts|tsx|jsx)$
+        exclude: |
+          (?x)^(
+            node_modules/|
+            venv/|
+            .venv/|
+            dist/|
+            build/|
+            .expo/|
+            alembic/versions/
+          )
+
+  # =============================================================================
+  # Python Security - Bandit
+  # =============================================================================
+  
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        name: Bandit Python Security
+        args:
+          - -c
+          - NestSync-backend/.bandit
+          - -r
+          - NestSync-backend/app/
+        files: ^NestSync-backend/.*\.py$
+        exclude: |
+          (?x)^(
+            NestSync-backend/tests/|
+            NestSync-backend/venv/|
+            NestSync-backend/alembic/versions/
+          )
+
+  # =============================================================================
+  # Python Code Quality
+  # =============================================================================
+  
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        name: Black Python Formatter
+        files: ^NestSync-backend/.*\.py$
+        args: ['--line-length=100']
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort Import Sorter
+        files: ^NestSync-backend/.*\.py$
+        args: ['--profile', 'black', '--line-length', '100']
+
+  # =============================================================================
+  # JavaScript/TypeScript Security
+  # =============================================================================
+  
+  - repo: local
+    hooks:
+      - id: eslint-security
+        name: ESLint Security Check
+        entry: bash -c 'cd NestSync-frontend && npm run lint'
+        language: system
+        files: ^NestSync-frontend/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
+
+  # =============================================================================
+  # Secrets Detection
+  # =============================================================================
+  
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: Detect Secrets
+        args:
+          - --baseline
+          - .secrets.baseline
+        exclude: |
+          (?x)^(
+            package-lock.json|
+            .*\.lock|
+            .*\.log|
+            .*/test-results/|
+            .*/node_modules/
+          )
+
+  # =============================================================================
+  # Dockerfile Security
+  # =============================================================================
+  
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        name: Hadolint Dockerfile Linter
+        files: Dockerfile.*
+
+  # =============================================================================
+  # YAML Security
+  # =============================================================================
+  
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        name: YAML Linter
+        args: ['-d', '{extends: default, rules: {line-length: {max: 120}}}']
+        files: \.(yaml|yml)$
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+default_language_version:
+  python: python3.11
+  node: '18'
+
+# Fail fast - stop on first failure
+fail_fast: false
+
+# Minimum pre-commit version
+minimum_pre_commit_version: '3.0.0'
+
+# =============================================================================
+# CI Configuration
+# =============================================================================
+
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+    
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

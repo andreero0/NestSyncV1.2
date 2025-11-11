@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run JSX structure validation
+echo "🔍 Checking JSX structure..."
+node scripts/audit-jsx-violations.js --dry-run
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ JSX structure violations found!"
+  echo "Run 'node scripts/fix-jsx-violations.js' to fix automatically"
+  echo "Or fix manually and commit again"
+  exit 1
+fi
+
+echo "✅ JSX structure check passed"
+
+# Run ESLint
+echo "🔍 Running ESLint..."
+npm run lint
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ ESLint errors found!"
+  echo "Fix the errors and commit again"
+  exit 1
+fi
+
+echo "✅ All checks passed"

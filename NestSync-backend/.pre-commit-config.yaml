@@ -1,0 +1,107 @@
+# Pre-commit hooks for NestSync Backend
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Security scanning with Bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: '1.7.5'
+    hooks:
+      - id: bandit
+        name: Bandit Security Linter
+        args: ['-c', '.bandit', '-r', 'app/']
+        exclude: ^(tests/|venv/|node_modules/|alembic/versions/|scripts/archive/)
+        
+  # Python code formatting
+  - repo: https://github.com/psf/black
+    rev: '23.11.0'
+    hooks:
+      - id: black
+        name: Black Code Formatter
+        language_version: python3.9
+        exclude: ^(venv/|node_modules/|alembic/versions/)
+        
+  # Import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: '5.12.0'
+    hooks:
+      - id: isort
+        name: isort Import Sorter
+        args: ['--profile', 'black']
+        exclude: ^(venv/|node_modules/)
+        
+  # Linting with flake8
+  - repo: https://github.com/PyCQA/flake8
+    rev: '6.1.0'
+    hooks:
+      - id: flake8
+        name: Flake8 Linter
+        args: ['--max-line-length=120', '--extend-ignore=E203,W503']
+        exclude: ^(venv/|node_modules/|alembic/versions/)
+        
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.7.1'
+    hooks:
+      - id: mypy
+        name: MyPy Type Checker
+        args: ['--ignore-missing-imports', '--no-strict-optional']
+        exclude: ^(tests/|venv/|node_modules/|alembic/versions/)
+        additional_dependencies: [types-all]
+        
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+      - id: end-of-file-fixer
+        name: Fix End of Files
+      - id: check-yaml
+        name: Check YAML Syntax
+      - id: check-json
+        name: Check JSON Syntax
+      - id: check-added-large-files
+        name: Check for Large Files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+        name: Check for Merge Conflicts
+      - id: detect-private-key
+        name: Detect Private Keys
+        
+  # SQL linting (optional)
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: '2.3.5'
+    hooks:
+      - id: sqlfluff-lint
+        name: SQLFluff SQL Linter
+        args: ['--dialect', 'postgres']
+        files: \.sql$
+        exclude: ^(venv/|node_modules/)
+
+# Configuration for specific hooks
+default_language_version:
+  python: python3.9
+
+# Files to exclude globally
+exclude: |
+  (?x)^(
+    venv/.*|
+    node_modules/.*|
+    \.git/.*|
+    \.pytest_cache/.*|
+    __pycache__/.*|
+    \.mypy_cache/.*|
+    \.eggs/.*|
+    \.tox/.*|
+    build/.*|
+    dist/.*|
+    .*\.egg-info/.*
+  )$
+
+# Fail fast on first error
+fail_fast: false
+
+# Minimum pre-commit version
+minimum_pre_commit_version: '2.20.0'
