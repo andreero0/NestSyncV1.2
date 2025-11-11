@@ -1,0 +1,176 @@
+# Semgrep Custom Configuration for NestSync
+# Purpose: Reduce false positives and add project-specific security patterns
+# Last Updated: 2025-11-10
+# Documentation: docs/security/semgrep-false-positives.md
+
+rules:
+  # Comment Exclusion Rules
+  # Note: Semgrep's default behavior already excludes comments from most security checks.
+  # These rules document our approach to handling false positives in comments.
+  # For specific false positives in comments, use inline nosemgrep comments instead.
+  
+  # Validated SQL Parameter Rules
+  # These rules identify SQL operations that are safe due to allowlist validation
+  
+  - id: validated-sql-timezone-parameter
+    patterns:
+      - pattern: |
+          def set_timezone($CURSOR, $TIMEZONE: str) -> None:
+            ...
+            if $TIMEZONE not in ALLOWED_TIMEZONES:
+              raise ValueError(...)
+            ...
+            $CURSOR.execute(...)
+    languages:
+      - python
+    message: "SQL parameter validated against ALLOWED_TIMEZONES allowlist - safe pattern"
+    severity: INFO
+    metadata:
+      category: security-pattern
+      confidence: HIGH
+      subcategory:
+        - audit
+      likelihood: LOW
+      impact: LOW
+      technology:
+        - sql
+        - postgresql
+      cwe:
+        - "CWE-89: SQL Injection"
+      owasp:
+        - "A03:2021 - Injection"
+      references:
+        - https://owasp.org/www-community/attacks/SQL_Injection
+        - docs/security/semgrep-false-positives.md
+      description: |
+        This pattern identifies SQL operations where parameters are validated
+        against a hardcoded allowlist before use. This is a safe pattern that
+        prevents SQL injection while maintaining flexibility for dynamic values.
+        
+        The set_timezone function validates the timezone parameter against
+        ALLOWED_TIMEZONES before executing the SQL query, making it safe from
+        SQL injection attacks.
+  
+  # Environment-Aware WebSocket Rules
+  # These rules identify WebSocket implementations that properly handle encryption
+  
+  - id: environment-aware-websocket-url-conversion
+    patterns:
+      - pattern-either:
+          - pattern: |
+              const $FUNC = (...) => {
+                ...
+                .replace('https://', 'wss://')
+                ...
+              }
+          - pattern: |
+              function $FUNC(...) {
+                ...
+                .replace('https://', 'wss://')
+                ...
+              }
+          - pattern: |
+              const $FUNC = (...) => {
+                ...
+                .replace('http://', 'ws://')
+                ...
+              }
+    languages:
+      - javascript
+      - typescript
+    message: "WebSocket URL properly handles protocol conversion based on environment - safe pattern"
+    severity: INFO
+    metadata:
+      category: security-pattern
+      confidence: HIGH
+      subcategory:
+        - audit
+      likelihood: LOW
+      impact: LOW
+      technology:
+        - websocket
+        - graphql
+      cwe:
+        - "CWE-319: Cleartext Transmission of Sensitive Information"
+      owasp:
+        - "A02:2021 - Cryptographic Failures"
+      references:
+        - https://owasp.org/www-community/vulnerabilities/Insecure_Transport
+        - docs/security/semgrep-false-positives.md
+      description: |
+        This pattern identifies WebSocket URL functions that properly convert
+        HTTP/HTTPS URLs to WS/WSS protocols. The function handles environment-
+        specific protocol selection, using wss:// in production and ws:// in
+        development.
+        
+        This is a safe pattern because the protocol conversion is based on the
+        incoming HTTP URL protocol, ensuring encrypted WebSocket connections
+        (wss://) are used when the API is accessed over HTTPS.
+
+# Path exclusions to reduce noise and improve scan performance
+# These exclusions prevent Semgrep from scanning files that:
+# 1. Contain intentional security patterns for testing purposes
+# 2. Are third-party dependencies we don't control
+# 3. Are generated artifacts that shouldn't be modified
+# 4. Are configuration/tooling files not part of the application
+paths:
+  exclude:
+    # Test files - security patterns in tests are intentional
+    # Reason: Tests often include examples of vulnerabilities to verify detection
+    - "*.test.ts"
+    - "*.test.py"
+    - "*.test.js"
+    - "*.spec.ts"
+    - "*.spec.py"
+    - "*.spec.js"
+    - "tests/"
+    - "test/"
+    - "__tests__/"
+    - "**/*test*/"
+    
+    # Dependencies - not our code to fix
+    # Reason: Third-party code should be updated via package managers, not patched
+    - "node_modules/"
+    - "venv/"
+    - ".venv/"
+    - "env/"
+    - ".env/"
+    - "vendor/"
+    - "packages/"
+    
+    # Build artifacts - generated code
+    # Reason: Generated files are recreated on each build and shouldn't be modified
+    - "dist/"
+    - "build/"
+    - ".next/"
+    - ".expo/"
+    - "__pycache__/"
+    - "*.pyc"
+    - "*.pyo"
+    - "*.egg-info/"
+    - ".cache/"
+    - "coverage/"
+    - ".nyc_output/"
+    
+    # Configuration and tooling
+    # Reason: Configuration files don't contain application logic
+    - ".git/"
+    - ".github/"
+    - ".vscode/"
+    - ".idea/"
+    - ".DS_Store"
+    
+    # Documentation
+    # Reason: Markdown files may contain code examples that aren't executed
+    - "*.md"
+    - "docs/"
+    - "documentation/"
+    
+    # Logs and temporary files
+    # Reason: Runtime artifacts that shouldn't be in version control
+    - "*.log"
+    - "*.tmp"
+    - ".logs/"
+    - ".pids/"
+    - "tmp/"
+    - "temp/"

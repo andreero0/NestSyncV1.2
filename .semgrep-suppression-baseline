@@ -1,0 +1,22 @@
+# Semgrep Suppression Baseline
+# 
+# This file tracks the expected number of nosemgrep suppression comments in the codebase.
+# It is used by CI/CD to detect when new suppressions are added without proper documentation.
+#
+# Last Updated: 2025-11-10
+# Documentation: docs/security/semgrep-false-positives.md
+# Audit Log: docs/security/suppression-audit-log.md
+#
+# IMPORTANT: When adding new suppressions:
+# 1. Update this baseline count
+# 2. Document the suppression in docs/security/semgrep-false-positives.md
+# 3. Add an entry to docs/security/suppression-audit-log.md
+# 4. Ensure security controls are tested
+#
+# Current Suppressions by Category:
+# - SQL Injection (False Positive): 3 suppressions (database.py lines 61, 165, 184)
+# - WebSocket Security (False Positive): 7 suppressions (client.ts lines 56, 60, 83, 97, 178, 231, 257)
+#
+# Total: 10 suppressions
+
+10

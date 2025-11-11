@@ -1,0 +1,499 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+  schedule:
+    # Run comprehensive scan weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  semgrep:
+    name: Semgrep Security Analysis
+    runs-on: ubuntu-latest
+    
+    # Skip duplicate runs on PR sync
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    container:
+      image: returntocorp/semgrep
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: Run Semgrep scan
+        id: semgrep
+        run: |
+          semgrep scan \
+            --config=auto \
+            --config=p/security-audit \
+            --config=p/secrets \
+            --config=p/owasp-top-ten \
+            --config=p/python \
+            --config=p/typescript \
+            --config=p/react \
+            --json \
+            --output=semgrep-results.json \
+            --severity=ERROR \
+            --severity=WARNING \
+            --severity=INFO
+        continue-on-error: true
+
+      - name: Parse Semgrep results
+        id: parse
+        run: |
+          # Count findings by severity
+          ERROR_COUNT=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep-results.json)
+          WARNING_COUNT=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' semgrep-results.json)
+          INFO_COUNT=$(jq '[.results[] | select(.extra.severity == "INFO")] | length' semgrep-results.json)
+          
+          echo "error_count=$ERROR_COUNT" >> $GITHUB_OUTPUT
+          echo "warning_count=$WARNING_COUNT" >> $GITHUB_OUTPUT
+          echo "info_count=$INFO_COUNT" >> $GITHUB_OUTPUT
+          
+          echo "### Semgrep Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔴 **ERROR**: $ERROR_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟡 **WARNING**: $WARNING_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔵 **INFO**: $INFO_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$ERROR_COUNT" -gt 0 ]; then
+            echo "❌ **FAILED**: Critical security issues found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **PASSED**: No critical security issues" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Generate suppression report
+        id: suppressions
+        run: |
+          # Count nosemgrep comments in codebase
+          PYTHON_SUPPRESSIONS=$(grep -r "# nosemgrep:" --include="*.py" . 2>/dev/null | wc -l || echo "0")
+          TS_SUPPRESSIONS=$(grep -r "// nosemgrep:" --include="*.ts" --include="*.tsx" . 2>/dev/null | wc -l || echo "0")
+          JS_SUPPRESSIONS=$(grep -r "// nosemgrep:" --include="*.js" --include="*.jsx" . 2>/dev/null | wc -l || echo "0")
+          TOTAL_SUPPRESSIONS=$((PYTHON_SUPPRESSIONS + TS_SUPPRESSIONS + JS_SUPPRESSIONS))
+          
+          echo "total_suppressions=$TOTAL_SUPPRESSIONS" >> $GITHUB_OUTPUT
+          echo "python_suppressions=$PYTHON_SUPPRESSIONS" >> $GITHUB_OUTPUT
+          echo "ts_suppressions=$TS_SUPPRESSIONS" >> $GITHUB_OUTPUT
+          echo "js_suppressions=$JS_SUPPRESSIONS" >> $GITHUB_OUTPUT
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Suppressed Findings" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 **Total Suppressions**: $TOTAL_SUPPRESSIONS" >> $GITHUB_STEP_SUMMARY
+          echo "  - Python: $PYTHON_SUPPRESSIONS" >> $GITHUB_STEP_SUMMARY
+          echo "  - TypeScript: $TS_SUPPRESSIONS" >> $GITHUB_STEP_SUMMARY
+          echo "  - JavaScript: $JS_SUPPRESSIONS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All suppressions are documented in [docs/security/semgrep-false-positives.md](../docs/security/semgrep-false-positives.md)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Validate suppression documentation
+        id: validate_suppressions
+        run: |
+          # Make validation script executable
+          chmod +x tests/validate-suppressions.sh
+          
+          # Run validation script
+          if ./tests/validate-suppressions.sh; then
+            echo "validation_passed=true" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Suppression Validation Passed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All suppressions are properly documented in the false positive registry." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "validation_passed=false" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ Suppression Validation Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Suppression count mismatch detected. See validation script output for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Required Actions**:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Review all nosemgrep comments in the codebase" >> $GITHUB_STEP_SUMMARY
+            echo "2. Add missing entries to \`docs/security/semgrep-false-positives.md\`" >> $GITHUB_STEP_SUMMARY
+            echo "3. Follow the format in existing FP-XXX entries" >> $GITHUB_STEP_SUMMARY
+            echo "4. Update the suppression audit log" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "See [False Positive Review Process](../docs/security/false-positive-review-process.md) for guidance." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Check for new suppressions
+        id: check_suppressions
+        run: |
+          # Read baseline suppression count
+          if [ -f .semgrep-suppression-baseline ]; then
+            BASELINE=$(grep -E '^[0-9]+$' .semgrep-suppression-baseline | tail -1)
+          else
+            BASELINE=0
+            echo "⚠️ Warning: .semgrep-suppression-baseline file not found, assuming baseline of 0"
+          fi
+          
+          CURRENT=${{ steps.suppressions.outputs.total_suppressions }}
+          
+          echo "baseline=$BASELINE" >> $GITHUB_OUTPUT
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          
+          if [ "$CURRENT" -gt "$BASELINE" ]; then
+            NEW_SUPPRESSIONS=$((CURRENT - BASELINE))
+            echo "new_suppressions=$NEW_SUPPRESSIONS" >> $GITHUB_OUTPUT
+            echo "has_new=true" >> $GITHUB_OUTPUT
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ New Suppressions Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Baseline**: $BASELINE suppressions" >> $GITHUB_STEP_SUMMARY
+            echo "- **Current**: $CURRENT suppressions" >> $GITHUB_STEP_SUMMARY
+            echo "- **New**: $NEW_SUPPRESSIONS suppression(s) added" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action Required**:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Document new suppressions in \`docs/security/semgrep-false-positives.md\`" >> $GITHUB_STEP_SUMMARY
+            echo "2. Add audit log entry in \`docs/security/suppression-audit-log.md\`" >> $GITHUB_STEP_SUMMARY
+            echo "3. Update baseline in \`.semgrep-suppression-baseline\`" >> $GITHUB_STEP_SUMMARY
+            echo "4. Ensure security controls are tested" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "See [False Positive Review Process](../docs/security/false-positive-review-process.md) for guidance." >> $GITHUB_STEP_SUMMARY
+            
+            echo "::warning::New suppressions detected: $NEW_SUPPRESSIONS. Please document in docs/security/semgrep-false-positives.md"
+          elif [ "$CURRENT" -lt "$BASELINE" ]; then
+            REMOVED_SUPPRESSIONS=$((BASELINE - CURRENT))
+            echo "has_new=false" >> $GITHUB_OUTPUT
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Suppressions Removed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Baseline**: $BASELINE suppressions" >> $GITHUB_STEP_SUMMARY
+            echo "- **Current**: $CURRENT suppressions" >> $GITHUB_STEP_SUMMARY
+            echo "- **Removed**: $REMOVED_SUPPRESSIONS suppression(s)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action Required**: Update baseline in \`.semgrep-suppression-baseline\` to $CURRENT" >> $GITHUB_STEP_SUMMARY
+            
+            echo "::notice::Suppressions removed: $REMOVED_SUPPRESSIONS. Consider updating baseline."
+          else
+            echo "has_new=false" >> $GITHUB_OUTPUT
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Suppression Count Stable" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Suppression count matches baseline: $BASELINE" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail on undocumented suppressions
+        if: steps.validate_suppressions.outputs.validation_passed == 'false'
+        run: |
+          echo "::error::Suppression validation failed. All suppressions must be documented in docs/security/semgrep-false-positives.md"
+          exit 1
+
+      - name: Generate suppressed findings report
+        if: always()
+        run: |
+          # Create detailed report of all suppressed findings
+          echo "# Suppressed Findings Report" > suppressed-findings-report.md
+          echo "" >> suppressed-findings-report.md
+          echo "**Generated**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> suppressed-findings-report.md
+          echo "**Total Suppressions**: ${{ steps.suppressions.outputs.total_suppressions }}" >> suppressed-findings-report.md
+          echo "" >> suppressed-findings-report.md
+          echo "## Suppressions by File" >> suppressed-findings-report.md
+          echo "" >> suppressed-findings-report.md
+          
+          # List all Python suppressions
+          if [ "${{ steps.suppressions.outputs.python_suppressions }}" -gt 0 ]; then
+            echo "### Python Files" >> suppressed-findings-report.md
+            echo "" >> suppressed-findings-report.md
+            grep -rn "# nosemgrep:" --include="*.py" . 2>/dev/null | while IFS=: read -r file line content; do
+              echo "- \`$file:$line\`" >> suppressed-findings-report.md
+              echo "  \`\`\`" >> suppressed-findings-report.md
+              echo "  $content" >> suppressed-findings-report.md
+              echo "  \`\`\`" >> suppressed-findings-report.md
+            done || true
+            echo "" >> suppressed-findings-report.md
+          fi
+          
+          # List all TypeScript suppressions
+          if [ "${{ steps.suppressions.outputs.ts_suppressions }}" -gt 0 ]; then
+            echo "### TypeScript Files" >> suppressed-findings-report.md
+            echo "" >> suppressed-findings-report.md
+            grep -rn "// nosemgrep:" --include="*.ts" --include="*.tsx" . 2>/dev/null | while IFS=: read -r file line content; do
+              echo "- \`$file:$line\`" >> suppressed-findings-report.md
+              echo "  \`\`\`" >> suppressed-findings-report.md
+              echo "  $content" >> suppressed-findings-report.md
+              echo "  \`\`\`" >> suppressed-findings-report.md
+            done || true
+            echo "" >> suppressed-findings-report.md
+          fi
+          
+          # List all JavaScript suppressions
+          if [ "${{ steps.suppressions.outputs.js_suppressions }}" -gt 0 ]; then
+            echo "### JavaScript Files" >> suppressed-findings-report.md
+            echo "" >> suppressed-findings-report.md
+            grep -rn "// nosemgrep:" --include="*.js" --include="*.jsx" . 2>/dev/null | while IFS=: read -r file line content; do
+              echo "- \`$file:$line\`" >> suppressed-findings-report.md
+              echo "  \`\`\`" >> suppressed-findings-report.md
+              echo "  $content" >> suppressed-findings-report.md
+              echo "  \`\`\`" >> suppressed-findings-report.md
+            done || true
+            echo "" >> suppressed-findings-report.md
+          fi
+          
+          echo "## Documentation" >> suppressed-findings-report.md
+          echo "" >> suppressed-findings-report.md
+          echo "All suppressions are documented in:" >> suppressed-findings-report.md
+          echo "- [False Positive Registry](../docs/security/semgrep-false-positives.md)" >> suppressed-findings-report.md
+          echo "- [Suppression Audit Log](../docs/security/suppression-audit-log.md)" >> suppressed-findings-report.md
+          echo "- [Review Process](../docs/security/false-positive-review-process.md)" >> suppressed-findings-report.md
+          
+          echo "Suppressed findings report generated"
+
+      - name: Upload Semgrep results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+          retention-days: 30
+
+      - name: Upload suppressed findings report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: suppressed-findings-report
+          path: suppressed-findings-report.md
+          retention-days: 30
+
+      - name: Generate human-readable report
+        if: always()
+        run: |
+          semgrep scan \
+            --config=auto \
+            --config=p/security-audit \
+            --config=p/secrets \
+            --config=p/owasp-top-ten \
+            --config=p/python \
+            --config=p/typescript \
+            --config=p/react \
+            --severity=ERROR \
+            --severity=WARNING \
+            --output=semgrep-report.txt
+        continue-on-error: true
+
+      - name: Upload human-readable report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-report
+          path: semgrep-report.txt
+          retention-days: 30
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('semgrep-results.json', 'utf8'));
+            
+            const errorCount = results.results.filter(r => r.extra.severity === 'ERROR').length;
+            const warningCount = results.results.filter(r => r.extra.severity === 'WARNING').length;
+            const infoCount = results.results.filter(r => r.extra.severity === 'INFO').length;
+            
+            let comment = '## 🔒 Semgrep Security Scan Results\n\n';
+            comment += `- 🔴 **ERROR**: ${errorCount}\n`;
+            comment += `- 🟡 **WARNING**: ${warningCount}\n`;
+            comment += `- 🔵 **INFO**: ${infoCount}\n\n`;
+            
+            if (errorCount > 0) {
+              comment += '❌ **FAILED**: Critical security issues found. Please review the findings.\n\n';
+              comment += '### Critical Issues:\n';
+              results.results
+                .filter(r => r.extra.severity === 'ERROR')
+                .slice(0, 5)  // Show first 5
+                .forEach(r => {
+                  comment += `- **${r.check_id}**: ${r.extra.message}\n`;
+                  comment += `  - File: \`${r.path}:${r.start.line}\`\n`;
+                });
+              if (errorCount > 5) {
+                comment += `\n... and ${errorCount - 5} more. See full report in artifacts.\n`;
+              }
+            } else {
+              comment += '✅ **PASSED**: No critical security issues found.\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Block merge on unsuppressed ERROR severity
+        if: steps.parse.outputs.error_count > 0
+        run: |
+          echo "::error::Semgrep found ${{ steps.parse.outputs.error_count }} unsuppressed ERROR severity security issues"
+          echo "Please fix these critical security issues before merging"
+          echo ""
+          echo "If these are false positives:"
+          echo "1. Follow the False Positive Review Process: docs/security/false-positive-review-process.md"
+          echo "2. Add nosemgrep suppression comments with justification"
+          echo "3. Document in docs/security/semgrep-false-positives.md"
+          echo "4. Add audit log entry in docs/security/suppression-audit-log.md"
+          echo "5. Ensure security controls are tested"
+          exit 1
+
+  bandit:
+    name: Bandit Python Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install bandit
+        run: pip install bandit[toml]
+
+      - name: Run bandit scan
+        run: |
+          cd NestSync-backend
+          bandit -r app/ -f json -o bandit-results.json || true
+          bandit -r app/ -f txt -o bandit-report.txt || true
+
+      - name: Parse bandit results
+        id: bandit
+        run: |
+          cd NestSync-backend
+          if [ -f bandit-results.json ]; then
+            HIGH_COUNT=$(jq '[.results[] | select(.issue_severity == "HIGH")] | length' bandit-results.json)
+            MEDIUM_COUNT=$(jq '[.results[] | select(.issue_severity == "MEDIUM")] | length' bandit-results.json)
+            LOW_COUNT=$(jq '[.results[] | select(.issue_severity == "LOW")] | length' bandit-results.json)
+            
+            echo "high_count=$HIGH_COUNT" >> $GITHUB_OUTPUT
+            echo "medium_count=$MEDIUM_COUNT" >> $GITHUB_OUTPUT
+            echo "low_count=$LOW_COUNT" >> $GITHUB_OUTPUT
+            
+            echo "### Bandit Python Security Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- 🔴 **HIGH**: $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- 🟡 **MEDIUM**: $MEDIUM_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- 🔵 **LOW**: $LOW_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload bandit results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-results
+          path: NestSync-backend/bandit-*.json
+          retention-days: 30
+
+  eslint-security:
+    name: ESLint Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: NestSync-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd NestSync-frontend
+          npm ci --legacy-peer-deps
+
+      - name: Run ESLint security check
+        id: eslint
+        run: |
+          cd NestSync-frontend
+          npm run lint -- --format json --output-file eslint-results.json || true
+          
+          # Count security issues
+          if [ -f eslint-results.json ]; then
+            SECURITY_ERRORS=$(jq '[.[] | .messages[] | select(.ruleId | startswith("security/"))] | length' eslint-results.json || echo "0")
+            echo "security_errors=$SECURITY_ERRORS" >> $GITHUB_OUTPUT
+            
+            echo "### ESLint Security Check Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- 🔒 **Security Issues**: $SECURITY_ERRORS" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Run lint again for console output
+          npm run lint || true
+
+      - name: Upload ESLint results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eslint-results
+          path: NestSync-frontend/eslint-results.json
+          retention-days: 30
+      
+      - name: Comment PR with security issues
+        if: github.event_name == 'pull_request' && steps.eslint.outputs.security_errors > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('NestSync-frontend/eslint-results.json', 'utf8'));
+            
+            const securityIssues = results
+              .flatMap(file => file.messages
+                .filter(msg => msg.ruleId && msg.ruleId.startsWith('security/'))
+                .map(msg => ({ file: file.filePath, ...msg }))
+              );
+            
+            if (securityIssues.length > 0) {
+              let comment = '## 🔒 ESLint Security Issues Found\n\n';
+              comment += `Found ${securityIssues.length} security-related issues:\n\n`;
+              
+              securityIssues.slice(0, 10).forEach(issue => {
+                comment += `- **${issue.ruleId}**: ${issue.message}\n`;
+                comment += `  - File: \`${issue.file}:${issue.line}:${issue.column}\`\n`;
+              });
+              
+              if (securityIssues.length > 10) {
+                comment += `\n... and ${securityIssues.length - 10} more. See full report in artifacts.\n`;
+              }
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [semgrep, bandit, eslint-security]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "### 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All security scans completed. Check individual job results for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Jobs:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Semgrep: ${{ needs.semgrep.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Bandit: ${{ needs.bandit.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ESLint Security: ${{ needs.eslint-security.result }}" >> $GITHUB_STEP_SUMMARY

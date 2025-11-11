@@ -1,0 +1,127 @@
+# Bandit Security Linting Configuration
+# https://bandit.readthedocs.io/en/latest/config.html
+
+[bandit]
+# Directories to exclude from scanning
+exclude_dirs = [
+    '/tests/',
+    '/venv/',
+    '/node_modules/',
+    '/.venv/',
+    '/alembic/versions/',
+    '/scripts/archive/'
+]
+
+# Test IDs to skip (if needed)
+# B101: assert_used - Allow asserts in test files
+# B601: paramiko_calls - Not using paramiko
+skips = []
+
+# Test IDs to run (leave empty to run all)
+# Focus on critical security issues:
+# B201: Flask debug mode
+# B501-B507: SSL/TLS issues
+# B608: SQL injection via string formatting
+# B602-B607: Shell injection and subprocess issues
+# B105-B107: Hardcoded passwords and secrets
+tests = []
+
+# =============================================================================
+# Security Checks Configuration
+# =============================================================================
+
+[bandit.plugins]
+# B608: Hardcoded SQL strings (SQL injection detection)
+# B201: Flask debug mode
+# B501: Request with no certificate validation
+# B502: SSL with bad version
+# B503: SSL with bad defaults
+# B504: SSL with no version
+# B505: Weak cryptographic key
+# B506: YAML load
+# B601: Paramiko calls
+# B602: Shell injection
+# B603: Subprocess without shell equals true
+# B604: Any other function with shell equals true
+# B605: Starting a process with a shell
+# B606: Starting a process with no shell
+# B607: Starting a process with a partial path
+
+# =============================================================================
+# SQL Injection Detection
+# =============================================================================
+# Detect SQL queries constructed with string formatting
+# This catches patterns like:
+# - cursor.execute(f"SELECT * FROM {table}")
+# - cursor.execute("SELECT * FROM " + table)
+# - cursor.execute("SELECT * FROM %s" % table)
+
+[bandit.formatters]
+# Output format: text, json, csv, xml, html
+format = text
+
+# Show only issues with severity level medium or higher
+level = MEDIUM
+
+# Show only issues with confidence level medium or higher
+confidence = MEDIUM
+
+[bandit.severity]
+# Severity levels: LOW, MEDIUM, HIGH
+# Report issues at or above this level
+min_severity = MEDIUM
+
+[bandit.confidence]
+# Confidence levels: LOW, MEDIUM, HIGH
+# Report issues at or above this level
+min_confidence = MEDIUM
+
+# =============================================================================
+# Custom Rules and Detection Patterns
+# =============================================================================
+
+# B608: Hardcoded SQL strings (SQL Injection Detection)
+# Detects SQL injection vulnerabilities from string formatting
+# Examples caught:
+# - execute(f"SELECT * FROM {table}")
+# - execute("SELECT * FROM " + table)
+# - execute("SELECT * FROM %s" % table)
+# ✅ Safe: execute("SELECT * FROM table WHERE id = %s", (id,))
+
+# B105-B107: Hardcoded Passwords and Secrets
+# Detects hardcoded credentials in code
+# Examples caught:
+# - password = "hardcoded_password"
+# - api_key = "sk_live_12345"
+# ✅ Safe: password = os.getenv("PASSWORD")
+
+# B501-B507: SSL/TLS Configuration Issues
+# Detects insecure SSL/TLS configurations
+# Examples caught:
+# - requests.get(url, verify=False)
+# - ssl.wrap_socket(context=ssl.SSLContext(ssl.PROTOCOL_SSLv2))
+# ✅ Safe: requests.get(url, verify=True)
+
+# B602-B607: Shell Injection and Subprocess Issues
+# Detects command injection vulnerabilities
+# Examples caught:
+# - os.system(f"rm {filename}")
+# - subprocess.call(shell=True)
+# ✅ Safe: subprocess.run(["rm", filename], shell=False)
+
+# =============================================================================
+# Reporting
+# =============================================================================
+
+[bandit.output]
+# Show code context in output
+show_code = true
+
+# Number of lines of code context to show
+lines = 3
+
+# Show skipped tests in output
+show_skipped = false
+
+# Aggregate output by filename
+aggregate = file
