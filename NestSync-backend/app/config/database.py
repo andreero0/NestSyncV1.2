@@ -22,6 +22,51 @@ from .settings import settings
 logger = logging.getLogger(__name__)
 
 # =============================================================================
+# Security Configuration
+# =============================================================================
+
+# Allowed Canadian timezones for SQL injection prevention
+ALLOWED_TIMEZONES = [
+    'America/Toronto',      # Eastern Time (Ontario, Quebec)
+    'America/Vancouver',    # Pacific Time (British Columbia)
+    'America/Edmonton',     # Mountain Time (Alberta)
+    'America/Winnipeg',     # Central Time (Manitoba)
+    'America/Halifax',      # Atlantic Time (Nova Scotia, New Brunswick)
+    'America/St_Johns',     # Newfoundland Time
+    'America/Regina',       # Saskatchewan (no DST)
+    'America/Yellowknife',  # Northwest Territories
+    'America/Whitehorse',   # Yukon
+    'America/Iqaluit',      # Nunavut (Eastern)
+    'America/Rankin_Inlet', # Nunavut (Central)
+    'UTC',                  # UTC for testing
+]
+
+
+def set_timezone(cursor, timezone: str) -> None:
+    """
+    Safely set database timezone with validation.
+    
+    Args:
+        cursor: Database cursor
+        timezone: Timezone string to set
+        
+    Raises:
+        ValueError: If timezone is not in the allowlist
+    """
+    if timezone not in ALLOWED_TIMEZONES:
+        raise ValueError(
+            f"Invalid timezone: {timezone}. "
+            f"Must be one of: {', '.join(ALLOWED_TIMEZONES)}"
+        )
+    # nosemgrep: python.lang.security.audit.formatted-sql-query
+    # Security Control: timezone validated against ALLOWED_TIMEZONES allowlist (lines 27-40)
+    # Validated By: tests/security/test_sql_injection.py::test_timezone_validation_rejects_invalid
+    # Safe to use string formatting here because timezone is validated against allowlist
+    # This prevents SQL injection while working with raw DBAPI cursor
+    cursor.execute(f"SET timezone = '{timezone}'")
+
+
+# =============================================================================
 # Database Metadata and Base Model
 # =============================================================================
 metadata = MetaData()
@@ -114,12 +159,19 @@ def setup_database_events():
         connection_record.info['connected_at'] = True
         logger.info("Database connection established")
         
-        # Set Canadian timezone
+        # Set Canadian timezone with validation
         cursor = dbapi_connection.cursor()
         try:
-            cursor.execute(f"SET timezone = '{settings.timezone}'")
+            # nosemgrep: python.lang.security.audit.formatted-sql-query
+            # Security Control: set_timezone() validates against ALLOWED_TIMEZONES allowlist
+            # Validated By: tests/security/test_sql_injection.py::test_settings_timezone_in_allowlist
+            set_timezone(cursor, settings.timezone)
             cursor.execute("SET statement_timeout = '300s'")  # 5 minute query timeout
             dbapi_connection.commit()
+        except ValueError as e:
+            logger.error(f"Invalid timezone configuration: {e}")
+            cursor.close()
+            raise
         finally:
             cursor.close()
             
@@ -129,9 +181,16 @@ def setup_database_events():
         """Set up sync connection configuration"""
         cursor = dbapi_connection.cursor()
         try:
-            cursor.execute(f"SET timezone = '{settings.timezone}'")
+            # nosemgrep: python.lang.security.audit.formatted-sql-query
+            # Security Control: set_timezone() validates against ALLOWED_TIMEZONES allowlist
+            # Validated By: tests/security/test_sql_injection.py::test_settings_timezone_in_allowlist
+            set_timezone(cursor, settings.timezone)
             cursor.execute("SET statement_timeout = '300s'")
             dbapi_connection.commit()
+        except ValueError as e:
+            logger.error(f"Invalid timezone configuration: {e}")
+            cursor.close()
+            raise
         finally:
             cursor.close()
 

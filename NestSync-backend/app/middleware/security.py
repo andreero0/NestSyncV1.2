@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from app.config.settings import settings
+from app.utils.logging import sanitize_log_data
 
 logger = logging.getLogger(__name__)
 
@@ -226,11 +227,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         
         # Log at appropriate level
         if response.status_code >= 500:
-            logger.error(f"Request failed: {log_data}")
+            logger.error("Request failed", extra=sanitize_log_data(log_data))
         elif response.status_code >= 400:
-            logger.warning(f"Client error: {log_data}")
+            logger.warning("Client error", extra=sanitize_log_data(log_data))
         else:
-            logger.info(f"Request processed: {log_data}")
+            logger.info("Request processed", extra=sanitize_log_data(log_data))
         
         # Add processing time header
         response.headers["X-Process-Time"] = str(process_time)
@@ -283,7 +284,7 @@ class PIPEDAAuditMiddleware(BaseHTTPMiddleware):
                 "compliance_framework": "PIPEDA"
             }
             
-            logger.info(f"PIPEDA Audit: {audit_info}")
+            logger.info("PIPEDA Audit", extra=sanitize_log_data(audit_info))
         
         response = await call_next(request)
         
@@ -296,7 +297,7 @@ class PIPEDAAuditMiddleware(BaseHTTPMiddleware):
                 "compliance_check": "passed" if response.status_code < 400 else "review_required"
             }
             
-            logger.info(f"PIPEDA Response Audit: {response_audit}")
+            logger.info("PIPEDA Response Audit", extra=sanitize_log_data(response_audit))
         
         return response
     
