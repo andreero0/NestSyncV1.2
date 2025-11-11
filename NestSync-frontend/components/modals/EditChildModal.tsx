@@ -647,10 +647,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        boxShadow: '0px 1px 2px rgba(0, 0, NaN, 0.05)',
       },
       android: {
         elevation: 1,

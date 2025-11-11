@@ -708,13 +708,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.25)',
     // Elevation for Android
     elevation: 10,
   },
