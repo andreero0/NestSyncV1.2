@@ -1,5 +1,7 @@
 # NestSync - Canadian Diaper Planning App
 
+[![Security Scan](https://github.com/YOUR_ORG/nestsync/actions/workflows/security-scan.yml/badge.svg)](https://github.com/YOUR_ORG/nestsync/actions/workflows/security-scan.yml)
+
 **A comprehensive diaper planning and inventory management application designed for Canadian families with PIPEDA compliance and psychology-driven UX.**
 
 ## 🎯 Business Model Overview
@@ -124,6 +126,8 @@ NestSync uses a comprehensive documentation organization system designed for eas
   - [`/audits/`](./docs/archives/audits/) - Compliance audits
 
 ### 🔍 Quick Links to Key Documentation
+- [Product Specification](./docs/PRODUCT_SPECIFICATION.md) - Complete product definition and strategy (v1.1 - Authoritative)
+- [Product Spec Summary](./docs/PRODUCT_SPEC_SUMMARY.md) - Quick reference guide
 - [Setup Guide](./docs/setup/) - Get started with development
 - [Architecture Overview](./docs/architecture/) - System design and patterns
 - [Troubleshooting](./docs/troubleshooting/) - Common issues and solutions
@@ -237,7 +241,8 @@ cd NestSync-backend && alembic upgrade head
 
 ### Compliance & Security
 - [PIPEDA Compliance](./docs/compliance/pipeda/) - Canadian privacy compliance
-- [Security Documentation](./docs/compliance/security/) - Authentication, encryption, RLS
+- [Security Documentation](./docs/security/) - Security scanning, vulnerability management, best practices
+- [Semgrep Best Practices](./docs/security/semgrep-best-practices.md) - Guide for working with security findings
 
 ### Archives & Historical Context
 - [Documentation Archives](./docs/archives/) - Historical fixes and implementation reports

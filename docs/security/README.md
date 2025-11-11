@@ -12,10 +12,13 @@ This directory contains security-related documentation for the NestSync applicat
 - **[Security Scanning Process](./security-scanning-process.md)** - Overview of security scanning workflow
 - **[CI/CD Security Integration](./ci-cd-security-integration-summary.md)** - Security in continuous integration
 - **[Security Dashboard](./security-dashboard.md)** - Current security posture and metrics
+- **[Semgrep Best Practices](./semgrep-best-practices.md)** - Guide for working with Semgrep findings
 
 ### Vulnerability Management
+- **[SQL Injection Audit (2025-11-10)](./sql-injection-audit-2025-11-10.md)** - Critical vulnerability audit and remediation
 - **[Semgrep False Positives Registry](./semgrep-false-positives.md)** - Documented false positive findings
 - **[Suppression Audit Log](./suppression-audit-log.md)** - Audit trail of suppression decisions
+- **[False Positive Review Process](./false-positive-review-process.md)** - Workflow for evaluating and suppressing findings
 
 ---
 
@@ -64,6 +67,8 @@ When a security scanner flags code that is not actually vulnerable:
 5. **Test**: Ensure security controls are tested
 6. **Review**: Schedule quarterly review
 
+**See**: [False Positive Review Process](./false-positive-review-process.md) for detailed workflow and decision criteria
+
 ### Current Suppressions
 
 **Total Suppressions**: 9
@@ -109,6 +114,7 @@ All suppression decisions are logged with:
 - Allowlist validation for dynamic values
 - Input sanitization
 - Tests: `tests/security/test_sql_injection.py`
+- Audit: [SQL Injection Audit (2025-11-10)](./sql-injection-audit-2025-11-10.md)
 
 **Authentication**:
 - JWT token-based authentication
@@ -227,53 +233,42 @@ All suppression decisions are logged with:
 
 ## Best Practices
 
-### Evaluating Security Findings
+### Working with Semgrep
 
-1. **Is it in executable code?**
-   - Comments/strings → Likely false positive
-   - Actual code → Continue evaluation
+For comprehensive guidance on evaluating Semgrep findings, suppression formats, and approval processes, see:
 
-2. **Is there a security control?**
-   - Allowlist validation → Document control
-   - Environment check → Document control
-   - Input sanitization → Document control
-   - No control → Real issue, needs fix
+**[Semgrep Best Practices Guide](./semgrep-best-practices.md)**
 
-3. **Is the control tested?**
-   - Yes → Safe to suppress
-   - No → Add tests first
+This guide covers:
+- How to evaluate security findings
+- When to fix vs when to suppress
+- Proper suppression comment formatting
+- False positive validation process
+- Approval workflows and timelines
+- Common patterns and examples
+- Troubleshooting
 
-4. **Is the control documented?**
-   - Yes → Add suppression
-   - No → Document then suppress
+### Quick Reference
 
-### Suppression Comment Format
+**Evaluating Findings**:
+1. Is it in executable code? (Comments/strings → False positive)
+2. Is there a security control? (Allowlist, validation, etc.)
+3. Is the control tested? (Add tests if missing)
+4. Is the control documented? (Document before suppressing)
 
-**Python**:
+**Suppression Format**:
 ```python
 # nosemgrep: [rule-id]
-# Security Control: [description of mitigation]
+# Security Control: [description and location]
 # Validated By: [test reference]
-[code]
 ```
 
-**TypeScript/JavaScript**:
-```typescript
-// nosemgrep: [rule-id]
-// Security Control: [description of mitigation]
-// Validated By: [test reference]
-[code]
-```
+**Approval Levels**:
+- Developer: Comments, docs, clear false positives
+- Senior Developer: Production code, security controls
+- Security Team: ERROR severity, auth/payment code
 
-### Approval Process
-
-1. **Developer**: Identifies potential false positive
-2. **Security Review**: Evaluates finding and security controls
-3. **Documentation**: Adds entry to false positives registry
-4. **Suppression**: Adds suppression comment to code
-5. **Audit**: Logs decision in audit log
-6. **Testing**: Ensures security controls are tested
-7. **Commit**: Commits changes with clear message
+**See**: [Semgrep Best Practices](./semgrep-best-practices.md) for detailed guidance
 
 ---
 
@@ -317,5 +312,38 @@ For each suppression:
 
 ---
 
-*Last Updated: 2025-11-10*  
-*For security concerns, please contact the security team immediately.*
+---
+
+## Document Index
+
+### Processes and Workflows
+- [Security Scanning Process](./security-scanning-process.md)
+- [False Positive Review Process](./false-positive-review-process.md)
+- [Semgrep Best Practices](./semgrep-best-practices.md)
+
+### Registries and Logs
+- [SQL Injection Audit (2025-11-10)](./sql-injection-audit-2025-11-10.md)
+- [Semgrep False Positives Registry](./semgrep-false-positives.md)
+- [Suppression Audit Log](./suppression-audit-log.md)
+
+### Dashboards and Reports
+- [Security Dashboard](./security-dashboard.md)
+- [CI/CD Security Integration](./ci-cd-security-integration-summary.md)
+
+### Test Documentation
+- [Security Control Validation](./security-control-validation-summary.md)
+- [Security Control Test Mapping](./security-control-test-mapping.md)
+- [CI/CD Suppression Testing](./ci-cd-suppression-testing-summary.md)
+
+---
+
+---
+
+**Last Updated**: 2025-11-11  
+**Maintained By**: Security Team  
+**Review Cycle**: Quarterly (Feb, May, Aug, Nov)  
+**Next Review**: 2026-02-10
+
+**For security concerns, please contact the security team immediately.**
+
+[← Back to Documentation Hub](../README.md)

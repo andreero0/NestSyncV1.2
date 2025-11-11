@@ -17,6 +17,8 @@ This directory contains documentation related to NestSync's security implementat
 1. **[RLS Policies](./rls-policies.md)** - Row Level Security implementation and database access control
 2. **[Authentication](./authentication.md)** - User authentication, JWT tokens, and session management
 3. **[Encryption](./encryption.md)** - Data encryption at rest and in transit
+4. **[Security Scanning Process](../../security/security-scanning-process.md)** - Automated security scanning and CI/CD integration
+5. **[Security Dashboard](../../security/security-dashboard.md)** - Security metrics and vulnerability tracking
 
 ### Additional Security Documentation
 
@@ -159,23 +161,41 @@ See [Access Control](./access-control.md) for detailed implementation.
 ## Vulnerability Management
 
 ### Security Testing
-- **Static Analysis** - Code scanning for vulnerabilities
+- **Static Analysis** - Code scanning for vulnerabilities (Semgrep, Bandit, ESLint Security)
 - **Dependency Scanning** - Third-party vulnerability checks
 - **Penetration Testing** - Annual security assessments
 - **Security Reviews** - Code review for security issues
+- **Automated Scanning** - Weekly comprehensive security scans
+- **Pre-commit Hooks** - Security checks before every commit
+
+### Security Scanning Tools
+- **Semgrep** - Multi-language security vulnerability detection
+- **Bandit** - Python-specific security linting
+- **ESLint Security** - JavaScript/TypeScript security patterns
+- **Detect Secrets** - Hardcoded credential detection
+- **Hadolint** - Dockerfile security best practices
+
+See [Security Scanning Process](../../security/security-scanning-process.md) for detailed information.
 
 ### Vulnerability Response
-1. **Identification** - Discover vulnerability
+1. **Identification** - Discover vulnerability (automated or manual)
 2. **Assessment** - Evaluate severity and impact
 3. **Remediation** - Fix vulnerability
 4. **Verification** - Confirm fix effectiveness
 5. **Disclosure** - Responsible disclosure if needed
 
 ### Patch Management
-- **Critical Patches** - Applied within 24 hours
+- **Critical Patches** - Applied within 24 hours (blocks merge)
 - **High Priority** - Applied within 7 days
 - **Medium Priority** - Applied within 30 days
 - **Low Priority** - Applied in next release
+
+### Security Metrics
+Track security posture with [Security Dashboard](../../security/security-dashboard.md):
+- Total vulnerabilities by severity
+- Mean time to remediation
+- Security scan pass rate
+- Compliance status
 
 ## Incident Response
 

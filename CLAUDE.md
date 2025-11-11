@@ -247,6 +247,66 @@ export function ComponentName() {
 }
 ```
 
+#### React Native Web API Deprecations (MIGRATED - November 2025)
+
+**IMPORTANT**: The following React Native Web APIs have been deprecated and migrated to current standards:
+
+**Shadow Props (MIGRATED)**
+```typescript
+// ❌ DEPRECATED - Do not use
+style={{
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+}}
+
+// ✅ CURRENT - Use boxShadow
+style={{
+  boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+  elevation: 3, // Preserved for Android compatibility
+}}
+```
+
+**Text Shadow Props (MIGRATED)**
+```typescript
+// ❌ DEPRECATED - Do not use
+style={{
+  textShadowColor: 'rgba(0, 0, 0, 0.1)',
+  textShadowOffset: { width: 0, height: 0.5 },
+  textShadowRadius: 1,
+}}
+
+// ✅ CURRENT - Use textShadow string
+style={{
+  textShadow: '0px 0.5px 1px rgba(0, 0, 0, 0.1)',
+}}
+```
+
+**Touchable Components (NOT FOUND IN CODEBASE)**
+```typescript
+// ❌ DEPRECATED - Do not use
+import { TouchableWithoutFeedback } from 'react-native';
+
+// ✅ CURRENT - Use Pressable
+import { Pressable } from 'react-native';
+```
+
+**Migration Status**:
+- ✅ Shadow props: 30 instances migrated across 23 files
+- ✅ Text shadow props: 1 instance migrated
+- ✅ TouchableWithoutFeedback: 0 instances found (already using Pressable)
+- ✅ tintColor: 0 instances found (already using props.tintColor)
+- ✅ pointerEvents: 0 instances found (already using style.pointerEvents)
+
+**Migration Script**: `NestSync-frontend/scripts/migrate-deprecated-rn-web-apis.js`
+
+**Cross-Platform Compatibility**:
+- `boxShadow` works on web via React Native Web
+- `elevation` property is preserved for Android shadow rendering
+- iOS uses `boxShadow` values automatically
+- Test on all platforms after making shadow changes
+
 ### Environment Configuration
 - **Frontend**: Expo configuration in `app.json`, environment detection via `__DEV__`
 - **Backend**: Python-dotenv with `.env.local` for development, `.env.production.template` for deployment
@@ -488,6 +548,31 @@ For current troubleshooting guides, see [`/docs/troubleshooting/`](../docs/troub
 **Files Modified**:
 - `lib/graphql/client.ts:47` - Changed to use `process.env.EXPO_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/graphql'`
 - `lib/graphql/client.ts:53-55` - Updated WebSocket endpoint to derive from environment variable
+
+### WebSocket Security Configuration (SECURITY FIX)
+**Problem**: WebSocket connections used unencrypted `ws://` protocol in production, violating PIPEDA compliance
+**Root Cause**: WebSocket URL generation did not enforce encryption based on environment
+**Solution**: Implemented secure WebSocket URL generator with environment-aware encryption
+**Security Rules**:
+- **Production**: Always uses encrypted WebSocket (`wss://`) for HTTPS endpoints
+- **Development**: Uses unencrypted WebSocket (`ws://`) only for localhost HTTP endpoints
+- **Enforcement**: Throws error if attempting to use `ws://` in production environment
+**Environment Configuration**:
+```bash
+# Development
+EXPO_PUBLIC_GRAPHQL_URL=http://localhost:8001/graphql
+# Automatically converts to: ws://localhost:8001/subscriptions
+
+# Production
+EXPO_PUBLIC_GRAPHQL_URL=https://api.nestsync.ca/graphql
+# Automatically converts to: wss://api.nestsync.ca/subscriptions
+```
+**Files Modified**:
+- `lib/graphql/client.ts` - Added `getWebSocketUrl()` function with security validation
+- `lib/graphql/client.ts` - Enhanced WebSocket link with authentication token in connectionParams
+- `lib/graphql/client.ts` - Added detailed error logging for WebSocket connection issues
+- `docs/setup/cross-platform-setup.md` - Documented WebSocket security configuration
+**PIPEDA Compliance**: Personal information is never transmitted over unencrypted WebSocket connections
 
 ### Cross-Platform Storage Compatibility Issues
 **Problem**: Web authentication fails with `TypeError: _ExpoSecureStore.default.getValueWithKeyAsync is not a function`
@@ -1479,3 +1564,213 @@ The NestSync codebase underwent systematic conservative cleanup focused on organ
 - **Payment Integration**: Stripe is configured for Canadian tax compliance
 - **Emergency Scripts**: Reference archive for similar data integrity issues
 - **PIPEDA Compliance**: All privacy tools and fixes preserved in archive
+
+
+## Security Best Practices
+
+### SQL Injection Prevention (CRITICAL)
+
+**NEVER use string formatting or concatenation in SQL queries.** This creates SQL injection vulnerabilities that can compromise the entire database.
+
+#### ❌ INCORRECT - SQL Injection Vulnerable Patterns
+
+```python
+# DANGEROUS - F-string in SQL
+cursor.execute(f"SET timezone = '{settings.timezone}'")
+cursor.execute(f"SELECT * FROM {table_name} WHERE id = {user_id}")
+
+# DANGEROUS - String concatenation
+cursor.execute("SELECT * FROM users WHERE email = '" + email + "'")
+
+# DANGEROUS - % formatting
+cursor.execute("INSERT INTO logs VALUES ('%s', '%s')" % (user, action))
+
+# DANGEROUS - .format() method
+cursor.execute("DELETE FROM items WHERE id = {}".format(item_id))
+```
+
+**Why Dangerous**: If any variable contains user input or untrusted data, attackers can inject arbitrary SQL commands:
+```python
+# Example attack:
+timezone = "UTC'; DROP TABLE users; --"
+cursor.execute(f"SET timezone = '{timezone}'")
+# Results in: SET timezone = 'UTC'; DROP TABLE users; --'
+```
+
+#### ✅ CORRECT - Parameterized Query Patterns
+
+```python
+# SAFE - Parameterized query with tuple
+cursor.execute("SET timezone = %s", (settings.timezone,))
+
+# SAFE - Named parameters with dict
+cursor.execute(
+    "SELECT * FROM users WHERE email = %(email)s",
+    {"email": email}
+)
+
+# SAFE - SQLAlchemy ORM (preferred)
+from sqlalchemy import select
+result = await session.execute(
+    select(User).where(User.email == email)
+)
+
+# SAFE - SQLAlchemy text with bound parameters
+from sqlalchemy import text
+result = await session.execute(
+    text("SELECT * FROM users WHERE email = :email"),
+    {"email": email}
+)
+```
+
+#### Input Validation with Allowlists
+
+For configuration values that must be dynamic (like table names or timezones), use allowlist validation:
+
+```python
+# Example: Timezone validation (app/config/database.py)
+ALLOWED_TIMEZONES = [
+    'America/Toronto',
+    'America/Vancouver',
+    'America/Edmonton',
+    'America/Winnipeg',
+    'America/Halifax',
+    'America/St_Johns',
+    'America/Regina',
+    'America/Yellowknife',
+    'America/Whitehorse',
+    'America/Iqaluit',
+    'America/Rankin_Inlet',
+    'UTC',
+]
+
+def set_timezone(cursor, timezone: str) -> None:
+    """Safely set database timezone with validation."""
+    if timezone not in ALLOWED_TIMEZONES:
+        raise ValueError(
+            f"Invalid timezone: {timezone}. "
+            f"Must be one of: {', '.join(ALLOWED_TIMEZONES)}"
+        )
+    cursor.execute("SET timezone = %s", (timezone,))
+```
+
+#### Security Linting Configuration
+
+**Bandit** is configured to detect SQL injection patterns automatically:
+
+```bash
+# Run security scan
+cd NestSync-backend
+bandit -c .bandit -r app/
+
+# Install pre-commit hooks (includes bandit)
+pip install pre-commit
+pre-commit install
+
+# Run all pre-commit checks manually
+pre-commit run --all-files
+```
+
+**Configuration**: `.bandit` file in backend root
+- Detects SQL string formatting patterns
+- Checks for hardcoded secrets
+- Validates cryptographic usage
+- Minimum severity: MEDIUM
+- Minimum confidence: MEDIUM
+
+#### Pre-commit Security Hooks
+
+**Pre-commit hooks** automatically run security checks before each commit to catch issues early.
+
+**Installation**:
+```bash
+# Install pre-commit framework
+pip install pre-commit
+
+# Install the git hooks
+pre-commit install
+
+# Test the hooks (optional)
+pre-commit run --all-files
+```
+
+**What Gets Checked**:
+- ✅ **Semgrep**: Security vulnerabilities (SQL injection, XSS, etc.)
+- ✅ **Bandit**: Python security issues
+- ✅ **ESLint Security**: JavaScript/TypeScript security patterns
+- ✅ **Detect Secrets**: Hardcoded credentials and API keys
+- ✅ **Hadolint**: Dockerfile security best practices
+- ✅ **Code Quality**: Formatting, trailing whitespace, merge conflicts
+
+**Configuration**: `.pre-commit-config.yaml` in repository root
+
+**Bypassing Hooks** (use sparingly):
+```bash
+# Skip all hooks for a commit (not recommended)
+git commit --no-verify -m "message"
+
+# Skip specific hook
+SKIP=semgrep git commit -m "message"
+```
+
+**Updating Hooks**:
+```bash
+# Update to latest versions
+pre-commit autoupdate
+
+# Re-run on all files after update
+pre-commit run --all-files
+```
+
+**Troubleshooting**:
+- If hooks fail, fix the issues before committing
+- Check `.pre-commit-config.yaml` for configuration
+- View detailed output with `pre-commit run --verbose`
+- For false positives, update `.secrets.baseline` or hook configuration
+
+#### Migration and Test Exceptions
+
+**Acceptable Low-Risk Patterns** (documented in audit):
+
+1. **Alembic Migrations** - Table names from hardcoded lists:
+```python
+# ACCEPTABLE - No user input vector
+for table in ['subscription_plans', 'subscriptions', 'payment_methods']:
+    op.execute(f"CREATE TRIGGER update_{table}_updated_at ...")
+```
+
+2. **Test Files** - Hardcoded test data:
+```python
+# ACCEPTABLE - Test environment only
+for table in tables_to_check:
+    result = await session.execute(text(f"SELECT COUNT(*) FROM {table}"))
+```
+
+**Why Acceptable**: These use compile-time constants with no user input vectors. However, for new code, prefer parameterized queries even in tests.
+
+#### Security Audit Trail
+
+All SQL injection vulnerabilities have been audited and documented:
+- **Audit Report**: `NestSync-backend/docs/security/sql-injection-audit-2025-11-10.md`
+- **Critical Fixes**: All production code uses parameterized queries
+- **Validation**: Bandit security scanning in CI/CD pipeline
+
+#### References
+
+- **CWE-89**: SQL Injection
+- **OWASP A03:2021**: Injection
+- **SQLAlchemy Security**: https://docs.sqlalchemy.org/en/20/core/connections.html#sqlalchemy.engine.Connection.execute
+- **Bandit Documentation**: https://bandit.readthedocs.io/
+
+#### Quick Reference
+
+| Pattern | Safe? | Use Case |
+|---------|-------|----------|
+| `cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))` | ✅ YES | Always use for queries |
+| `cursor.execute(f"SELECT * FROM {table}")` | ❌ NO | Never use f-strings |
+| `session.execute(select(User).where(User.id == user_id))` | ✅ YES | Preferred ORM pattern |
+| `cursor.execute("SELECT * FROM " + table)` | ❌ NO | Never concatenate |
+| `text("SELECT * FROM users WHERE id = :id"), {"id": user_id}` | ✅ YES | SQLAlchemy text with params |
+| `op.execute(f"CREATE TRIGGER {trigger_name}")` | ⚠️ MAYBE | Only in migrations with hardcoded values |
+
+**Golden Rule**: If a variable touches SQL, use parameterized queries. No exceptions for production code.

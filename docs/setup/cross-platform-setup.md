@@ -274,6 +274,50 @@ chmod +x docker/docker-dev.sh
 - **54324**: Email testing (Inbucket)
 - **6379**: Redis cache
 
+### Environment Variables
+
+#### Development Environment
+```bash
+# Frontend Development (.env or .env.local)
+EXPO_PUBLIC_GRAPHQL_URL=http://localhost:8001/graphql
+
+# For iOS/Android testing on physical devices, use your machine's IP:
+EXPO_PUBLIC_GRAPHQL_URL=http://192.168.1.XXX:8001/graphql
+```
+
+#### Production Environment
+```bash
+# Frontend Production
+EXPO_PUBLIC_GRAPHQL_URL=https://api.nestsync.ca/graphql
+```
+
+### WebSocket Security Configuration
+
+**Important Security Note:** The application automatically handles WebSocket encryption based on the environment:
+
+- **Development (`http://`)**: Uses unencrypted WebSocket (`ws://`) for localhost connections
+- **Production (`https://`)**: Uses encrypted WebSocket (`wss://`) for secure real-time communication
+
+**How it works:**
+1. The GraphQL client reads `EXPO_PUBLIC_GRAPHQL_URL`
+2. Automatically converts `http://` → `ws://` (development only)
+3. Automatically converts `https://` → `wss://` (production)
+4. Replaces `/graphql` endpoint with `/subscriptions`
+
+**Security Enforcement:**
+- The system will **throw an error** if you attempt to use `ws://` (unencrypted) in production
+- All production WebSocket connections **must** use `wss://` for PIPEDA compliance
+- Personal information is never transmitted over unencrypted WebSocket connections
+
+**Example WebSocket URLs:**
+```bash
+# Development
+http://localhost:8001/graphql → ws://localhost:8001/subscriptions
+
+# Production
+https://api.nestsync.ca/graphql → wss://api.nestsync.ca/subscriptions
+```
+
 ### Firewall Settings
 If you have firewall enabled, allow these ports:
 ```bash
