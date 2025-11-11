@@ -64,6 +64,9 @@ baseline-screenshots/
 .logs/
 .pids/
 .specify/
+playwright-report/
+test-screenshots/
+*-test.html
 
 # Git worktrees (separate working directories for branches)
 worktrees/

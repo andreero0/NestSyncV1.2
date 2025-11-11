@@ -130,6 +130,11 @@ test-results/
 test_*.db
 test_*.sqlite
 
+# Test reports and screenshots (generated)
+test-screenshots/
+*-test.html
+playwright-report/
+
 # =============================================================================
 # Machine Learning & AI Models
 # =============================================================================

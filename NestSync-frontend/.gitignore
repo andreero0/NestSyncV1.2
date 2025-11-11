@@ -36,4 +36,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Test reports and artifacts (generated)
+playwright-report/
+test-results/
+*-test.html
+coverage/
+
 app-example
