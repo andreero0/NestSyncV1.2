@@ -608,10 +608,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, // XLarge border radius for large cards
     marginBottom: 24, // 6 × 4px base unit
     // Shadow for depth and elevation
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(NaN, 186, NaN, 0.1)',
     elevation: 2, // Android shadow
   },
   subscriptionHeader: {
@@ -719,10 +716,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, // XLarge border radius for large cards
     marginBottom: 16, // 4 × 4px base unit
     // Shadow for depth and elevation
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(NaN, 186, NaN, 0.1)',
     elevation: 2, // Android shadow
   },
   tierCardHeader: {
