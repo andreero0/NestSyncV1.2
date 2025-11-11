@@ -91,7 +91,7 @@ The following automated tests validate the security controls:
 # Validated By: tests/security/test_sql_injection.py::test_timezone_validation_rejects_invalid
 ```
 
-**Commit**: e86cead (2025-11-10)  
+**Commit**: 4978362 (2025-11-10)  
 **Next Review Date**: 2026-02-10 (Quarterly)
 
 ---
@@ -240,7 +240,7 @@ The following automated tests validate the WebSocket security controls:
 // The URL has already been validated by getWebSocketUrl() function above
 ```
 
-**Commit**: e86cead (2025-11-10)  
+**Commit**: 4978362 (2025-11-10)  
 **Next Review Date**: 2026-02-10 (Quarterly)
 
 ---
