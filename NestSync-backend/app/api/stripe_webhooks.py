@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_async_session
 from app.services.stripe_webhook_service import StripeWebhookService
+from app.utils.logging import sanitize_log_data
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,10 @@ async def handle_stripe_webhooks(
         # Process the webhook event
         result = await webhook_service.handle_webhook_event(body, signature)
 
-        logger.info(f"Webhook processed successfully: {result}")
+        logger.info(
+            "Webhook processed successfully",
+            extra={"result": sanitize_log_data(result)}
+        )
 
         return JSONResponse(
             content={

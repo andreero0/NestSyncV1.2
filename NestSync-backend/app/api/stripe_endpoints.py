@@ -24,6 +24,7 @@ from app.auth.dependencies import get_current_user, get_request_context, Request
 from app.models import User
 from app.config.stripe import get_stripe_config
 from app.config.database import get_async_session
+from app.utils.logging import sanitize_log_data
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -213,8 +214,12 @@ async def create_setup_intent(
         )
 
         logger.info(
-            f"Created SetupIntent {setup_intent.id} for user {current_user.id} "
-            f"(customer {customer_id})"
+            "Created SetupIntent",
+            extra={
+                "setup_intent_id": sanitize_log_data(setup_intent.id),
+                "user_id": sanitize_log_data(str(current_user.id)),
+                "customer_id": sanitize_log_data(customer_id)
+            }
         )
 
         return SetupIntentResponse(
@@ -331,9 +336,16 @@ async def create_payment_intent(
         payment_intent = stripe.PaymentIntent.create(**payment_intent_params)
 
         logger.info(
-            f"Created PaymentIntent {payment_intent.id} for user {current_user.id} "
-            f"(customer {customer_id}): ${total_amount/100:.2f} {payment_request.currency} "
-            f"(base: ${base_amount/100:.2f}, tax: ${tax_amount/100:.2f})"
+            "Created PaymentIntent",
+            extra={
+                "payment_intent_id": sanitize_log_data(payment_intent.id),
+                "user_id": sanitize_log_data(str(current_user.id)),
+                "customer_id": sanitize_log_data(customer_id),
+                "total_amount": total_amount / 100,
+                "currency": payment_request.currency,
+                "base_amount": base_amount / 100,
+                "tax_amount": tax_amount / 100
+            }
         )
 
         return PaymentIntentResponse(

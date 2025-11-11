@@ -22,15 +22,39 @@ logger = logging.getLogger(__name__)
 class StripeConfig:
     """
     Stripe SDK configuration and helper methods
+    
+    Supports both development and production modes:
+    - Development: Test mode with debug logging
+    - Production: Live mode with standard logging
+    
+    Requirements: 10.1, 10.2
     """
 
     def __init__(self):
         """Initialize Stripe configuration"""
         settings = get_settings()
 
-        # Configure Stripe API
-        stripe.api_key = settings.stripe_secret_key
+        # Determine if we're in development mode
+        self.is_development = settings.environment == "development"
+
+        # Configure Stripe API with appropriate key
+        if self.is_development:
+            # Use test key in development
+            stripe.api_key = settings.stripe_secret_key
+            logger.info("Stripe configured in TEST MODE for development")
+        else:
+            # Use live key in production
+            stripe.api_key = settings.stripe_secret_key
+            logger.info("Stripe configured in LIVE MODE for production")
+
+        # Set API version
         stripe.api_version = "2024-10-28.acacia"  # Latest API version
+
+        # Enable debug logging in development
+        if self.is_development:
+            stripe.log = "debug"
+            logger.setLevel(logging.DEBUG)
+            logger.debug("Stripe debug logging enabled")
 
         # Store configuration
         self.publishable_key = settings.stripe_publishable_key
@@ -46,7 +70,16 @@ class StripeConfig:
         # Cooling-off period (14 days for annual subscriptions)
         self.cooling_off_period_days = 14
 
-        logger.info("Stripe SDK configured for Canadian billing")
+        # Log configuration summary
+        logger.info(
+            "Stripe SDK configured for Canadian billing",
+            extra={
+                "environment": settings.environment,
+                "test_mode": self.is_development,
+                "currency": self.default_currency,
+                "country": self.default_country,
+            }
+        )
 
     def get_publishable_key(self) -> str:
         """Get Stripe publishable key for frontend"""
