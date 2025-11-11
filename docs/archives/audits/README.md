@@ -27,7 +27,50 @@ Audit reports are organized chronologically with clear date prefixes for easy re
 
 ## Reports
 
-**Status**: No audit reports archived yet.
+### Product Specification Codebase Audit (2025-11-10)
+**Status**: ✅ Resolved - Findings Incorporated  
+**Impact**: High - Product Definition  
+**Document**: [product-specification-audit-20251110.md](./product-specification-audit-20251110.md)
+
+**Summary**: Comprehensive audit of the Product Specification Document against actual codebase implementation. Identified critical discrepancies in pricing structure and subscription model.
+
+**Key Findings**:
+- Dual subscription model discovered (core app + reorder automation)
+- Actual pricing: $19.99/$24.99/$34.99 CAD (not $4.99/$6.99 as originally documented)
+- All major features validated as implemented
+- ML/AI dependencies confirmed as strategic, not dead code
+- PIPEDA compliance implementation validated as comprehensive
+
+**Corrections Applied**:
+- Updated PRODUCT_SPECIFICATION.md to v1.1 with correct pricing
+- Clarified dual subscription architecture
+- Documented feature implementation status
+- Updated revenue model projections
+
+**Related Documents**:
+- [Product Specification v1.1](../../PRODUCT_SPECIFICATION.md)
+- [Product Spec Summary](../../PRODUCT_SPEC_SUMMARY.md)
+
+---
+
+### JSX Structure Violations Audit (2025-11-10)
+**Status**: ✅ Resolved  
+**Impact**: Medium - Code Quality  
+**Document**: [jsx-violations-audit-20251110.md](./jsx-violations-audit-20251110.md)
+
+**Summary**: Automated audit of JSX structure violations where text nodes were direct children of View components. Identified 11 actual violations (all in test files) and 5 false positives.
+
+**Key Findings**:
+- 11 violations in test component StatusOverviewGrid.test.tsx
+- 0 violations in production code
+- All violations fixed with automated script
+- ESLint rules enabled to prevent future violations
+
+**Related Documents**:
+- [JSX Structure Fixes Summary](../fixes/ui-ux/jsx-structure-fixes-summary-20251110.md)
+- [Component Guidelines](../../NestSync-frontend/docs/component-guidelines.md)
+
+---
 
 **Note**: Active compliance and security documentation is maintained in:
 - [Compliance Documentation](../../compliance/) - Current compliance status
@@ -56,10 +99,11 @@ Audit reports should include:
 
 ## Summary Statistics
 
-- **Total Audits**: 0
+- **Total Audits**: 2
+- **Product Audits**: 1
 - **Compliance Audits**: 0
 - **Security Audits**: 0
-- **Quality Audits**: 0
+- **Quality Audits**: 1
 
 ### Audit Schedule
 Regular audits are planned for:

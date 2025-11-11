@@ -13,10 +13,12 @@ This directory contains active testing guides, strategies, and methodologies for
 - **[Screenshot Capture User Journey Map](./screenshot-capture-user-journey-map.md)** - Visual testing and user journey documentation
 
 ### Recent Test Reports
-- **[Comprehensive Feature Testing Report](./COMPREHENSIVE_FEATURE_TESTING_REPORT.md)** - Family collaboration and child management testing
-- **[Emergency Order Flow Test Report](./EMERGENCY_ORDER_FLOW_TEST_REPORT.md)** - Emergency ordering functionality validation
-- **[Stripe Integration Playwright Validation](./STRIPE_INTEGRATION_PLAYWRIGHT_VALIDATION.md)** - Payment system testing
-- **[Stripe Endpoints Test Report](./STRIPE_ENDPOINTS_TEST_REPORT.md)** - Backend payment endpoint validation
+
+Recent test reports have been archived. See the [Test Reports Archive](../archives/test-reports/README.md) for:
+- [Family Collaboration Testing (2025-09-17)](../archives/test-reports/e2e/family-collaboration-testing-20250917.md)
+- [Emergency Order Flow (2025-10-06)](../archives/test-reports/e2e/emergency-order-flow-20251006.md)
+- [Stripe Integration Playwright (2025-10-04)](../archives/test-reports/e2e/stripe-integration-playwright-20251004.md)
+- [Stripe Endpoints Test (2025-10-04)](../archives/test-reports/integration/stripe-endpoints-test-20251004.md)
 
 ### Test Artifacts
 - **[baseline-screenshots/](./baseline-screenshots/)** - Visual regression baseline images

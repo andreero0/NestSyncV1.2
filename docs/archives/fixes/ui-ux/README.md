@@ -45,6 +45,27 @@ This directory contains documentation for user interface and user experience fix
 
 ---
 
+### JSX Structure Fixes (2025-11-10)
+**Status**: ✅ Resolved  
+**Impact**: Medium - Code Quality  
+**Document**: [jsx-structure-fixes-summary-20251110.md](./jsx-structure-fixes-summary-20251110.md)
+
+**Summary**: Fixed JSX structure violations where text nodes were direct children of View components without Text wrappers. Applied 11 fixes to test components with automated script.
+
+**Key Changes**:
+- Fixed 11 violations in StatusOverviewGrid.test.tsx
+- Created automated audit and fix scripts
+- Enabled ESLint react-native/no-raw-text rule
+- Added pre-commit hooks to prevent future violations
+- Updated component guidelines documentation
+
+**Impact**:
+- Eliminated console warnings
+- 100% compliance with React Native best practices
+- Automated enforcement prevents regressions
+
+---
+
 ### Trial Banner Visibility Fix (2025-11-06)
 **Status**: ✅ Resolved  
 **Impact**: High - Fixed confusing subscription messaging  
@@ -68,7 +89,7 @@ This directory contains documentation for user interface and user experience fix
 
 ### By Priority
 - **P1 High**: Family Modal Safe Area, Trial Banner Visibility
-- **P2 Medium**: Nested Text Components (partial)
+- **P2 Medium**: JSX Structure Fixes, Nested Text Components (partial)
 
 ### By Platform
 - **iOS**: Family Modal Safe Area Fix
@@ -76,7 +97,7 @@ This directory contains documentation for user interface and user experience fix
 - **Cross-Platform**: Trial Banner Visibility
 
 ### By Status
-- **Fully Resolved**: Family Modal Safe Area, Trial Banner Visibility
+- **Fully Resolved**: JSX Structure Fixes, Family Modal Safe Area, Trial Banner Visibility
 - **Partial Resolution**: Nested Text Components
 
 ### Related Documentation

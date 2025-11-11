@@ -11,6 +11,7 @@ This directory contains active troubleshooting guides and debugging resources fo
 ### Active Troubleshooting Guides
 - **[Development Bottlenecks](./bottlenecks.md)** - Critical issues encountered during development with solutions
 - **[General Troubleshooting Guide](./TROUBLESHOOTING-GUIDE.md)** - Common setup and environment issues
+- **[Test Environment Issues](./test-environment-issues.md)** - Test environment setup and common testing problems
 - **[Diaper Size Mismatch](./DIAPER_SIZE_MISMATCH.md)** - Child ID selection bug in QuickLogModal
 
 ### Specific Issue Guides
@@ -384,5 +385,12 @@ psql $DATABASE_URL -c "SELECT * FROM pg_stat_activity"
 
 ---
 
-*Last Updated: 2025-11-08*
+---
+
+**Last Updated**: 2025-11-11  
+**Maintained By**: Development Team  
+**Review Cycle**: As needed
+
 *For historical troubleshooting documentation, see [Documentation Archives](../archives/README.md)*
+
+[← Back to Documentation Hub](../README.md)
