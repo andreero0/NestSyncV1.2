@@ -9,6 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "migrate:rn-web": "node ./scripts/migrate-deprecated-rn-web-apis.js",
+    "migrate:rn-web:dry-run": "node ./scripts/migrate-deprecated-rn-web-apis.js --dry-run",
     "test:visual": "playwright test --config=playwright.visual-regression.config.ts",
     "test:visual:mobile": "playwright test --config=playwright.visual-regression.config.ts --project=visual-mobile-chrome",
     "test:visual:desktop": "playwright test --config=playwright.visual-regression.config.ts --project=visual-desktop-chrome",
@@ -90,6 +92,8 @@
     "@types/react": "~19.1.10",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "eslint-plugin-react-native": "^4.1.0",
+    "eslint-plugin-security": "^3.0.1",
     "typescript": "~5.9.2"
   },
   "private": true

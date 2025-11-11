@@ -54,39 +54,39 @@ export function StatusOverviewGridTest() {
     <View style={styles.container}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <View style={styles.headerText}>Fixed-Size Traffic Light Grid Test</View>
-          <View style={styles.headerSubtext}>
+          <View style={styles.headerText}><Text>Fixed-Size Traffic Light Grid Test</Text></View>
+          <View style={styles.headerSubtext}><Text>
             All cards are exactly 160×120px with consistent spacing
-          </View>
+          </Text></View>
         </View>
         
         <StatusOverviewGrid cards={mockTrafficLightCards} />
         
         <View style={styles.specs}>
           <View style={styles.specItem}>
-            <View style={styles.specLabel}>Card Size:</View>
-            <View style={styles.specValue}>160×120px (4:3 aspect ratio)</View>
+            <View style={styles.specLabel}><Text>Card Size:</Text></View>
+            <View style={styles.specValue}><Text>160×120px (4:3 aspect ratio)</Text></View>
           </View>
           <View style={styles.specItem}>
-            <View style={styles.specLabel}>Grid Gap:</View>
-            <View style={styles.specValue}>16px between cards</View>
+            <View style={styles.specLabel}><Text>Grid Gap:</Text></View>
+            <View style={styles.specValue}><Text>16px between cards</Text></View>
           </View>
           <View style={styles.specItem}>
-            <View style={styles.specLabel}>Container Padding:</View>
-            <View style={styles.specValue}>20px edge padding</View>
+            <View style={styles.specLabel}><Text>Container Padding:</Text></View>
+            <View style={styles.specValue}><Text>20px edge padding</Text></View>
           </View>
           <View style={styles.specItem}>
-            <View style={styles.specLabel}>Layout:</View>
-            <View style={styles.specValue}>2×2 grid on all screen sizes</View>
+            <View style={styles.specLabel}><Text>Layout:</Text></View>
+            <View style={styles.specValue}><Text>2×2 grid on all screen sizes</Text></View>
           </View>
         </View>
         
         <View style={styles.note}>
-          <View style={styles.noteText}>
+          <View style={styles.noteText}><Text>
             Note: Cards maintain fixed dimensions and do not dynamically resize 
             based on content length or screen size. This ensures consistent 
             visual hierarchy and scannable layout for stressed parents.
-          </View>
+          </Text></View>
         </View>
       </View>
     </View>

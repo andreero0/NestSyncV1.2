@@ -106,7 +106,7 @@ class EmergencyStorageService {
       }
       return null;
     } catch (error) {
-      console.warn(`Failed to get string for key ${key}:`, error);
+      console.warn('Failed to get string for key:', key, error);
       return null;
     }
   }
@@ -125,7 +125,7 @@ class EmergencyStorageService {
       }
       return false;
     } catch (error) {
-      console.warn(`Failed to set string for key ${key}:`, error);
+      console.warn('Failed to set string for key:', key, error);
       return false;
     }
   }
@@ -144,7 +144,7 @@ class EmergencyStorageService {
       }
       return false;
     } catch (error) {
-      console.warn(`Failed to delete key ${key}:`, error);
+      console.warn('Failed to delete key:', key, error);
       return false;
     }
   }
