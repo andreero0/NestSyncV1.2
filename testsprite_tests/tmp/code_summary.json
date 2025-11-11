@@ -1,0 +1,251 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "Python 3.11",
+    "React Native",
+    "Expo",
+    "FastAPI",
+    "GraphQL",
+    "Strawberry GraphQL",
+    "PostgreSQL",
+    "SQLAlchemy",
+    "Supabase",
+    "Redis",
+    "Stripe",
+    "Apollo Client",
+    "React Navigation",
+    "Zustand",
+    "Zod"
+  ],
+  "features": [
+    {
+      "name": "Authentication System",
+      "description": "User authentication with login, registration, password recovery, and biometric authentication support",
+      "files": [
+        "NestSync-frontend/app/(auth)/login.tsx",
+        "NestSync-frontend/app/(auth)/register.tsx",
+        "NestSync-frontend/app/(auth)/forgot-password.tsx",
+        "NestSync-frontend/app/(auth)/reset-password.tsx",
+        "NestSync-backend/app/graphql/auth_resolvers.py",
+        "NestSync-backend/app/auth/supabase.py"
+      ]
+    },
+    {
+      "name": "Onboarding Flow",
+      "description": "User onboarding process with child profile setup and initial configuration",
+      "files": [
+        "NestSync-frontend/app/(auth)/onboarding.tsx",
+        "NestSync-frontend/hooks/useTrialOnboarding.tsx"
+      ]
+    },
+    {
+      "name": "Child Profile Management",
+      "description": "Create, edit, and manage multiple child profiles with details",
+      "files": [
+        "NestSync-frontend/app/children-management.tsx",
+        "NestSync-frontend/components/modals/AddChildModal.tsx",
+        "NestSync-frontend/components/modals/EditChildModal.tsx",
+        "NestSync-frontend/hooks/useChildren.ts",
+        "NestSync-backend/app/graphql/child_resolvers.py",
+        "NestSync-backend/app/models/child.py",
+        "NestSync-backend/app/services/child_service.py"
+      ]
+    },
+    {
+      "name": "Inventory Management",
+      "description": "Track diaper inventory with traffic light status system (red/yellow/green)",
+      "files": [
+        "NestSync-frontend/app/inventory-list.tsx",
+        "NestSync-frontend/app/add-inventory-item.tsx",
+        "NestSync-frontend/components/modals/AddInventoryModal.tsx",
+        "NestSync-frontend/components/modals/EditInventoryModal.tsx",
+        "NestSync-frontend/hooks/useInventoryTrafficLight.ts",
+        "NestSync-backend/app/graphql/inventory_resolvers.py",
+        "NestSync-backend/app/models/inventory.py"
+      ]
+    },
+    {
+      "name": "Reorder Suggestions",
+      "description": "ML-powered reorder suggestions with retailer comparison and emergency ordering",
+      "files": [
+        "NestSync-frontend/app/reorder-suggestions.tsx",
+        "NestSync-frontend/app/reorder-suggestions-simple.tsx",
+        "NestSync-frontend/components/reorder/ReorderSuggestionCard.tsx",
+        "NestSync-frontend/components/reorder/ReorderSuggestionsContainer.tsx",
+        "NestSync-frontend/components/reorder/RetailerComparisonSheet.tsx",
+        "NestSync-frontend/components/reorder/EmergencyOrderModal.tsx",
+        "NestSync-frontend/components/reorder/ModifyOrderModal.tsx",
+        "NestSync-backend/app/graphql/reorder_resolvers.py",
+        "NestSync-backend/app/services/reorder_service.py",
+        "NestSync-backend/app/services/retailer_api_service.py"
+      ]
+    },
+    {
+      "name": "Analytics Dashboard",
+      "description": "Comprehensive analytics with charts, usage patterns, predictions, and insights",
+      "files": [
+        "NestSync-frontend/app/(tabs)/explore.tsx",
+        "NestSync-frontend/components/analytics/WeeklyPatternChart.tsx",
+        "NestSync-frontend/components/analytics/SmartPredictionsCard.tsx",
+        "NestSync-frontend/components/analytics/SmartInsightsCard.tsx",
+        "NestSync-frontend/components/analytics/YourBabysPatternsCard.tsx",
+        "NestSync-frontend/components/charts/AnalyticsBarChart.tsx",
+        "NestSync-frontend/components/charts/AnalyticsLineChart.tsx",
+        "NestSync-frontend/components/charts/AnalyticsPieChart.tsx",
+        "NestSync-frontend/hooks/useAnalytics.ts",
+        "NestSync-frontend/hooks/useEnhancedAnalytics.ts",
+        "NestSync-backend/app/graphql/analytics_resolvers.py",
+        "NestSync-backend/app/services/analytics_service.py",
+        "NestSync-backend/app/services/enhanced_analytics_service.py"
+      ]
+    },
+    {
+      "name": "Activity Timeline",
+      "description": "Track and display chronological activity logs with filtering and visualization",
+      "files": [
+        "NestSync-frontend/app/timeline.tsx",
+        "NestSync-frontend/components/timeline/ActivityTimeline.tsx",
+        "NestSync-frontend/components/timeline/TimelineItem.tsx",
+        "NestSync-frontend/hooks/useTimelineData.ts",
+        "NestSync-backend/app/models/activity.py",
+        "NestSync-backend/app/services/activity_service.py"
+      ]
+    },
+    {
+      "name": "Emergency Dashboard",
+      "description": "Emergency access system with medical information and emergency contacts",
+      "files": [
+        "NestSync-frontend/app/emergency-dashboard.tsx",
+        "NestSync-frontend/components/emergency/EmergencyDashboard.tsx",
+        "NestSync-frontend/components/emergency/EmergencyModeButton.tsx",
+        "NestSync-frontend/components/emergency/EmergencyShareModal.tsx",
+        "NestSync-frontend/components/emergency/EmergencyContactCard.tsx",
+        "NestSync-frontend/components/emergency/MedicalInfoCard.tsx",
+        "NestSync-frontend/hooks/useEmergencyProfiles.ts",
+        "NestSync-backend/app/graphql/emergency_resolvers.py",
+        "NestSync-backend/app/models/emergency_access.py",
+        "NestSync-backend/app/models/emergency_contact.py",
+        "NestSync-backend/app/models/medical_information.py"
+      ]
+    },
+    {
+      "name": "Family Collaboration",
+      "description": "Real-time family collaboration with presence indicators and permissions",
+      "files": [
+        "NestSync-frontend/components/collaboration/FamilyManagement.tsx",
+        "NestSync-frontend/components/collaboration/PresenceIndicators.tsx",
+        "NestSync-backend/app/graphql/collaboration_resolvers.py",
+        "NestSync-backend/app/services/collaboration_service.py",
+        "NestSync-backend/app/services/websocket_service.py",
+        "NestSync-backend/app/models/collaboration.py"
+      ]
+    },
+    {
+      "name": "Subscription Management",
+      "description": "Trial activation, subscription billing, payment methods, and feature access control",
+      "files": [
+        "NestSync-frontend/app/(subscription)/subscription-management.tsx",
+        "NestSync-frontend/app/(subscription)/trial-activation.tsx",
+        "NestSync-frontend/app/(subscription)/billing-history.tsx",
+        "NestSync-frontend/app/(subscription)/payment-methods.tsx",
+        "NestSync-frontend/components/subscription/SubscribedTrialBanner.tsx",
+        "NestSync-frontend/components/reorder/PremiumFeatureGate.tsx",
+        "NestSync-frontend/components/reorder/PremiumUpgradeModal.tsx",
+        "NestSync-frontend/components/reorder/TrialProgressCard.tsx",
+        "NestSync-frontend/hooks/useFeatureAccess.ts",
+        "NestSync-backend/app/graphql/subscription_resolvers.py",
+        "NestSync-backend/app/models/premium_subscription.py",
+        "NestSync-backend/app/services/subscription_monitoring.py",
+        "NestSync-backend/app/api/stripe_endpoints.py",
+        "NestSync-backend/app/api/stripe_webhooks.py"
+      ]
+    },
+    {
+      "name": "Consent Management",
+      "description": "PIPEDA-compliant consent management with audit trail and JIT consent",
+      "files": [
+        "NestSync-frontend/components/consent/ConsentToggle.tsx",
+        "NestSync-frontend/components/consent/ConsentGuard.tsx",
+        "NestSync-frontend/components/consent/JITConsentModal.tsx",
+        "NestSync-frontend/components/consent/LegalModals.tsx",
+        "NestSync-backend/app/models/consent.py",
+        "NestSync-backend/app/services/consent_service.py"
+      ]
+    },
+    {
+      "name": "Notification System",
+      "description": "Push notifications with preference management and delivery tracking",
+      "files": [
+        "NestSync-frontend/components/settings/NotificationPreferences.tsx",
+        "NestSync-backend/app/graphql/notification_resolvers.py",
+        "NestSync-backend/app/models/notification.py",
+        "NestSync-backend/app/services/email_service.py"
+      ]
+    },
+    {
+      "name": "Settings and Profile",
+      "description": "User profile settings, preferences, and account management",
+      "files": [
+        "NestSync-frontend/app/(tabs)/settings.tsx",
+        "NestSync-frontend/app/profile-settings.tsx",
+        "NestSync-backend/app/models/user.py",
+        "NestSync-backend/app/services/user_service.py"
+      ]
+    },
+    {
+      "name": "UI Components Library",
+      "description": "Reusable UI components including Glass UI, buttons, cards, inputs, and themed components",
+      "files": [
+        "NestSync-frontend/components/ui/GlassCard.tsx",
+        "NestSync-frontend/components/ui/GlassButton.tsx",
+        "NestSync-frontend/components/ui/GlassView.tsx",
+        "NestSync-frontend/components/ui/NestSyncButton.tsx",
+        "NestSync-frontend/components/ui/NestSyncCard.tsx",
+        "NestSync-frontend/components/ui/NestSyncInput.tsx",
+        "NestSync-frontend/components/ui/StandardHeader.tsx",
+        "NestSync-frontend/components/ui/ChildSelector.tsx",
+        "NestSync-frontend/components/ThemedText.tsx",
+        "NestSync-frontend/components/ThemedView.tsx"
+      ]
+    },
+    {
+      "name": "Splash and Loading",
+      "description": "App initialization with splash screen, loading indicators, and trust signals",
+      "files": [
+        "NestSync-frontend/components/splash/SplashScreen.tsx",
+        "NestSync-frontend/components/splash/SplashAnimation.tsx",
+        "NestSync-frontend/components/splash/LoadingBar.tsx",
+        "NestSync-frontend/components/splash/TrustIndicators.tsx",
+        "NestSync-frontend/hooks/useSplashLogic.ts"
+      ]
+    },
+    {
+      "name": "Observability and Monitoring",
+      "description": "Continuous monitoring, health checks, and system observability",
+      "files": [
+        "NestSync-backend/app/graphql/observability_resolvers.py",
+        "NestSync-backend/app/services/observability_service.py",
+        "NestSync-backend/app/services/continuous_monitoring.py",
+        "NestSync-backend/app/health/auth_health.py",
+        "NestSync-backend/app/api/health.py"
+      ]
+    },
+    {
+      "name": "Canadian Tax and Billing",
+      "description": "Canadian tax calculation and billing compliance",
+      "files": [
+        "NestSync-backend/app/services/tax_service.py"
+      ]
+    },
+    {
+      "name": "Data Caching and Performance",
+      "description": "Redis caching and performance optimization for analytics",
+      "files": [
+        "NestSync-backend/app/services/analytics_cache.py",
+        "NestSync-backend/app/services/analytics_scheduler.py"
+      ]
+    }
+  ]
+}
+
+

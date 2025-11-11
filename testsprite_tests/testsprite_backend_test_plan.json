@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "test_user_authentication_endpoints",
+    "description": "Verify the user authentication system including login, registration, password recovery, and biometric authentication endpoints for correct functionality, security, and error handling."
+  },
+  {
+    "id": "TC002",
+    "title": "test_onboarding_flow_endpoints",
+    "description": "Test the onboarding flow endpoints to ensure proper child profile setup and initial configuration are handled correctly for first-time users."
+  },
+  {
+    "id": "TC003",
+    "title": "test_child_profile_management_endpoints",
+    "description": "Validate the child profile management APIs for creating, editing, retrieving, and deleting child profiles with accurate data reflection and permission checks."
+  },
+  {
+    "id": "TC004",
+    "title": "test_inventory_management_endpoints",
+    "description": "Check the inventory management endpoints to confirm diaper stock tracking with traffic light status updates, real-time synchronization, and offline capabilities."
+  },
+  {
+    "id": "TC005",
+    "title": "test_reorder_suggestions_endpoints",
+    "description": "Test the ML-powered reorder suggestion APIs for providing accurate reorder timing, size-change predictions, retailer price comparisons, and emergency ordering functionality."
+  },
+  {
+    "id": "TC006",
+    "title": "test_analytics_dashboard_endpoints",
+    "description": "Verify the analytics dashboard endpoints for loading usage patterns, cost summaries, predictions, and insights within performance targets."
+  },
+  {
+    "id": "TC007",
+    "title": "test_family_collaboration_endpoints",
+    "description": "Validate real-time family collaboration APIs for presence indicators, shared shopping lists, role-based permissions, and conflict-free synchronization."
+  },
+  {
+    "id": "TC008",
+    "title": "test_subscription_management_endpoints",
+    "description": "Test subscription management endpoints including trial activation, billing, payment methods, and feature access control with Canadian tax compliance."
+  },
+  {
+    "id": "TC009",
+    "title": "test_consent_management_endpoints",
+    "description": "Verify PIPEDA-compliant consent management APIs for user consent tracking, audit trails, just-in-time consent prompts, and data portability requests."
+  },
+  {
+    "id": "TC010",
+    "title": "test_notification_system_endpoints",
+    "description": "Check notification system endpoints for reliable push notification delivery, user preference adherence, and actionable responses."
+  }
+]

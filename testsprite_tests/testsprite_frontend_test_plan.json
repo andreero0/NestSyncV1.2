@@ -1,0 +1,651 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Registration Success",
+    "description": "Verify that a new user can successfully register with valid email and password inputs and receive confirmation.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Input a valid Canadian email address and a strong password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify registration success message is displayed and user is redirected to onboarding."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Registration with Existing Email",
+    "description": "Verify registration fails when using an email address that is already registered.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Input an email already registered and a valid password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate that a proper error message is displayed indicating duplicate email."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "User Login with Valid Credentials",
+    "description": "Verify that a registered user can login successfully using correct credentials.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter a registered email and correct password."
+      },
+      {
+        "type": "action",
+        "description": "Click on the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the user is logged in and redirected to the main dashboard."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "User Login Failure with Incorrect Credentials",
+    "description": "Verify that login fails with incorrect password and appropriate error message is shown.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter a registered email and incorrect password."
+      },
+      {
+        "type": "action",
+        "description": "Click on the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Check for error message indicating invalid credentials and no navigation occurs."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Biometric Authentication Login",
+    "description": "Verify user can login using biometric authentication if enabled.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Enable biometric authentication in user settings."
+      },
+      {
+        "type": "action",
+        "description": "Log out and navigate to login screen."
+      },
+      {
+        "type": "action",
+        "description": "Select biometric login option and authenticate using biometric input."
+      },
+      {
+        "type": "assertion",
+        "description": "User is successfully logged in without typing password."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Onboarding: Child Profile Creation",
+    "description": "Verify that first-time user can create a child profile during onboarding with all required fields.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Complete user registration and proceed to onboarding."
+      },
+      {
+        "type": "action",
+        "description": "Input child name, birthdate, and initial diaper size."
+      },
+      {
+        "type": "action",
+        "description": "Submit the child profile creation form."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm child profile is created and visible in profile list."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Child Profile Create/Edit/Delete Operations",
+    "description": "Verify user can create additional child profiles, edit existing profiles, and delete them with appropriate confirmations.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to child profile management section."
+      },
+      {
+        "type": "action",
+        "description": "Add a new child profile with valid data."
+      },
+      {
+        "type": "assertion",
+        "description": "New profile appears in the profile list."
+      },
+      {
+        "type": "action",
+        "description": "Edit the created child profile to change details."
+      },
+      {
+        "type": "assertion",
+        "description": "Changes are saved and reflected immediately."
+      },
+      {
+        "type": "action",
+        "description": "Delete the edited child profile and confirm deletion."
+      },
+      {
+        "type": "assertion",
+        "description": "Profile is removed from list and deleted from backend."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Inventory Management Traffic Light Status Update",
+    "description": "Verify that diaper inventory traffic light changes correctly based on stock levels (green/yellow/red).",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Add diaper inventory with stock above green threshold."
+      },
+      {
+        "type": "assertion",
+        "description": "Traffic light indicator shows green."
+      },
+      {
+        "type": "action",
+        "description": "Add inventory to reduce stock to below yellow threshold."
+      },
+      {
+        "type": "assertion",
+        "description": "Traffic light indicator updates to yellow."
+      },
+      {
+        "type": "action",
+        "description": "Reduce inventory to below red threshold."
+      },
+      {
+        "type": "assertion",
+        "description": "Traffic light indicator updates to red indicating low stock."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Inventory Quick Add and Remove",
+    "description": "Verify users can quickly add and remove diaper inventory items and that UI and backend stay in sync.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Use quick-add controls to add inventory for a selected diaper size."
+      },
+      {
+        "type": "assertion",
+        "description": "Inventory count updates in UI and is persisted."
+      },
+      {
+        "type": "action",
+        "description": "Use quick-remove controls to reduce inventory count."
+      },
+      {
+        "type": "assertion",
+        "description": "Inventory count updates accordingly and reflects correctly across user devices."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "ML-Powered Reorder Suggestions Accuracy",
+    "description": "Validate ML model provides reorder suggestions based on historical usage, size changes, and retailer price data.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Populate inventory usage data for multiple diaper sizes and child profiles."
+      },
+      {
+        "type": "action",
+        "description": "Access reorder suggestion screen."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify reorder suggestions are displayed with expected reorder timing and size recommendations."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify retailer price comparisons show best deals."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "ML Model Size-Change Prediction Validation",
+    "description": "Verify that size-change predictions for children are accurate based on growth tracking data.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Input child growth measurements over time."
+      },
+      {
+        "type": "action",
+        "description": "Trigger prediction generation."
+      },
+      {
+        "type": "assertion",
+        "description": "Predicted next diaper size aligns with growth trends."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Emergency Order Modal Functionality",
+    "description": "Verify emergency order modal opens correctly and allows placing urgent orders with confirmation and retry options.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger emergency order from reorder suggestions page."
+      },
+      {
+        "type": "assertion",
+        "description": "Emergency order modal appears with required information."
+      },
+      {
+        "type": "action",
+        "description": "Place emergency order."
+      },
+      {
+        "type": "assertion",
+        "description": "Order confirmation is shown and inventory updates accordingly."
+      },
+      {
+        "type": "action",
+        "description": "Simulate network failure and retry placing an emergency order."
+      },
+      {
+        "type": "assertion",
+        "description": "Retry mechanism works and order succeeds after retry."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Analytics Dashboard Loading and Accuracy",
+    "description": "Verify analytics dashboard loads within 2 seconds with accurate display of usage charts, cost summaries, and predictions.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to analytics dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard loads within 2 seconds."
+      },
+      {
+        "type": "assertion",
+        "description": "Correct analytics data including weekly usage pattern, cost optimization charts, and size-change predictions are displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Family Collaboration Real-Time Synchronization",
+    "description": "Verify real-time inventory updates and notifications sync correctly across multiple caregiver devices with role-based permission enforcement.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "User A and User B login to shared family account from different devices."
+      },
+      {
+        "type": "action",
+        "description": "User A updates inventory and shopping list."
+      },
+      {
+        "type": "assertion",
+        "description": "User B sees real-time updates immediately with presence indicators."
+      },
+      {
+        "type": "action",
+        "description": "Test permission restrictions by attempting prohibited actions from User B based on role."
+      },
+      {
+        "type": "assertion",
+        "description": "Unauthorized actions are blocked with proper error messages."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Push Notification Delivery and Preference Respect",
+    "description": "Verify that low stock alerts and reorder reminders are sent reliably as push notifications and respect user-configured preferences.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Configure notification preferences to enable low stock alerts and reorder reminders."
+      },
+      {
+        "type": "action",
+        "description": "Simulate inventory reaching low stock threshold."
+      },
+      {
+        "type": "assertion",
+        "description": "Push notification for low stock alert is received on user device."
+      },
+      {
+        "type": "action",
+        "description": "Disable reorder reminder notifications in preferences."
+      },
+      {
+        "type": "action",
+        "description": "Trigger reorder reminder event."
+      },
+      {
+        "type": "assertion",
+        "description": "No reorder reminder notification is received respecting user choices."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Receipt Scanning and OCR Accuracy",
+    "description": "Verify receipt scanning feature accurately extracts diaper purchase information and updates inventory with user correction options.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Scan a receipt with multiple diaper purchase entries."
+      },
+      {
+        "type": "assertion",
+        "description": "OCR extracts diaper brands, sizes, and quantities with confidence scores."
+      },
+      {
+        "type": "action",
+        "description": "Review extracted data and manually correct any errors."
+      },
+      {
+        "type": "action",
+        "description": "Confirm update of diaper inventory based on scanned receipt."
+      },
+      {
+        "type": "assertion",
+        "description": "Inventory reflects the new stock accurately including price and cost tracking."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Subscription Trial Activation and Conversion Workflow",
+    "description": "Verify users can activate a free trial and convert to paid subscriptions with Canadian tax calculations applied correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "New user activates a trial subscription."
+      },
+      {
+        "type": "assertion",
+        "description": "Trial status is active and premium features unlocked."
+      },
+      {
+        "type": "action",
+        "description": "User initiates subscription upgrade to paid plan."
+      },
+      {
+        "type": "assertion",
+        "description": "Billing is processed with correct Canadian tax applied."
+      },
+      {
+        "type": "assertion",
+        "description": "Receipt and subscription confirmation displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "PIPEDA-Compliant Consent Management and Audit Trail",
+    "description": "Verify that user consent for data collection is requested just-in-time, stored securely with audit trails, and can be updated or withdrawn.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger app feature that requires new data consent."
+      },
+      {
+        "type": "assertion",
+        "description": "Just-in-time consent modal is shown explaining data usage."
+      },
+      {
+        "type": "action",
+        "description": "User consents and the action is recorded."
+      },
+      {
+        "type": "assertion",
+        "description": "Audit log shows timestamp and consent details."
+      },
+      {
+        "type": "action",
+        "description": "User withdraws consent from settings."
+      },
+      {
+        "type": "assertion",
+        "description": "Consent update is recorded and relevant data is deleted or access revoked."
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Emergency Dashboard Access and Information Display",
+    "description": "Validate that emergency dashboard can be accessed quickly and displays correct medical info and emergency contacts for selected child.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to emergency dashboard from main navigation."
+      },
+      {
+        "type": "assertion",
+        "description": "Emergency medical cards and contact information for selected child are displayed."
+      },
+      {
+        "type": "action",
+        "description": "Share emergency info via supported sharing modal."
+      },
+      {
+        "type": "assertion",
+        "description": "Information is shared securely with audit of sharing events."
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "App Accessibility Compliance WCAG 2.1 AA",
+    "description": "Verify that app UI components and navigation comply with WCAG 2.1 AA standards, providing accessible labels, keyboard navigation and color contrast.",
+    "category": "ui",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate through major app screens using keyboard only."
+      },
+      {
+        "type": "assertion",
+        "description": "All interactive elements are reachable and focus states are visible."
+      },
+      {
+        "type": "assertion",
+        "description": "All UI images and buttons have accessible labels."
+      },
+      {
+        "type": "action",
+        "description": "Verify color contrast ratios on traffic light indicators and key buttons."
+      },
+      {
+        "type": "assertion",
+        "description": "Contrast ratios meet or exceed WCAG 2.1 AA guidelines."
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "App Startup Performance Under 3 Seconds",
+    "description": "Verify app startup time from launch to home screen load is under 3 seconds on recommended devices.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Launch the app fresh from device home screen."
+      },
+      {
+        "type": "assertion",
+        "description": "Time from launch to full home screen render is measured and is less than 3 seconds."
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "API Response Time Below 500 ms",
+    "description": "Verify backend GraphQL APIs respond within 500 milliseconds for typical requests including authentication, inventory, and analytics queries.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send authenticated GraphQL queries for user inventory, child profiles and analytics data."
+      },
+      {
+        "type": "assertion",
+        "description": "Each API response is received within 500 ms consistently."
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Security Audit Verification",
+    "description": "Verify implementation of encryption, row-level security, and authentication best practices through penetration testing and code review.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Conduct penetration testing including authentication bypass, data access attempts, and encryption validation."
+      },
+      {
+        "type": "assertion",
+        "description": "No security vulnerabilities found; data access rules enforced correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Offline Sync Capability for Inventory Updates",
+    "description": "Verify that inventory updates made while offline sync correctly once network is restored without data loss or conflicts.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Turn off network connectivity and update diaper inventory."
+      },
+      {
+        "type": "action",
+        "description": "Turn network back on to restore connectivity."
+      },
+      {
+        "type": "assertion",
+        "description": "Offline changes sync successfully to backend and reflect on all devices."
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Subscription Payment Failure Handling",
+    "description": "Verify app handles failed subscription payments gracefully and notifies users with retry options.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate subscription payment failure through billing system."
+      },
+      {
+        "type": "assertion",
+        "description": "User is notified of the failed payment with clear messaging."
+      },
+      {
+        "type": "action",
+        "description": "User attempts payment retry."
+      },
+      {
+        "type": "assertion",
+        "description": "Successful retry updates subscription status without data corruption."
+      }
+    ]
+  }
+]
