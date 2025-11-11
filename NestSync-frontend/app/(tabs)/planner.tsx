@@ -1408,13 +1408,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#DC2626',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(220, 38, 38, 0.1)',
     elevation: 3,
   },
   trustBadgeContainer: {
@@ -1446,13 +1440,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.2)',
     elevation: 2,
   },
   shieldText: {
@@ -1465,13 +1453,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 8,
   },
   enhancedConsistencyCard: {
@@ -1479,13 +1461,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 8,
   },
   enhancedTrendsCard: {
@@ -1493,13 +1469,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 8,
   },
   enhancedCostAnalysisCard: {
@@ -1507,13 +1477,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 8,
   },
   cardHeader: {
@@ -1665,13 +1629,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#0891B2',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    boxShadow: '0px 4px 8px rgba(8, 145, 178, 0.2)',
     elevation: 6,
   },
   enhancedButtonText: {
@@ -1742,10 +1700,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginHorizontal: 16,
     gap: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
   viewAllText: {

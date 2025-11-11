@@ -152,10 +152,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderRadius: 12,
     // Shadow for depth
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.1)',
     elevation: 2, // Android shadow
     // Touch target requirements
     minWidth: 44, // Accessibility minimum
