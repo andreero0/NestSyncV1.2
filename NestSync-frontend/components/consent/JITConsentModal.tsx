@@ -11,7 +11,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableWithoutFeedback,
+  Pressable,
   Platform,
   StatusBar,
 } from 'react-native';
@@ -152,7 +152,7 @@ export function JITConsentModal() {
       )}
       
       {/* Backdrop with blur effect */}
-      <TouchableWithoutFeedback onPress={handleBackdropPress}>
+      <Pressable onPress={handleBackdropPress}>
         <View style={styles.backdrop}>
           {Platform.OS === 'ios' ? (
             <BlurView intensity={20} style={StyleSheet.absoluteFill} />
@@ -160,7 +160,7 @@ export function JITConsentModal() {
             <View style={[StyleSheet.absoluteFill, styles.androidBlur]} />
           )}
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
 
       {/* Modal Content */}
       <View style={styles.modalContainer}>
@@ -267,13 +267,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     maxHeight: '85%',
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    boxShadow: '0px 8px 16px rgba(0, 0, 0, 0.25)',
     elevation: 16,
   },
   header: {

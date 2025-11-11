@@ -483,10 +483,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5E7',
     marginBottom: 16,
     elevation: 2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
   },
   qrInstruction: {
     fontSize: 14,
