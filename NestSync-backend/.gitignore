@@ -84,6 +84,12 @@ debug.log
 error.log
 access.log
 
+# Incident reports and debugging data (contain PII - PIPEDA compliance)
+incident_report_*.json
+migration_*.log
+scripts/archive/incident-reports/
+scripts/archive/*.log
+
 # Temporary files
 temp/
 tmp/

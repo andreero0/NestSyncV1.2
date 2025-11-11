@@ -30,6 +30,7 @@ import { useAuthStore } from '../stores/authStore';
 import { JITConsentModal } from '../components/consent/JITConsentModal';
 import NestSyncSplashScreen from '../components/splash/SplashScreen';
 import { EmergencyModeButton } from '../components/emergency';
+import { getStripeConfig } from '../lib/stripe/config';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -231,10 +232,8 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Stripe configuration for Canadian users
-  const stripePublishableKey = __DEV__
-    ? 'pk_test_51H...' // TODO: Replace with actual test key
-    : 'pk_live_51H...'; // TODO: Replace with actual live key
+  // Stripe configuration for Canadian users - loaded from environment
+  const stripePublishableKey = getStripeConfig().publishableKey;
 
   useEffect(() => {
     if (error) {
