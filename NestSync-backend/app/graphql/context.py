@@ -18,6 +18,7 @@ from app.config.database import get_async_session
 from app.config.settings import settings
 from app.models import User
 from app.auth.supabase import supabase_auth
+from app.utils.logging import sanitize_log_data
 
 logger = logging.getLogger(__name__)
 
@@ -55,13 +56,25 @@ class NestSyncGraphQLContext(BaseContext):
         self._auth_attempted: bool = False
         self._auth_token_hash: Optional[str] = None
         
-        logger.info(f"Context created for request: {request.method} {request.url.path}")
+        logger.info(
+            "Context created for request",
+            extra={
+                "method": request.method,
+                "path": sanitize_log_data(str(request.url.path))
+            }
+        )
         
         # Log token information for debugging (without exposing sensitive data)
         auth_header = self.request.headers.get("Authorization", "")
         has_bearer = auth_header.startswith("Bearer ")
         token_length = len(auth_header[7:]) if has_bearer else 0
-        logger.info(f"Context initialization - has_bearer: {has_bearer}, token_length: {token_length}")
+        logger.info(
+            "Context initialization",
+            extra={
+                "has_bearer": has_bearer,
+                "token_length": token_length
+            }
+        )
 
     async def get_user(self) -> Optional[User]:
         """
@@ -283,13 +296,19 @@ class NestSyncGraphQLContext(BaseContext):
         """
         user = await self.get_user()
         if not user:
-            logger.error(f"Context: Authentication required - user lookup failed")
+            logger.error(
+                "Context: Authentication required - user lookup failed",
+                extra={"context": "require_authentication"}
+            )
             raise GraphQLError(
                 "Authentication required",
                 extensions={"code": "UNAUTHENTICATED"}
             )
         
-        logger.info(f"Context: User authenticated successfully: {user.id}")
+        logger.info(
+            "Context: User authenticated successfully",
+            extra={"user_id": sanitize_log_data(str(user.id))}
+        )
         return user
     
     async def require_permission(self, permission: str) -> User:

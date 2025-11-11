@@ -16,6 +16,11 @@ from app.config.settings import settings
 logger = logging.getLogger(__name__)
 
 
+class AuthenticationError(Exception):
+    """Custom exception for authentication failures"""
+    pass
+
+
 def _transform_identity_response(response_data: Any) -> Any:
     """
     Transform Supabase response to ensure compatibility with gotrue versions.
@@ -322,6 +327,50 @@ class SupabaseAuth:
             logger.error(f"Unexpected error during password update: {e}")
             return {"success": False, "error": "Internal server error"}
     
+    async def complete_password_reset(self, token: str, new_password: str) -> Dict[str, Any]:
+        """
+        Complete password reset using token from email
+        """
+        try:
+            # Verify the OTP token and get session
+            response = self.client.auth.verify_otp({
+                "token_hash": token,
+                "type": "recovery"
+            })
+            
+            if not response.session:
+                return {"success": False, "error": "Invalid or expired reset token"}
+            
+            # Use the session to update the password
+            self.client.auth.set_session(response.session.access_token, response.session.refresh_token)
+            
+            update_response = self.client.auth.update_user({
+                "password": new_password
+            })
+            
+            if update_response.user:
+                return {"success": True, "message": "Password reset successfully"}
+            else:
+                return {"success": False, "error": "Failed to reset password"}
+                
+        except AuthError as e:
+            error_msg = str(e)
+            logger.error(f"Supabase auth error during password reset completion: {error_msg}")
+            
+            # Provide user-friendly error messages
+            if "expired" in error_msg.lower():
+                return {"success": False, "error": "This reset link has expired. Please request a new one."}
+            elif "invalid" in error_msg.lower() or "not found" in error_msg.lower():
+                return {"success": False, "error": "This reset link is invalid. Please request a new one."}
+            elif "already" in error_msg.lower() and "used" in error_msg.lower():
+                return {"success": False, "error": "This reset link has already been used. Please request a new one."}
+            else:
+                return {"success": False, "error": "Failed to reset password. Please try again."}
+                
+        except Exception as e:
+            logger.error(f"Unexpected error during password reset completion: {e}")
+            return {"success": False, "error": "Internal server error"}
+    
     async def verify_email(self, token: str, type: str = "signup") -> Dict[str, Any]:
         """
         Verify email with token
@@ -353,25 +402,20 @@ class SupabaseAuth:
     
     def verify_jwt_token(self, token: str) -> Optional[Dict[str, Any]]:
         """
-        Verify and decode JWT token
+        Verify and decode JWT token with signature verification enabled
+        
+        Raises:
+            AuthenticationError: If token is expired or invalid
         """
         try:
-            # Decode token without verification first to get header
-            unverified_header = jwt.get_unverified_header(token)
-            unverified_payload = jwt.decode(token, options={"verify_signature": False})
-            
-            # Verify token with Supabase JWT secret
+            # Verify token with Supabase JWT secret and signature verification
             payload = jwt.decode(
                 token,
                 self.jwt_secret,
                 algorithms=["HS256"],
-                audience="authenticated"
+                audience="authenticated",
+                options={"verify_signature": True}
             )
-            
-            # Check token expiration
-            if payload.get("exp", 0) < datetime.now(timezone.utc).timestamp():
-                logger.warning("JWT token has expired")
-                return None
             
             return {
                 "user_id": payload.get("sub"),
@@ -385,12 +429,40 @@ class SupabaseAuth:
                 "app_metadata": payload.get("app_metadata", {})
             }
             
-        except JWTError as e:
-            logger.warning(f"Invalid JWT token: {e}")
-            return None
+        except jwt.ExpiredSignatureError as e:
+            # Log security event for expired token
+            logger.warning(
+                "Authentication failed: Token has expired",
+                extra={
+                    "error_type": "expired_token",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+            )
+            raise AuthenticationError("Token has expired")
+            
+        except jwt.InvalidTokenError as e:
+            # Log security event for invalid token (includes signature verification failures)
+            logger.warning(
+                "Authentication failed: Invalid token",
+                extra={
+                    "error_type": "invalid_token",
+                    "error_detail": str(e),
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+            )
+            raise AuthenticationError("Invalid token")
+            
         except Exception as e:
-            logger.error(f"Error verifying JWT token: {e}")
-            return None
+            # Log unexpected errors
+            logger.error(
+                "Unexpected error during JWT verification",
+                extra={
+                    "error_type": "jwt_verification_error",
+                    "error_detail": str(e),
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+            )
+            raise AuthenticationError("Invalid token")
     
     async def get_user_by_token(self, access_token: str) -> Optional[Dict[str, Any]]:
         """
@@ -490,4 +562,4 @@ supabase_auth = SupabaseAuth()
 # Export
 # =============================================================================
 
-__all__ = ["SupabaseAuth", "supabase_auth"]
+__all__ = ["SupabaseAuth", "supabase_auth", "AuthenticationError"]

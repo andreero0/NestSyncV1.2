@@ -530,6 +530,39 @@ class AuthMutations:
             )
     
     @strawberry.mutation
+    async def complete_password_reset(
+        self,
+        token: str,
+        new_password: str
+    ) -> MutationResponse:
+        """
+        Complete password reset using token from email
+        """
+        try:
+            # Validate password strength
+            if len(new_password) < 8:
+                return MutationResponse(
+                    success=False,
+                    error="Password must be at least 8 characters"
+                )
+            
+            # Use Supabase to complete password reset with token
+            result = await supabase_auth.complete_password_reset(token, new_password)
+            
+            return MutationResponse(
+                success=result["success"],
+                message=result.get("message", "Password reset successfully"),
+                error=result.get("error")
+            )
+            
+        except Exception as e:
+            logger.error(f"Error completing password reset: {e}")
+            return MutationResponse(
+                success=False,
+                error="Password reset failed. Please try again."
+            )
+    
+    @strawberry.mutation
     async def update_profile(
         self,
         input: UpdateProfileInput,
