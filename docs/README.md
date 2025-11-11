@@ -14,9 +14,11 @@ Welcome to the NestSync documentation hub. This directory contains comprehensive
 - **[Development Bottlenecks](./troubleshooting/bottlenecks.md)** - Critical issues and prevention strategies
 
 ### Core Documentation
+- **[Product Specification](./PRODUCT_SPECIFICATION.md)** - Complete product definition and strategy
 - **[Architecture](./architecture/README.md)** - System architecture and design patterns
 - **[Testing](./testing/README.md)** - Testing strategies and methodologies
 - **[Infrastructure](./infrastructure/README.md)** - Deployment and infrastructure configuration
+- **[Security](./security/README.md)** - Security scanning, vulnerability management, and suppressions
 - **[Compliance](./compliance/README.md)** - PIPEDA and security compliance
 
 ### Component-Specific Documentation
@@ -156,6 +158,7 @@ docs/
 ### For Product Managers
 
 **Product Documentation**:
+- [Product Specification](./PRODUCT_SPECIFICATION.md) - Complete product definition (START HERE)
 - [Design Documentation](../design-documentation/README.md) - UX and design system
 - [Feature Architecture](./architecture/README.md) - System capabilities
 - [Implementation Reports](./archives/implementation-reports/README.md) - Feature history
