@@ -128,7 +128,7 @@ export function NestSyncButton({
         return [
           ...baseTextStyle,
           {
-            color: isDisabled ? NestSyncColors.neutral[400] : '#FFFFFF',
+            color: isDisabled ? NestSyncColors.neutral[400] : colors.background,
             fontWeight: '600',
           },
         ];
@@ -171,9 +171,9 @@ export function NestSyncButton({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator 
-          size="small" 
-          color={variant === 'outline' || variant === 'ghost' ? colors.tint : '#FFFFFF'} 
+        <ActivityIndicator
+          size="small"
+          color={variant === 'outline' || variant === 'ghost' ? colors.tint : colors.background}
         />
       ) : (
         <Text style={[getTextStyle(), textStyle]}>
