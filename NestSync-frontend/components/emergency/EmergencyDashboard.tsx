@@ -9,11 +9,13 @@ import {
   Dimensions,
   SafeAreaView,
   Linking,
+  useColorScheme,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { emergencyStorage, EmergencyProfile } from '../../lib/storage/EmergencyStorageService';
+import { Colors, NestSyncColors } from '../../constants/Colors';
 import EmergencyContactCard from './EmergencyContactCard';
 import MedicalInfoCard from './MedicalInfoCard';
 import EmergencyShareModal from './EmergencyShareModal';
@@ -100,6 +102,8 @@ const QuickActionTile: React.FC<QuickActionTileProps> = ({
 const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
   onExitEmergencyMode,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const [emergencyProfiles, setEmergencyProfiles] = useState<EmergencyProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<EmergencyProfile | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -226,14 +230,14 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Emergency Header */}
-      <View style={styles.emergencyHeader}>
+      <View style={[styles.emergencyHeader, { backgroundColor: NestSyncColors.semantic.error }]}>
         <View style={styles.headerContent}>
-          <MaterialIcons name="emergency" size={32} color="#FFFFFF" />
+          <MaterialIcons name="emergency" size={32} color={colors.background} />
           <View style={styles.headerText}>
-            <Text style={styles.emergencyTitle}>EMERGENCY MODE</Text>
-            <Text style={styles.emergencySubtitle}>
+            <Text style={[styles.emergencyTitle, { color: colors.background }]}>EMERGENCY MODE</Text>
+            <Text style={[styles.emergencySubtitle, { color: `${colors.background}CC` }]}>
               Instant access to emergency features
             </Text>
           </View>
@@ -243,20 +247,20 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
           onPress={exitEmergencyMode}
           accessibilityLabel="Exit emergency mode"
         >
-          <MaterialIcons name="close" size={24} color="#FFFFFF" />
+          <MaterialIcons name="close" size={24} color={colors.background} />
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Critical Emergency Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>CRITICAL EMERGENCY</Text>
+          <Text style={[styles.sectionTitle, { color: NestSyncColors.semantic.error }]}>CRITICAL EMERGENCY</Text>
           <View style={styles.emergencyGrid}>
             <QuickActionTile
               title="911"
               subtitle="Emergency Services"
               icon="emergency"
-              color="#FF3B30"
+              color={NestSyncColors.semantic.error}
               onPress={call911}
               isUrgent={true}
               size="large"
@@ -265,7 +269,7 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
               title="Poison Control"
               subtitle="1-800-268-5391"
               icon="warning"
-              color="#FF6B00"
+              color={NestSyncColors.accent.orange}
               onPress={callPoisonControl}
               isUrgent={true}
               size="large"
@@ -275,13 +279,13 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
 
         {/* Medical Support */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MEDICAL SUPPORT</Text>
+          <Text style={[styles.sectionTitle, { color: NestSyncColors.semantic.error }]}>MEDICAL SUPPORT</Text>
           <View style={styles.supportGrid}>
             <QuickActionTile
               title="Telehealth"
               subtitle="Ontario 811"
               icon="local-hospital"
-              color="#007AFF"
+              color={NestSyncColors.primary.blue}
               onPress={callTelehealth}
               size="small"
             />
@@ -289,7 +293,7 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
               title="Share Info"
               subtitle="Medical QR Code"
               icon="qr-code"
-              color="#34C759"
+              color={NestSyncColors.secondary.green}
               onPress={shareEmergencyInfo}
               size="small"
             />
@@ -299,7 +303,7 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
         {/* Child Selection */}
         {emergencyProfiles.length > 1 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>SELECT CHILD</Text>
+            <Text style={[styles.sectionTitle, { color: NestSyncColors.semantic.error }]}>SELECT CHILD</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -310,18 +314,26 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
                   key={profile.childId}
                   style={[
                     styles.profileTile,
-                    selectedProfile?.childId === profile.childId && styles.selectedProfileTile,
+                    { backgroundColor: colors.surface },
+                    selectedProfile?.childId === profile.childId && [
+                      styles.selectedProfileTile,
+                      { backgroundColor: NestSyncColors.primary.blue },
+                    ],
                   ]}
                   onPress={() => setSelectedProfile(profile)}
                 >
                   <MaterialIcons
                     name="child-care"
                     size={24}
-                    color={selectedProfile?.childId === profile.childId ? '#FFFFFF' : '#666666'}
+                    color={selectedProfile?.childId === profile.childId ? colors.background : colors.textSecondary}
                   />
                   <Text style={[
                     styles.profileName,
-                    selectedProfile?.childId === profile.childId && styles.selectedProfileName,
+                    { color: colors.textSecondary },
+                    selectedProfile?.childId === profile.childId && [
+                      styles.selectedProfileName,
+                      { color: colors.background },
+                    ],
                   ]}>
                     {profile.childName}
                   </Text>
@@ -334,7 +346,7 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
         {/* Emergency Contacts */}
         {selectedProfile && selectedProfile.emergencyContacts.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>EMERGENCY CONTACTS</Text>
+            <Text style={[styles.sectionTitle, { color: NestSyncColors.semantic.error }]}>EMERGENCY CONTACTS</Text>
             {selectedProfile.emergencyContacts
               .filter(contact => contact.isPrimary)
               .slice(0, 2) // Show max 2 contacts in emergency mode
@@ -353,7 +365,7 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
         {/* Medical Information */}
         {selectedProfile && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MEDICAL INFORMATION</Text>
+            <Text style={[styles.sectionTitle, { color: NestSyncColors.semantic.error }]}>MEDICAL INFORMATION</Text>
             <MedicalInfoCard
               medicalInfo={selectedProfile.medicalInfo}
               childName={selectedProfile.childName}
@@ -364,9 +376,15 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
 
         {/* Storage Health Warning */}
         {!storageHealth.isHealthy && (
-          <View style={styles.warningSection}>
-            <MaterialIcons name="warning" size={24} color="#FF6B00" />
-            <Text style={styles.warningText}>
+          <View style={[
+            styles.warningSection,
+            {
+              backgroundColor: `${NestSyncColors.accent.orange}10`,
+              borderLeftColor: NestSyncColors.accent.orange,
+            },
+          ]}>
+            <MaterialIcons name="warning" size={24} color={NestSyncColors.accent.orange} />
+            <Text style={[styles.warningText, { color: NestSyncColors.accent.orange }]}>
               Storage performance warning: {storageHealth.lastAccessTime}ms access time
             </Text>
           </View>
@@ -374,9 +392,15 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
 
         {/* Emergency Instructions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>EMERGENCY INSTRUCTIONS</Text>
-          <View style={styles.instructionsContainer}>
-            <Text style={styles.instructionsText}>
+          <Text style={[styles.sectionTitle, { color: NestSyncColors.semantic.error }]}>EMERGENCY INSTRUCTIONS</Text>
+          <View style={[
+            styles.instructionsContainer,
+            {
+              backgroundColor: colors.surface,
+              borderLeftColor: NestSyncColors.primary.blue,
+            },
+          ]}>
+            <Text style={[styles.instructionsText, { color: colors.text }]}>
               1. Stay calm and assess the situation{'\n'}
               2. Call 911 for life-threatening emergencies{'\n'}
               3. Share medical information with first responders{'\n'}
@@ -403,10 +427,8 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   emergencyHeader: {
-    backgroundColor: '#FF3B30',
     padding: 20,
     paddingTop: 10,
     flexDirection: 'row',
@@ -425,12 +447,10 @@ const styles = StyleSheet.create({
   emergencyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     letterSpacing: 1,
   },
   emergencySubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
   },
   exitButton: {
@@ -438,7 +458,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   section: {
     margin: 16,
@@ -447,7 +466,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF3B30',
     marginBottom: 12,
     letterSpacing: 0.5,
   },
@@ -524,48 +542,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginRight: 12,
     borderRadius: 12,
-    backgroundColor: '#F2F2F7',
     minWidth: 80,
   },
-  selectedProfileTile: {
-    backgroundColor: '#007AFF',
-  },
+  selectedProfileTile: {},
   profileName: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#666666',
     marginTop: 4,
     textAlign: 'center',
   },
-  selectedProfileName: {
-    color: '#FFFFFF',
-  },
+  selectedProfileName: {},
   warningSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF8E1',
     padding: 16,
     margin: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF6B00',
   },
   warningText: {
     fontSize: 14,
-    color: '#E65100',
     marginLeft: 8,
     flex: 1,
   },
   instructionsContainer: {
-    backgroundColor: '#F8F9FA',
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
   },
   instructionsText: {
     fontSize: 14,
-    color: '#333333',
     lineHeight: 20,
   },
 });

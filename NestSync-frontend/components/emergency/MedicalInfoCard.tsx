@@ -7,10 +7,12 @@ import {
   Animated,
   ScrollView,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { MedicalInfo } from '../../lib/storage/EmergencyStorageService';
+import { Colors, NestSyncColors } from '../../constants/Colors';
 
 interface MedicalInfoCardProps {
   medicalInfo: MedicalInfo;
@@ -36,6 +38,8 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   defaultExpanded = false,
   isEmergencyMode = false,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || isEmergencyMode);
   const [rotateAnimation] = useState(new Animated.Value(defaultExpanded ? 1 : 0));
 
@@ -76,18 +80,19 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           <MaterialIcons
             name={icon}
             size={24}
-            color={isImportant || isEmergencyMode ? '#FF3B30' : '#666666'}
+            color={isImportant || isEmergencyMode ? NestSyncColors.semantic.error : colors.textSecondary}
             style={styles.sectionIcon}
           />
           <Text style={[
             styles.sectionTitle,
+            { color: colors.text },
             isImportant && styles.importantTitle,
             isEmergencyMode && styles.emergencyTitle,
           ]}>
             {title}
           </Text>
           {isImportant && (
-            <View style={styles.urgentBadge}>
+            <View style={[styles.urgentBadge, { backgroundColor: NestSyncColors.semantic.error }]}>
               <Text style={styles.urgentText}>URGENT</Text>
             </View>
           )}
@@ -96,7 +101,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           <MaterialIcons
             name="chevron-right"
             size={24}
-            color={isImportant || isEmergencyMode ? '#FF3B30' : '#999999'}
+            color={isImportant || isEmergencyMode ? NestSyncColors.semantic.error : colors.textSecondary}
           />
         </Animated.View>
       </TouchableOpacity>
@@ -116,6 +121,9 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
   isEmergencyMode = false,
   showAllSections = false,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   // Format last updated time
   const formatLastUpdated = (timestamp: string): string => {
     try {
@@ -150,34 +158,36 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
   return (
     <View style={[
       styles.container,
-      isEmergencyMode && styles.emergencyContainer,
+      { backgroundColor: colors.background, borderColor: colors.border },
+      isEmergencyMode && [styles.emergencyContainer, { borderColor: NestSyncColors.semantic.error }],
     ]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerContent}>
           <MaterialIcons
             name="medical-services"
             size={32}
-            color={isEmergencyMode ? '#FF3B30' : '#007AFF'}
+            color={isEmergencyMode ? NestSyncColors.semantic.error : NestSyncColors.primary.blue}
           />
           <View style={styles.headerText}>
             <Text style={[
               styles.title,
+              { color: colors.text },
               isEmergencyMode && styles.emergencyTitle,
             ]}>
               Medical Information
             </Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               {childName}
             </Text>
-            <Text style={styles.lastUpdated}>
+            <Text style={[styles.lastUpdated, { color: colors.textSecondary }]}>
               {formatLastUpdated(medicalInfo.lastUpdated)}
             </Text>
           </View>
         </View>
         {hasCriticalInfo && (
-          <View style={styles.criticalBadge}>
-            <MaterialIcons name="warning" size={16} color="#FFFFFF" />
+          <View style={[styles.criticalBadge, { backgroundColor: NestSyncColors.semantic.error }]}>
+            <MaterialIcons name="warning" size={16} color={colors.background} />
             <Text style={styles.criticalText}>CRITICAL</Text>
           </View>
         )}
@@ -197,7 +207,14 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
             defaultExpanded={true}
             isEmergencyMode={isEmergencyMode}
           >
-            <Text style={styles.emergencyInfoText}>
+            <Text style={[
+              styles.emergencyInfoText,
+              {
+                color: NestSyncColors.semantic.error,
+                backgroundColor: `${NestSyncColors.semantic.error}10`,
+                borderLeftColor: NestSyncColors.semantic.error,
+              },
+            ]}>
               {medicalInfo.emergencyMedicalInfo}
             </Text>
           </CollapsibleSection>
@@ -215,8 +232,8 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
             <View style={styles.listContainer}>
               {medicalInfo.allergies.map((allergy, index) => (
                 <View key={index} style={styles.listItem}>
-                  <MaterialIcons name="error" size={16} color="#FF3B30" />
-                  <Text style={styles.allergyText}>{allergy}</Text>
+                  <MaterialIcons name="error" size={16} color={NestSyncColors.semantic.error} />
+                  <Text style={[styles.allergyText, { color: NestSyncColors.semantic.error }]}>{allergy}</Text>
                 </View>
               ))}
             </View>
@@ -235,8 +252,8 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
             <View style={styles.listContainer}>
               {medicalInfo.medicalConditions.map((condition, index) => (
                 <View key={index} style={styles.listItem}>
-                  <MaterialIcons name="health-and-safety" size={16} color="#FF6B00" />
-                  <Text style={styles.conditionText}>{condition}</Text>
+                  <MaterialIcons name="health-and-safety" size={16} color={NestSyncColors.accent.orange} />
+                  <Text style={[styles.conditionText, { color: NestSyncColors.accent.orange }]}>{condition}</Text>
                 </View>
               ))}
             </View>
@@ -254,8 +271,8 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
             <View style={styles.listContainer}>
               {medicalInfo.medications.map((medication, index) => (
                 <View key={index} style={styles.listItem}>
-                  <MaterialIcons name="local-pharmacy" size={16} color="#34C759" />
-                  <Text style={styles.medicationText}>{medication}</Text>
+                  <MaterialIcons name="local-pharmacy" size={16} color={NestSyncColors.secondary.green} />
+                  <Text style={[styles.medicationText, { color: NestSyncColors.secondary.green }]}>{medication}</Text>
                 </View>
               ))}
             </View>
@@ -272,8 +289,8 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
           <View style={styles.basicInfoContainer}>
             {medicalInfo.bloodType && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Blood Type:</Text>
-                <Text style={styles.infoValue}>{medicalInfo.bloodType}</Text>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Blood Type:</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{medicalInfo.bloodType}</Text>
               </View>
             )}
           </View>
@@ -287,19 +304,22 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
             defaultExpanded={showAllSections}
             isEmergencyMode={isEmergencyMode}
           >
-            <View style={styles.healthCardContainer}>
+            <View style={[
+              styles.healthCardContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Province:</Text>
-                <Text style={styles.infoValue}>{medicalInfo.province}</Text>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Province:</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{medicalInfo.province}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Health Card Number:</Text>
-                <Text style={styles.healthCardNumber}>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Health Card Number:</Text>
+                <Text style={[styles.healthCardNumber, { color: colors.text }]}>
                   {medicalInfo.healthCardNumber}
                 </Text>
               </View>
               <View style={styles.canadianFlag}>
-                <Text style={styles.flagText}>🇨🇦 Canadian Health Card</Text>
+                <Text style={[styles.flagText, { color: colors.textSecondary }]}>🇨🇦 Canadian Health Card</Text>
               </View>
             </View>
           </CollapsibleSection>
@@ -311,16 +331,13 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E5E7',
     marginVertical: 8,
     boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
   emergencyContainer: {
-    borderColor: '#FF3B30',
     borderWidth: 2,
   },
   header: {
@@ -329,7 +346,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
   },
   headerContent: {
     flexDirection: 'row',
@@ -343,26 +359,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000000',
     marginBottom: 2,
   },
   emergencyTitle: {
-    color: '#FF3B30',
+    color: NestSyncColors.semantic.error,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666666',
     marginBottom: 2,
   },
   lastUpdated: {
     fontSize: 12,
-    color: '#999999',
     fontStyle: 'italic',
   },
   criticalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF3B30',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -379,13 +391,13 @@ const styles = StyleSheet.create({
   },
   section: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: NestSyncColors.neutral[100],
   },
   importantSection: {
-    backgroundColor: '#FFF9F9',
+    backgroundColor: `${NestSyncColors.semantic.error}05`,
   },
   emergencySection: {
-    backgroundColor: '#FFEBEB',
+    backgroundColor: `${NestSyncColors.semantic.error}10`,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -405,15 +417,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
     flex: 1,
   },
   importantTitle: {
-    color: '#FF3B30',
+    color: NestSyncColors.semantic.error,
     fontWeight: 'bold',
   },
   urgentBadge: {
-    backgroundColor: '#FF3B30',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -431,14 +441,11 @@ const styles = StyleSheet.create({
   },
   emergencyInfoText: {
     fontSize: 16,
-    color: '#FF3B30',
     fontWeight: '500',
     lineHeight: 24,
-    backgroundColor: '#FFF0F0',
     padding: 12,
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF3B30',
   },
   listContainer: {
     marginTop: 8,
@@ -451,21 +458,18 @@ const styles = StyleSheet.create({
   },
   allergyText: {
     fontSize: 14,
-    color: '#FF3B30',
     fontWeight: '500',
     marginLeft: 8,
     flex: 1,
   },
   conditionText: {
     fontSize: 14,
-    color: '#FF6B00',
     fontWeight: '500',
     marginLeft: 8,
     flex: 1,
   },
   medicationText: {
     fontSize: 14,
-    color: '#34C759',
     fontWeight: '500',
     marginLeft: 8,
     flex: 1,
@@ -482,25 +486,20 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: '#666666',
     fontWeight: '500',
   },
   infoValue: {
     fontSize: 14,
-    color: '#000000',
     fontWeight: '600',
   },
   healthCardContainer: {
     marginTop: 8,
     padding: 12,
-    backgroundColor: '#F8F9FA',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
   },
   healthCardNumber: {
     fontSize: 14,
-    color: '#000000',
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
@@ -510,7 +509,6 @@ const styles = StyleSheet.create({
   },
   flagText: {
     fontSize: 12,
-    color: '#666666',
     fontWeight: '500',
   },
 });
