@@ -22,7 +22,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { NestSyncColors } from '../../constants/Colors';
+import { Colors, NestSyncColors } from '../../constants/Colors';
+import { useColorScheme } from '../../hooks/useColorScheme';
 import { useNestSyncTheme } from '../../contexts/ThemeContext';
 import { useFeatureAccess } from '../../hooks/useFeatureAccess';
 import { StorageHelpers } from '../../hooks/useUniversalStorage';
@@ -90,6 +91,8 @@ export function TrialCountdownBanner({
   style
 }: TrialCountdownBannerProps) {
   const theme = useNestSyncTheme();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { isLoading: isFeatureAccessLoading } = useFeatureAccess();
   const { trialProgress, loading: trialLoading } = useTrialProgress();
@@ -237,7 +240,7 @@ export function TrialCountdownBanner({
       fontWeight: '600', // Semi-bold for emphasis
       letterSpacing: -0.2, // Subtle letter spacing
       color: theme === 'dark'
-        ? '#FFFFFF'
+        ? colors.background
         : NestSyncColors.primary.blue,
       marginBottom: 2, // 0.5 × 4px base units - minimal spacing
       lineHeight: 18, // Compact line height
@@ -299,7 +302,7 @@ export function TrialCountdownBanner({
       bottom: 0,
     },
     upgradeButtonText: {
-      color: '#FFFFFF',
+      color: colors.background,
       fontSize: 12, // Compact font size
       fontWeight: '600', // Semi-bold for button emphasis
       letterSpacing: 0.2, // Subtle letter spacing
@@ -340,7 +343,7 @@ export function TrialCountdownBanner({
         <Ionicons
           name="shield-checkmark-outline"
           size={20}
-          color={theme === 'dark' ? '#FFFFFF' : NestSyncColors.primary.blue}
+          color={theme === 'dark' ? colors.background : NestSyncColors.primary.blue}
         />
       </View>
 

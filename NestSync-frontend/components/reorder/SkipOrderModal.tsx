@@ -14,7 +14,8 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { NestSyncColors } from '../../constants/Colors';
+import { Colors, NestSyncColors } from '../../constants/Colors';
+import { useColorScheme } from '../../hooks/useColorScheme';
 import { useNestSyncTheme } from '../../contexts/ThemeContext';
 
 interface SkipOrderModalProps {
@@ -55,6 +56,8 @@ export function SkipOrderModal({
   onSkip,
 }: SkipOrderModalProps) {
   const theme = useNestSyncTheme();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   const [selectedDuration, setSelectedDuration] = useState<'week' | 'twoweeks' | 'month' | 'custom'>('week');
   const [customDays, setCustomDays] = useState('');
@@ -110,7 +113,7 @@ export function SkipOrderModal({
     modalContent: {
       width: '90%',
       maxWidth: 400,
-      backgroundColor: theme === 'dark' ? '#374151' : '#FFFFFF',
+      backgroundColor: theme === 'dark' ? '#374151' : colors.background,
       borderRadius: 16,
       padding: 24,
       maxHeight: '80%',
@@ -129,7 +132,7 @@ export function SkipOrderModal({
     title: {
       fontSize: 20,
       fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
+      color: theme === 'dark' ? colors.background : colors.text,
       marginBottom: 4,
     },
     productName: {
@@ -170,7 +173,7 @@ export function SkipOrderModal({
     skipOptionLabel: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
+      color: theme === 'dark' ? colors.background : colors.text,
       marginBottom: 2,
     },
     skipOptionSubtitle: {
@@ -213,7 +216,7 @@ export function SkipOrderModal({
       borderRadius: 8,
       padding: 12,
       fontSize: 16,
-      color: theme === 'dark' ? '#FFFFFF' : '#111827',
+      color: theme === 'dark' ? colors.background : colors.text,
       minHeight: 48,
     },
     inputMultiline: {
@@ -262,10 +265,10 @@ export function SkipOrderModal({
       fontWeight: '600',
     },
     cancelText: {
-      color: theme === 'dark' ? '#FFFFFF' : '#374151',
+      color: theme === 'dark' ? colors.background : '#374151',
     },
     skipText: {
-      color: '#FFFFFF',
+      color: colors.background,
     },
   });
 
@@ -293,7 +296,7 @@ export function SkipOrderModal({
               <Ionicons
                 name="close"
                 size={24}
-                color={theme === 'dark' ? '#FFFFFF' : '#111827'}
+                color={theme === 'dark' ? colors.background : colors.text}
               />
             </TouchableOpacity>
           </View>

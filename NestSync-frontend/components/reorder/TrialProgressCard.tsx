@@ -15,7 +15,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { NestSyncColors } from '../../constants/Colors';
+import { Colors, NestSyncColors } from '../../constants/Colors';
+import { useColorScheme } from '../../hooks/useColorScheme';
 import { useNestSyncTheme } from '../../contexts/ThemeContext';
 import { useAnalyticsAccess } from '../../hooks/useFeatureAccess';
 
@@ -44,6 +45,8 @@ export function TrialProgressCard({
   style
 }: TrialProgressCardProps) {
   const theme = useNestSyncTheme();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const hasAnalyticsAccess = useAnalyticsAccess();
   const [progressAnimation] = useState(new Animated.Value(0));
 
@@ -123,7 +126,7 @@ export function TrialProgressCard({
 
   const styles = StyleSheet.create({
     card: {
-      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[800] : '#FFFFFF',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[800] : colors.background,
       borderRadius: 16,
       marginHorizontal: 16,
       marginVertical: 8,
@@ -273,7 +276,7 @@ export function TrialProgressCard({
       alignItems: 'center',
     },
     primaryButtonText: {
-      color: '#FFFFFF',
+      color: colors.background,
       fontSize: 16,
       fontWeight: '600',
     },
