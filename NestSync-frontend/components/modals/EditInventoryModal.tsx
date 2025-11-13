@@ -65,7 +65,7 @@ import Animated, {
 
 import { ThemedText } from '../ThemedText';
 import { IconSymbol } from '../ui/IconSymbol';
-import { Colors } from '@/constants/Colors';
+import { Colors, NestSyncColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import {
   UPDATE_INVENTORY_ITEM_MUTATION,
@@ -372,7 +372,7 @@ export function EditInventoryModal({ visible, onClose, onSuccess, inventoryItem 
               </View>
               <View style={styles.headerActions}>
                 <TouchableOpacity
-                  style={[styles.deleteButton, { backgroundColor: colors.errorSurface || '#ffebee' }]}
+                  style={[styles.deleteButton, { backgroundColor: colors.errorSurface }]}
                   onPress={handleDeleteConfirmation}
                   accessibilityRole="button"
                   accessibilityLabel="Delete item"
@@ -526,7 +526,7 @@ export function EditInventoryModal({ visible, onClose, onSuccess, inventoryItem 
                       <IconSymbol
                         name={star <= qualityRating ? "star.fill" : "star"}
                         size={24}
-                        color={star <= qualityRating ? "#FFD700" : colors.textSecondary}
+                        color={star <= qualityRating ? NestSyncColors.accent.orange : colors.textSecondary}
                       />
                     </TouchableOpacity>
                   ))}
@@ -560,7 +560,7 @@ export function EditInventoryModal({ visible, onClose, onSuccess, inventoryItem 
                     accessibilityState={{ checked: wouldRebuy }}
                   >
                     {wouldRebuy && (
-                      <IconSymbol name="checkmark" size={16} color="#FFFFFF" />
+                      <IconSymbol name="checkmark" size={16} color={colors.background} />
                     )}
                   </TouchableOpacity>
                 </View>
@@ -568,7 +568,7 @@ export function EditInventoryModal({ visible, onClose, onSuccess, inventoryItem 
 
               {/* Delete Confirmation Section */}
               {showDeleteConfirmation && (
-                <View style={[styles.deleteSection, { backgroundColor: colors.errorSurface || '#ffebee', borderColor: colors.error }]}>
+                <View style={[styles.deleteSection, { backgroundColor: colors.errorSurface, borderColor: colors.error }]}>
                   <ThemedText type="defaultSemiBold" style={[styles.deleteSectionTitle, { color: colors.error }]}>
                     Delete Confirmation
                   </ThemedText>
@@ -625,11 +625,11 @@ export function EditInventoryModal({ visible, onClose, onSuccess, inventoryItem 
                     accessibilityLabel="Delete inventory item"
                   >
                     {deleteLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={colors.background} />
                     ) : (
                       <>
-                        <IconSymbol name="trash" size={18} color="#FFFFFF" />
-                        <ThemedText style={styles.primaryButtonText}>
+                        <IconSymbol name="trash" size={18} color={colors.background} />
+                        <ThemedText style={[styles.primaryButtonText, { color: colors.background }]}>
                           Delete Item
                         </ThemedText>
                       </>
@@ -650,11 +650,11 @@ export function EditInventoryModal({ visible, onClose, onSuccess, inventoryItem 
                     accessibilityLabel="Update inventory item"
                   >
                     {updateLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={colors.background} />
                     ) : (
                       <>
-                        <IconSymbol name="checkmark" size={18} color="#FFFFFF" />
-                        <ThemedText style={styles.primaryButtonText}>
+                        <IconSymbol name="checkmark" size={18} color={colors.background} />
+                        <ThemedText style={[styles.primaryButtonText, { color: colors.background }]}>
                           Update Item
                         </ThemedText>
                       </>
@@ -863,6 +863,5 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

@@ -44,6 +44,8 @@ import { IconSymbol } from './IconSymbol';
 import { GlassUITokens } from '@/constants/GlassUI';
 import { BlurView } from 'expo-blur';
 import { useGlassUI } from '@/contexts/GlassUIContext';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 /**
  * Modal Size Types
@@ -122,6 +124,8 @@ export const GlassModal = React.memo<GlassModalProps>(({
 }) => {
   const { isSupported, theme } = useGlassUI();
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   // Size configuration
   const sizeConfig = React.useMemo(() => {
@@ -173,7 +177,7 @@ export const GlassModal = React.memo<GlassModalProps>(({
     return (
       <View style={[styles.header, headerStyle]}>
         {title && (
-          <Text style={[styles.title, titleStyle]}>
+          <Text style={[styles.title, { color: colors.text }, titleStyle]}>
             {title}
           </Text>
         )}
@@ -185,7 +189,7 @@ export const GlassModal = React.memo<GlassModalProps>(({
             accessibilityRole="button"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <IconSymbol name="xmark" size={24} color="#374151" />
+            <IconSymbol name="xmark" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -300,7 +304,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
     flex: 1,
   },
   closeButton: {

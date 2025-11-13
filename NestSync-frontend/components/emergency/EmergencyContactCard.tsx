@@ -8,10 +8,12 @@ import {
   Alert,
   Animated,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { EmergencyContact , emergencyStorage } from '../../lib/storage/EmergencyStorageService';
+import { Colors, NestSyncColors } from '../../constants/Colors';
 
 interface EmergencyContactCardProps {
   contact: EmergencyContact;
@@ -28,6 +30,8 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
   size = 'medium',
   showLastContacted = true,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const [isPressed, setIsPressed] = useState(false);
   const [scaleAnimation] = useState(new Animated.Value(1));
 
@@ -181,8 +185,8 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
           height: config.containerHeight,
           padding: config.padding,
           transform: [{ scale: scaleAnimation }],
-          backgroundColor: contact.isPrimary ? '#FF3B30' : '#FFFFFF',
-          borderColor: contact.isPrimary ? '#FF3B30' : '#E5E5E7',
+          backgroundColor: contact.isPrimary ? NestSyncColors.semantic.error : colors.background,
+          borderColor: contact.isPrimary ? NestSyncColors.semantic.error : colors.border,
         },
       ]}
     >
@@ -207,7 +211,7 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
                 styles.contactName,
                 {
                   fontSize: config.fontSize,
-                  color: contact.isPrimary ? '#FFFFFF' : '#000000',
+                  color: contact.isPrimary ? colors.background : colors.text,
                 },
               ]}
               numberOfLines={1}
@@ -215,8 +219,8 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
               {contact.name}
             </Text>
             {contact.isPrimary && (
-              <View style={styles.primaryBadge}>
-                <Text style={styles.primaryText}>PRIMARY</Text>
+              <View style={[styles.primaryBadge, { backgroundColor: `${colors.background}30` }]}>
+                <Text style={[styles.primaryText, { color: colors.background }]}>PRIMARY</Text>
               </View>
             )}
           </View>
@@ -226,7 +230,7 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
               styles.relationship,
               {
                 fontSize: config.fontSize - 2,
-                color: contact.isPrimary ? 'rgba(255, 255, 255, 0.8)' : '#666666',
+                color: contact.isPrimary ? `${colors.background}CC` : colors.textSecondary,
               },
             ]}
             numberOfLines={1}
@@ -239,7 +243,7 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
               styles.phoneNumber,
               {
                 fontSize: config.fontSize - 2,
-                color: contact.isPrimary ? 'rgba(255, 255, 255, 0.9)' : '#333333',
+                color: contact.isPrimary ? `${colors.background}E6` : colors.text,
               },
             ]}
             numberOfLines={1}
@@ -253,7 +257,7 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
                 styles.lastContacted,
                 {
                   fontSize: config.fontSize - 4,
-                  color: contact.isPrimary ? 'rgba(255, 255, 255, 0.7)' : '#999999',
+                  color: contact.isPrimary ? `${colors.background}B3` : colors.textSecondary,
                 },
               ]}
             >
@@ -268,14 +272,14 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
             style={[
               styles.callButton,
               {
-                backgroundColor: contact.isPrimary ? 'rgba(255, 255, 255, 0.2)' : '#FF3B30',
+                backgroundColor: contact.isPrimary ? `${colors.background}33` : NestSyncColors.semantic.error,
               },
             ]}
           >
             <MaterialIcons
               name="phone"
               size={config.iconSize}
-              color={contact.isPrimary ? '#FFFFFF' : '#FFFFFF'}
+              color={colors.background}
             />
           </View>
           <Text
@@ -283,7 +287,7 @@ const EmergencyContactCard: React.FC<EmergencyContactCardProps> = ({
               styles.callLabel,
               {
                 fontSize: config.fontSize - 4,
-                color: contact.isPrimary ? 'rgba(255, 255, 255, 0.8)' : '#666666',
+                color: contact.isPrimary ? `${colors.background}CC` : colors.textSecondary,
               },
             ]}
           >
@@ -323,14 +327,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   primaryBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     marginLeft: 8,
   },
   primaryText: {
-    color: '#FFFFFF',
     fontSize: 10,
     fontWeight: 'bold',
     letterSpacing: 0.5,

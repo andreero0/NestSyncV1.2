@@ -485,7 +485,7 @@ export function EditChildModal({ visible, child, onClose, onSuccess }: EditChild
                   <View style={[
                     styles.toggleThumb,
                     {
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: colors.background,
                       transform: [{ translateX: formData.hasSensitiveSkin ? 20 : 2 }]
                     }
                   ]} />
@@ -512,7 +512,7 @@ export function EditChildModal({ visible, child, onClose, onSuccess }: EditChild
                   <View style={[
                     styles.toggleThumb,
                     {
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: colors.background,
                       transform: [{ translateX: formData.hasAllergies ? 20 : 2 }]
                     }
                   ]} />
@@ -558,11 +558,11 @@ export function EditChildModal({ visible, child, onClose, onSuccess }: EditChild
             disabled={!isFormValid || updateChildLoading}
           >
             {updateChildLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={colors.background} />
             ) : (
               <>
-                <IconSymbol name="checkmark.circle.fill" size={20} color="#FFFFFF" />
-                <ThemedText style={styles.updateButtonText}>
+                <IconSymbol name="checkmark.circle.fill" size={20} color={colors.background} />
+                <ThemedText style={[styles.updateButtonText, { color: colors.background }]}>
                   Update Profile
                 </ThemedText>
               </>
@@ -784,6 +784,5 @@ const styles = StyleSheet.create({
   updateButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

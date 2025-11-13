@@ -443,7 +443,7 @@ export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLog
                         style={[
                           styles.timeChipText,
                           {
-                            color: selectedTime === option.id ? '#FFFFFF' : colors.text,
+                            color: selectedTime === option.id ? colors.background : colors.text,
                           },
                         ]}
                       >
@@ -467,7 +467,7 @@ export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLog
                           accessibilityRole="button"
                           accessibilityLabel="Done selecting time"
                         >
-                          <ThemedText style={styles.customTimeDoneText}>Done</ThemedText>
+                          <ThemedText style={[styles.customTimeDoneText, { color: colors.background }]}>Done</ThemedText>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -541,14 +541,14 @@ export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLog
                       <IconSymbol
                         name={type.icon}
                         size={24}
-                        color={selectedChangeType === type.id ? '#FFFFFF' : colors.textSecondary}
+                        color={selectedChangeType === type.id ? colors.background : colors.textSecondary}
                       />
                       <ThemedText
                         type="defaultSemiBold"
                         style={[
                           styles.changeTypeLabel,
                           {
-                            color: selectedChangeType === type.id ? '#FFFFFF' : colors.text,
+                            color: selectedChangeType === type.id ? colors.background : colors.text,
                           },
                         ]}
                       >
@@ -558,7 +558,7 @@ export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLog
                         style={[
                           styles.changeTypeDescription,
                           {
-                            color: selectedChangeType === type.id ? '#FFFFFF' : colors.textSecondary,
+                            color: selectedChangeType === type.id ? colors.background : colors.textSecondary,
                           },
                         ]}
                       >
@@ -664,15 +664,15 @@ export function QuickLogModal({ visible, onClose, onSuccess, childId }: QuickLog
                       accessibilityLabel={totalInventory === 0 ? "Cannot log - no inventory" : "Log diaper change"}
                     >
                       {submitLoading ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <ActivityIndicator size="small" color={colors.background} />
                       ) : (
                         <>
                           <IconSymbol
                             name={totalInventory === 0 ? "xmark" : "checkmark"}
                             size={18}
-                            color="#FFFFFF"
+                            color={colors.background}
                           />
-                          <ThemedText style={styles.primaryButtonText}>
+                          <ThemedText style={[styles.primaryButtonText, { color: colors.background }]}>
                             {totalInventory === 0 ? "No Inventory" : "Log Change"}
                           </ThemedText>
                         </>
@@ -839,14 +839,12 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   customTimeContainer: {
     marginTop: 16,
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,
-    backgroundColor: '#FFFFFF',
   },
   customTimeHeader: {
     flexDirection: 'row',
@@ -863,7 +861,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   customTimeDoneText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },

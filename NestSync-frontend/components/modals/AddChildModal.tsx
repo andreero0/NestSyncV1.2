@@ -345,11 +345,11 @@ export function AddChildModal({ visible, onClose, onSuccess }: AddChildModalProp
             disabled={!isFormValid || createChildLoading}
           >
             {createChildLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={colors.background} />
             ) : (
               <>
-                <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-                <ThemedText style={styles.createButtonText}>
+                <IconSymbol name="plus.circle.fill" size={20} color={colors.background} />
+                <ThemedText style={[styles.createButtonText, { color: colors.background }]}>
                   Add Child
                 </ThemedText>
               </>
@@ -473,6 +473,5 @@ const styles = StyleSheet.create({
   createButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

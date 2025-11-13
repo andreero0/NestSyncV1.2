@@ -14,7 +14,8 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { NestSyncColors } from '../../constants/Colors';
+import { Colors, NestSyncColors } from '../../constants/Colors';
+import { useColorScheme } from '../../hooks/useColorScheme';
 import { useNestSyncTheme } from '../../contexts/ThemeContext';
 import { useTrialOnboarding, useFeatureOnboarding, useScreenOnboarding } from '../../hooks/useTrialOnboarding';
 import { useTrialDaysRemaining } from './TrialCountdownBanner';
@@ -24,6 +25,8 @@ import { useTrialDaysRemaining } from './TrialCountdownBanner';
  */
 export function TrialOnboardingExample() {
   const theme = useNestSyncTheme();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const {
     showWelcomeTooltip,
     showAnalyticsTooltip,
@@ -62,7 +65,7 @@ export function TrialOnboardingExample() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[900] : '#FFFFFF',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[900] : colors.background,
     },
     content: {
       padding: 20,
@@ -84,7 +87,7 @@ export function TrialOnboardingExample() {
       marginBottom: 15,
     },
     button: {
-      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[800] : '#FFFFFF',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[800] : colors.background,
       borderRadius: 12,
       padding: 16,
       marginBottom: 12,
@@ -124,7 +127,7 @@ export function TrialOnboardingExample() {
       marginLeft: 8,
     },
     premiumBadgeText: {
-      color: '#FFFFFF',
+      color: colors.background,
       fontSize: 10,
       fontWeight: '600',
     },
@@ -152,7 +155,7 @@ export function TrialOnboardingExample() {
       alignItems: 'center',
     },
     demoButtonText: {
-      color: '#FFFFFF',
+      color: colors.background,
       fontSize: 14,
       fontWeight: '600',
     },

@@ -27,7 +27,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { NestSyncColors } from '../../constants/Colors';
+import { Colors, NestSyncColors } from '../../constants/Colors';
+import { useColorScheme } from '../../hooks/useColorScheme';
 import { useNestSyncTheme } from '../../contexts/ThemeContext';
 import { useAnalyticsAccess, useFeatureAccess } from '../../hooks/useFeatureAccess';
 
@@ -367,6 +368,8 @@ function TooltipBubble({
   onSecondaryAction?: () => void;
 }) {
   const theme = useNestSyncTheme();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const [fadeAnimation] = useState(new Animated.Value(0));
   const [scaleAnimation] = useState(new Animated.Value(0.8));
 
@@ -457,7 +460,7 @@ function TooltipBubble({
 
   const styles = StyleSheet.create({
     tooltip: {
-      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[800] : '#FFFFFF',
+      backgroundColor: theme === 'dark' ? NestSyncColors.neutral[800] : colors.background,
       borderRadius: 16,
       padding: 20,
       shadowColor: NestSyncColors.primary.blue,
@@ -517,7 +520,7 @@ function TooltipBubble({
       alignItems: 'center',
     },
     primaryButtonText: {
-      color: '#FFFFFF',
+      color: colors.background,
       fontSize: 14,
       fontWeight: '600',
     },

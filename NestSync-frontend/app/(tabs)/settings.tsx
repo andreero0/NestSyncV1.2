@@ -650,7 +650,7 @@ export default function SettingsScreen() {
               value={item.value}
               onValueChange={item.onToggle}
               trackColor={{ false: colors.border, true: colors.tint }}
-              thumbColor={item.value ? '#FFFFFF' : colors.background}
+              thumbColor={colors.background}
               accessibilityLabel={`Toggle ${item.title}`}
             />
           ) : isLoading ? (
@@ -821,8 +821,8 @@ export default function SettingsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Sign out of your account"
           >
-            <IconSymbol name="arrow.right.square" size={20} color="#FFFFFF" />
-            <ThemedText style={styles.logoutText}>Sign Out</ThemedText>
+            <IconSymbol name="arrow.right.square" size={20} color={colors.background} />
+            <ThemedText style={[styles.logoutText, { color: colors.background }]}>Sign Out</ThemedText>
           </TouchableOpacity>
 
           {/* App Version */}
@@ -926,7 +926,7 @@ export default function SettingsScreen() {
                     style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.tint }]}
                     onPress={handleSaveThreshold}
                   >
-                    <ThemedText style={[styles.buttonText, { color: '#FFFFFF' }]}>
+                    <ThemedText style={[styles.buttonText, { color: colors.background }]}>
                       Save
                     </ThemedText>
                   </TouchableOpacity>
@@ -1045,7 +1045,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },

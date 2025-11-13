@@ -548,7 +548,7 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
                       <IconSymbol
                         name={type.icon}
                         size={20}
-                        color={selectedProductType === type.id ? '#FFFFFF' : colors.textSecondary}
+                        color={selectedProductType === type.id ? colors.background : colors.textSecondary}
                       />
                       <View style={styles.productTypeContent}>
                         <ThemedText
@@ -556,7 +556,7 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
                           style={[
                             styles.productTypeLabel,
                             {
-                              color: selectedProductType === type.id ? '#FFFFFF' : colors.text,
+                              color: selectedProductType === type.id ? colors.background : colors.text,
                             },
                           ]}
                         >
@@ -566,7 +566,7 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
                           style={[
                             styles.productTypeDescription,
                             {
-                              color: selectedProductType === type.id ? '#FFFFFF' : colors.textSecondary,
+                              color: selectedProductType === type.id ? colors.background : colors.textSecondary,
                             },
                           ]}
                         >
@@ -649,7 +649,7 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
                         style={[
                           styles.sizeChipText,
                           {
-                            color: selectedSize === option.value ? '#FFFFFF' : colors.text,
+                            color: selectedSize === option.value ? colors.background : colors.text,
                           },
                         ]}
                       >
@@ -850,11 +850,11 @@ export function AddInventoryModal({ visible, onClose, onSuccess, childId }: AddI
                   accessibilityLabel="Add inventory item"
                 >
                   {submitLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={colors.background} />
                   ) : (
                     <>
-                      <IconSymbol name="plus" size={18} color="#FFFFFF" />
-                      <ThemedText style={styles.primaryButtonText}>
+                      <IconSymbol name="plus" size={18} color={colors.background} />
+                      <ThemedText style={[styles.primaryButtonText, { color: colors.background }]}>
                         Add Stock
                       </ThemedText>
                     </>
@@ -1051,7 +1051,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   // Enhanced expiry date styles
   expiryHeader: {

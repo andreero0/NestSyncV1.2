@@ -465,14 +465,14 @@ export default function PlannerScreen() {
                   >
                     <Text style={[
                       styles.filterText,
-                      { color: isActive ? '#FFFFFF' : colors.text }
+                      { color: isActive ? colors.background : colors.text }
                     ]}>
                       {getFilterLabel(filterType)}
                     </Text>
                     {count > 0 && (
                       <Text style={[
                         styles.filterCount,
-                        { color: isActive ? '#FFFFFF' : colors.textSecondary }
+                        { color: isActive ? colors.background : colors.textSecondary }
                       ]}>
                         ({count})
                       </Text>
@@ -501,7 +501,7 @@ export default function PlannerScreen() {
           >
             <Text style={[
               styles.toggleText,
-              { color: currentView === 'planner' ? '#FFFFFF' : colors.text }
+              { color: currentView === 'planner' ? colors.background : colors.text }
             ]}>
               Planner
             </Text>
@@ -522,7 +522,7 @@ export default function PlannerScreen() {
           >
             <Text style={[
               styles.toggleText,
-              { color: currentView === 'analytics' ? '#FFFFFF' : colors.text }
+              { color: currentView === 'analytics' ? colors.background : colors.text }
             ]}>
               Analytics
             </Text>
@@ -542,7 +542,7 @@ export default function PlannerScreen() {
           >
             <Text style={[
               styles.toggleText,
-              { color: currentView === 'inventory' ? '#FFFFFF' : colors.text }
+              { color: currentView === 'inventory' ? colors.background : colors.text }
             ]}>
               Inventory
             </Text>
@@ -588,7 +588,7 @@ export default function PlannerScreen() {
                     Advanced pattern tracking, predictive insights, and optimization recommendations coming soon.
                   </ThemedText>
                   <View style={[styles.comingSoonBadge, { backgroundColor: colors.success }]}>
-                    <ThemedText style={[styles.comingSoonBadgeText, { color: '#FFFFFF' }]}>
+                    <ThemedText style={[styles.comingSoonBadgeText, { color: colors.background }]}>
                       Premium Active
                     </ThemedText>
                   </View>
@@ -627,8 +627,8 @@ export default function PlannerScreen() {
                           accessibilityRole="button"
                           accessibilityLabel="View all reorder suggestions"
                         >
-                          <IconSymbol name="arrow.right.circle.fill" size={20} color="#FFFFFF" />
-                          <Text style={[styles.viewAllText, { color: '#FFFFFF' }]}>
+                          <IconSymbol name="arrow.right.circle.fill" size={20} color={colors.background} />
+                          <Text style={[styles.viewAllText, { color: colors.background }]}>
                             View All Suggestions
                           </Text>
                         </TouchableOpacity>
@@ -686,7 +686,7 @@ export default function PlannerScreen() {
                     </View>
 
                     <View style={[styles.plannerStatusBadge, { backgroundColor: getItemColor(item.status) }]}>
-                      <ThemedText style={[styles.plannerStatusText, { color: '#FFFFFF' }]}>
+                      <ThemedText style={[styles.plannerStatusText, { color: colors.background }]}>
                         {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                       </ThemedText>
                     </View>
@@ -802,7 +802,7 @@ export default function PlannerScreen() {
                       Critical
                     </ThemedText>
                   </View>
-                  <View style={styles.summaryStatDivider} />
+                  <View style={[styles.summaryStatDivider, { backgroundColor: colors.border }]} />
                   <View style={styles.summaryStatItem}>
                     <ThemedText type="title" style={[styles.summaryStatNumber, { color: NestSyncColors.trafficLight.low }]}>
                       {filterSummary.low}
@@ -811,7 +811,7 @@ export default function PlannerScreen() {
                       Low Stock
                     </ThemedText>
                   </View>
-                  <View style={styles.summaryStatDivider} />
+                  <View style={[styles.summaryStatDivider, { backgroundColor: colors.border }]} />
                   <View style={styles.summaryStatItem}>
                     <ThemedText type="title" style={[styles.summaryStatNumber, { color: NestSyncColors.trafficLight.stocked }]}>
                       {filterSummary.stocked}
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
   summaryStatDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#E5E7EB',
+    // backgroundColor will be set inline with colors.border
     marginHorizontal: 12,
   },
   predictionCard: {
@@ -1333,7 +1333,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    // borderTopColor will be set inline with colors.border
   },
   trendAnalysisText: {
     fontSize: 14,
@@ -1445,14 +1445,14 @@ const styles = StyleSheet.create({
   },
   shieldText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    // color: colors.background (set inline when used)
   },
-  // Enhanced Card Design System
+  // Enhanced Card Design System (analytics disabled - styles preserved for future use)
   enhancedPeakHoursCard: {
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor: colors.surface (set inline when analytics re-enabled)
     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 8,
   },
@@ -1460,7 +1460,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor: colors.surface (set inline when analytics re-enabled)
     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 8,
   },
@@ -1468,7 +1468,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor: colors.surface (set inline when analytics re-enabled)
     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 8,
   },
@@ -1476,7 +1476,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor: colors.surface (set inline when analytics re-enabled)
     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 8,
   },
@@ -1633,7 +1633,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   enhancedButtonText: {
-    color: '#FFFFFF',
+    // color: colors.background (set inline when used)
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: 0.8,

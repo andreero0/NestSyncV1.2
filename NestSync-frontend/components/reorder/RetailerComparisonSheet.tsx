@@ -374,14 +374,14 @@ export function RetailerComparisonSheet({
         <View style={styles.badgeContainer}>
           {isLowestPrice && (
             <View style={[styles.badge, { backgroundColor: NestSyncColors.semantic.success }]}>
-              <IconSymbol name="crown.fill" size={12} color="#FFFFFF" />
-              <ThemedText style={styles.badgeText}>Best Price</ThemedText>
+              <IconSymbol name="crown.fill" size={12} color={colors.background} />
+              <ThemedText style={[styles.badgeText, { color: colors.background }]}>Best Price</ThemedText>
             </View>
           )}
           {isFastestDelivery && (
             <View style={[styles.badge, { backgroundColor: NestSyncColors.accent.orange }]}>
-              <IconSymbol name="bolt.fill" size={12} color="#FFFFFF" />
-              <ThemedText style={styles.badgeText}>Fastest</ThemedText>
+              <IconSymbol name="bolt.fill" size={12} color={colors.background} />
+              <ThemedText style={[styles.badgeText, { color: colors.background }]}>Fastest</ThemedText>
             </View>
           )}
         </View>
@@ -431,7 +431,7 @@ export function RetailerComparisonSheet({
             </ThemedText>
             {retailer.price.discountPercentage && retailer.price.discountPercentage > 0 && (
               <View style={[styles.discountBadge, { backgroundColor: NestSyncColors.semantic.success }]}>
-                <ThemedText style={styles.discountText}>
+                <ThemedText style={[styles.discountText, { color: colors.background }]}>
                   -{retailer.price.discountPercentage}%
                 </ThemedText>
               </View>
@@ -591,12 +591,12 @@ export function RetailerComparisonSheet({
                           <IconSymbol
                             name={option.icon}
                             size={14}
-                            color={sortBy === option.key ? '#FFFFFF' : colors.textSecondary}
+                            color={sortBy === option.key ? colors.background : colors.textSecondary}
                           />
                           <ThemedText
                             style={[
                               styles.sortOptionText,
-                              { color: sortBy === option.key ? '#FFFFFF' : colors.text }
+                              { color: sortBy === option.key ? colors.background : colors.text }
                             ]}
                           >
                             {option.label}
@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    // color applied inline with theme awareness
   },
 
   retailerHeader: {
@@ -938,7 +938,7 @@ const styles = StyleSheet.create({
   discountText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    // color applied inline with theme awareness
   },
 
   taxContainer: {

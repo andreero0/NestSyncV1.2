@@ -43,6 +43,8 @@ import {
 import { GlassView } from './GlassView';
 import { IconSymbol } from './IconSymbol';
 import { GlassUITokens } from '@/constants/GlassUI';
+import { Colors, NestSyncColors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 /**
  * Button Variant Types
@@ -135,6 +137,10 @@ export const GlassButton = React.memo<GlassButtonProps>(({
   // Button is disabled when loading or explicitly disabled
   const isDisabled = disabled || loading;
 
+  // Theme colors
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   // Size configuration
   const sizeConfig = React.useMemo(() => {
     switch (size) {
@@ -169,24 +175,24 @@ export const GlassButton = React.memo<GlassButtonProps>(({
       case 'secondary':
         return {
           backgroundColor: 'rgba(107, 114, 128, 0.2)',
-          textColor: '#374151',
+          textColor: colors.textSecondary,
           borderWidth: 0,
         };
       case 'outline':
         return {
           backgroundColor: 'transparent',
-          textColor: '#0891B2',
+          textColor: NestSyncColors.primary.blue,
           borderWidth: 2,
         };
       case 'primary':
       default:
         return {
           backgroundColor: 'rgba(8, 145, 178, 0.2)',
-          textColor: '#FFFFFF',
+          textColor: colors.background,
           borderWidth: 0,
         };
     }
-  }, [variant]);
+  }, [variant, colors]);
 
   // Button container style
   const buttonContainerStyle = React.useMemo<ViewStyle>(() => ({

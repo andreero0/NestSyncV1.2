@@ -426,8 +426,8 @@ export default function HomeScreen() {
           {/* Success Message */}
           {successMessage && (
             <View style={[styles.successMessage, { backgroundColor: colors.success }]}>
-              <IconSymbol name="checkmark.circle.fill" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.successMessageText}>
+              <IconSymbol name="checkmark.circle.fill" size={20} color={colors.background} />
+              <ThemedText style={[styles.successMessageText, { color: colors.background }]}>
                 {successMessage}
               </ThemedText>
             </View>
@@ -521,7 +521,7 @@ export default function HomeScreen() {
               
               {/* Legacy Dashboard Stats - Keep for additional metrics */}
               {dashboardData?.getDashboardStats && (
-                <View style={styles.legacyStatsRow}>
+                <View style={[styles.legacyStatsRow, { borderTopColor: colors.border }]}>
                   <View style={styles.legacyStatItem}>
                     <ThemedText style={[styles.legacyStatLabel, { color: colors.textSecondary }]}>
                       Days Remaining
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    // borderTopColor will be set inline with colors.border
   },
   legacyStatItem: {
     alignItems: 'center',
@@ -924,7 +924,6 @@ const styles = StyleSheet.create({
   successMessageText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#FFFFFF',
   },
   activityLoadingContainer: {
     flexDirection: 'row',
@@ -956,7 +955,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  // No children state
+  // No children state - styles unused (component uses EmptyState component)
   noChildrenContainer: {
     alignItems: 'center',
     padding: 32,
@@ -986,7 +985,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   noChildrenButtonText: {
-    color: '#FFFFFF',
+    // Unused - component uses EmptyState component
     fontSize: 16,
     fontWeight: '600',
   },

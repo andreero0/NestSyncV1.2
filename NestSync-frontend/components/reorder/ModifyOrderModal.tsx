@@ -14,8 +14,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { NestSyncColors } from '../../constants/Colors';
+import { Colors, NestSyncColors } from '../../constants/Colors';
 import { useNestSyncTheme } from '../../contexts/ThemeContext';
+import { useColorScheme } from '../../hooks/useColorScheme';
 
 interface ModifyOrderModalProps {
   visible: boolean;
@@ -36,6 +37,8 @@ export function ModifyOrderModal({
   onModify,
 }: ModifyOrderModalProps) {
   const theme = useNestSyncTheme();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const [quantity, setQuantity] = useState((order.quantity || 1).toString());
   const [retailer, setRetailer] = useState(order.retailer || 'Walmart');
 
@@ -133,7 +136,7 @@ export function ModifyOrderModal({
       color: theme === 'dark' ? NestSyncColors.neutral[100] : NestSyncColors.neutral[700],
     },
     saveText: {
-      color: '#FFFFFF',
+      color: colors.background,
     },
   });
 
@@ -158,7 +161,7 @@ export function ModifyOrderModal({
               <Ionicons
                 name="close"
                 size={24}
-                color={theme === 'dark' ? '#FFFFFF' : '#111827'}
+                color={colors.text}
               />
             </TouchableOpacity>
           </View>
