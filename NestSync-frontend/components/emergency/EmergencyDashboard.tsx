@@ -157,7 +157,7 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
   // Emergency actions
   const call911 = () => {
     Alert.alert(
-      '🚨 Call 911 Emergency Services',
+      'Call 911 Emergency Services',
       'This will call emergency services. Are you sure you want to proceed?',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -172,7 +172,7 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
 
   const callPoisonControl = () => {
     Alert.alert(
-      '☠️ Call Poison Control',
+      'Call Poison Control',
       'This will call the Canadian Poison Control Centre.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -187,7 +187,7 @@ const EmergencyDashboard: React.FC<EmergencyDashboardProps> = ({
 
   const callTelehealth = () => {
     Alert.alert(
-      '🏥 Call Telehealth Ontario',
+      'Call Telehealth Ontario',
       'This will call Telehealth Ontario for medical advice.',
       [
         { text: 'Cancel', style: 'cancel' },

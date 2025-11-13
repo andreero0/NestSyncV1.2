@@ -93,7 +93,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           </Text>
           {isImportant && (
             <View style={[styles.urgentBadge, { backgroundColor: NestSyncColors.semantic.error }]}>
-              <Text style={styles.urgentText}>URGENT</Text>
+              <Text style={[styles.urgentText, { color: colors.background }]}>URGENT</Text>
             </View>
           )}
         </View>
@@ -188,7 +188,7 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
         {hasCriticalInfo && (
           <View style={[styles.criticalBadge, { backgroundColor: NestSyncColors.semantic.error }]}>
             <MaterialIcons name="warning" size={16} color={colors.background} />
-            <Text style={styles.criticalText}>CRITICAL</Text>
+            <Text style={[styles.criticalText, { color: colors.background }]}>CRITICAL</Text>
           </View>
         )}
       </View>
@@ -319,7 +319,7 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
                 </Text>
               </View>
               <View style={styles.canadianFlag}>
-                <Text style={[styles.flagText, { color: colors.textSecondary }]}>🇨🇦 Canadian Health Card</Text>
+                <Text style={[styles.flagText, { color: colors.textSecondary }]}>Canadian Health Card</Text>
               </View>
             </View>
           </CollapsibleSection>
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   criticalText: {
-    color: '#FFFFFF',
+    // color: colors.background (set inline in component)
     fontSize: 10,
     fontWeight: 'bold',
     marginLeft: 4,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   urgentText: {
-    color: '#FFFFFF',
+    // color: colors.background (set inline in component)
     fontSize: 10,
     fontWeight: 'bold',
     letterSpacing: 0.5,

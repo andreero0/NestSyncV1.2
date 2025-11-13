@@ -244,7 +244,7 @@ export function JITConsentExamples() {
 
       <View style={[styles.complianceFooter, { backgroundColor: colors.surface }]}>
         <Text style={[styles.complianceText, { color: colors.textSecondary }]}>
-          🇨🇦 All consent requests are PIPEDA-compliant and stored securely in Canada.
+          All consent requests are PIPEDA-compliant and stored securely in Canada.
           Users can withdraw consent anytime in Settings.
         </Text>
       </View>

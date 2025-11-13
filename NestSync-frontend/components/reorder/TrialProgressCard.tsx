@@ -359,7 +359,7 @@ export function TrialProgressCard({
 
       {/* Canadian Pricing Section */}
       <View style={styles.pricingSection}>
-        <Text style={styles.pricingTitle}>🇨🇦 Canadian Pricing</Text>
+        <Text style={styles.pricingTitle}>Canadian Pricing</Text>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Standard Monthly</Text>
           <Text style={styles.priceValue}>$4.99 CAD</Text>

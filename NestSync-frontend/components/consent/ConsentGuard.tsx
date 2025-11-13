@@ -182,7 +182,7 @@ export function ConsentGuard({
       {/* Canadian compliance note */}
       <View style={[styles.complianceNote, { backgroundColor: colors.background }]}>
         <Text style={[styles.complianceText, { color: colors.textSecondary }]}>
-          🇨🇦 Your privacy is protected under Canadian PIPEDA standards
+          Your privacy is protected under Canadian PIPEDA standards
         </Text>
       </View>
     </View>
