@@ -467,7 +467,7 @@ export function PremiumUpgradeModal({
 
       // Show Canadian-context success message
       Alert.alert(
-        '🇨🇦 Upgrade Successful!',
+        'Upgrade Successful!',
         `Welcome to ${selectedPlan.name}! Your subscription is now active and your data remains secure in Canada. You now have access to all premium features.`,
         [
           {
@@ -807,7 +807,7 @@ export function PremiumUpgradeModal({
                     <IconSymbol name="info.circle" size={16} color={NestSyncColors.canadian.trust} />
                     <View style={styles.taxContent}>
                       <ThemedText style={[styles.taxTitle, { color: colors.text }]}>
-                        🇨🇦 Canadian Pricing
+                        Canadian Pricing
                       </ThemedText>
                       <ThemedText style={[styles.taxDescription, { color: colors.textSecondary }]}>
                         Price includes applicable taxes. Billed in Canadian dollars with secure processing.

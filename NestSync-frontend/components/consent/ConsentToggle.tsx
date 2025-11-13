@@ -13,6 +13,7 @@ import {
   AccessibilityInfo,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../../hooks/useColorScheme';
 import { Colors } from '../../constants/Colors';
 
@@ -117,7 +118,7 @@ export const ConsentToggle: React.FC<ConsentToggleProps> = ({
         </View>
 
         <View style={[styles.checkbox, dynamicStyles.checkbox]}>
-          {isChecked && <Text style={[styles.checkmark, dynamicStyles.checkmark]}>✓</Text>}
+          {isChecked && <Ionicons name="checkmark" size={16} color={dynamicStyles.checkmark.color} />}
         </View>
       </View>
     </TouchableOpacity>

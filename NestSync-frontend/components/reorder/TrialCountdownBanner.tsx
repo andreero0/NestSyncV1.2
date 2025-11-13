@@ -320,14 +320,6 @@ export function TrialCountdownBanner({
       justifyContent: 'center',
       backgroundColor: 'transparent',
     },
-    dismissButtonText: {
-      color: theme === 'dark'
-        ? 'rgba(255, 255, 255, 0.6)'
-        : NestSyncColors.neutral[500],
-      fontSize: 18, // Large enough for touch target
-      fontWeight: '400', // Regular weight
-      lineHeight: 18,
-    },
   });
 
   return (
@@ -390,7 +382,7 @@ export function TrialCountdownBanner({
             accessibilityLabel="Dismiss trial banner"
             accessibilityHint="Hides this banner until next session"
           >
-            <Text style={styles.dismissButtonText}>✕</Text>
+            <Ionicons name="close" size={18} color={theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : NestSyncColors.neutral[500]} />
           </TouchableOpacity>
         )}
       </View>

@@ -530,7 +530,7 @@ export function ReorderSuggestionsContainer({
           <View style={[styles.complianceFooter, { borderTopColor: colors.border }]}>
             <IconSymbol name="shield.checkmark" size={14} color={NestSyncColors.canadian.trust} />
             <ThemedText style={[styles.complianceText, { color: colors.textSecondary }]}>
-              🇨🇦 ML predictions use PIPEDA-compliant data processing •
+              ML predictions use PIPEDA-compliant data processing •
               Data stored in Canada • Updated every 6 hours
             </ThemedText>
           </View>
