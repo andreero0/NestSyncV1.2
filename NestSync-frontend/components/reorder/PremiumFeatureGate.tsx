@@ -253,14 +253,14 @@ export function PremiumFeatureGate({
             {/* Feature Title */}
             <ThemedText
               type="subtitle"
-              style={[styles.title, { color: '#FFFFFF' }]}
+              style={[styles.title, { color: colors.background }]}
             >
               {config.title}
             </ThemedText>
 
             {/* Feature Description */}
             <ThemedText
-              style={[styles.description, { color: '#FFFFFF' }]}
+              style={[styles.description, { color: colors.background }]}
             >
               {config.description}
             </ThemedText>
@@ -273,7 +273,7 @@ export function PremiumFeatureGate({
                 color={NestSyncColors.secondary.green}
               />
               <ThemedText
-                style={[styles.benefit, { color: '#FFFFFF' }]}
+                style={[styles.benefit, { color: colors.background }]}
               >
                 {config.benefit}
               </ThemedText>
@@ -281,7 +281,7 @@ export function PremiumFeatureGate({
 
             {/* Canadian Context */}
             <View style={styles.canadianContainer}>
-              <ThemedText style={styles.canadianText}>
+              <ThemedText style={[styles.canadianText, { color: colors.background }]}>
                 Data stored in Canada • GST/PST included
               </ThemedText>
             </View>
@@ -293,7 +293,7 @@ export function PremiumFeatureGate({
               activeOpacity={0.9}
             >
               <LinearGradient
-                colors={['#FFFFFF', '#F8F9FA']}
+                colors={[colors.background, colorScheme === 'dark' ? NestSyncColors.neutral[800] : '#F8F9FA']}
                 style={styles.buttonGradient}
               >
                 <ThemedText style={styles.buttonText}>
@@ -306,7 +306,7 @@ export function PremiumFeatureGate({
             </TouchableOpacity>
 
             {/* Trust Indicator */}
-            <ThemedText style={styles.trustText}>
+            <ThemedText style={[styles.trustText, { color: colors.background }]}>
               30-day money-back guarantee • Cancel anytime
             </ThemedText>
           </View>
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
 
   canadianText: {
     fontSize: 12,
-    color: '#FFFFFF',
+    // color applied inline with theme awareness (with opacity)
     opacity: 0.8,
     textAlign: 'center',
   },
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
 
   trustText: {
     fontSize: 11,
-    color: '#FFFFFF',
+    // color applied inline with theme awareness (with opacity)
     opacity: 0.7,
     textAlign: 'center',
     lineHeight: 16,
