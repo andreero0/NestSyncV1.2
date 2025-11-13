@@ -10,12 +10,14 @@ import {
   Share,
   Dimensions,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { EmergencyProfile, emergencyStorage } from '../../lib/storage/EmergencyStorageService';
+import { Colors, NestSyncColors } from '../../constants/Colors';
 
 interface EmergencyShareModalProps {
   visible: boolean;
@@ -30,6 +32,8 @@ const EmergencyShareModal: React.FC<EmergencyShareModalProps> = ({
   emergencyProfile,
   isEmergencyMode = false,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const [qrData, setQrData] = useState<string>('');
   const [shareFormat, setShareFormat] = useState<'qr' | 'text'>('qr');
   const [isGenerating, setIsGenerating] = useState(false);
