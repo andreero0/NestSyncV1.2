@@ -470,7 +470,7 @@ export function ReorderSuggestionsContainer({
                     ]}
                     textStyle={[
                       styles.filterButtonText,
-                      isActive && { color: '#FFFFFF' },
+                      isActive && { color: colors.background },
                     ]}
                   />
                 </Animated.View>

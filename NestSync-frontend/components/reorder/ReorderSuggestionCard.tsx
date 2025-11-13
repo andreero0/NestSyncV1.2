@@ -197,17 +197,17 @@ export function ReorderSuggestionCard({
   const urgencyColors = {
     critical: {
       background: NestSyncColors.trafficLight.critical,
-      text: '#FFFFFF',
+      text: colors.background,
       border: NestSyncColors.trafficLight.critical,
     },
     moderate: {
       background: NestSyncColors.trafficLight.low,
-      text: '#FFFFFF',
+      text: colors.background,
       border: NestSyncColors.trafficLight.low,
     },
     low: {
       background: NestSyncColors.trafficLight.stocked,
-      text: '#FFFFFF',
+      text: colors.background,
       border: NestSyncColors.trafficLight.stocked,
     },
   };
