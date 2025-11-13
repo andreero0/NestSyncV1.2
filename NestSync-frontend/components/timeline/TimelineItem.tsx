@@ -125,7 +125,7 @@ export function TimelineItem({
     >
       <View style={styles.content}>
         {/* Icon Area - 32×32px container with 16×16px icon */}
-        <View 
+        <View
           style={[
             styles.iconContainer,
             { backgroundColor: activityColors.primary }
@@ -134,7 +134,7 @@ export function TimelineItem({
           <IconSymbol
             name={activityColors.icon as any}
             size={16}
-            color="#FFFFFF"
+            color={colors.background}
           />
         </View>
 
