@@ -649,7 +649,7 @@ export function RetailerComparisonSheet({
                   <View style={[styles.complianceFooter, { borderTopColor: colors.border }]}>
                     <IconSymbol name="shield.checkmark" size={12} color={NestSyncColors.canadian.trust} />
                     <ThemedText style={[styles.complianceText, { color: colors.textSecondary }]}>
-                      🇨🇦 Price data processed under PIPEDA compliance • Updated {new Date(comparisonData.lastUpdated).toLocaleDateString('en-CA')}
+                      Price data processed under PIPEDA compliance • Updated {new Date(comparisonData.lastUpdated).toLocaleDateString('en-CA')}
                     </ThemedText>
                   </View>
                 </>

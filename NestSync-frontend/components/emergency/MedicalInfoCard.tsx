@@ -299,7 +299,7 @@ const MedicalInfoCard: React.FC<MedicalInfoCardProps> = ({
                 </Text>
               </View>
               <View style={styles.canadianFlag}>
-                <Text style={styles.flagText}>🇨🇦 Canadian Health Card</Text>
+                <Text style={styles.flagText}>Canadian Health Card</Text>
               </View>
             </View>
           </CollapsibleSection>

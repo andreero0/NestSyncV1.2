@@ -282,7 +282,7 @@ export function PremiumFeatureGate({
             {/* Canadian Context */}
             <View style={styles.canadianContainer}>
               <ThemedText style={styles.canadianText}>
-                🇨🇦 Data stored in Canada • GST/PST included
+                Data stored in Canada • GST/PST included
               </ThemedText>
             </View>
 
@@ -307,7 +307,7 @@ export function PremiumFeatureGate({
 
             {/* Trust Indicator */}
             <ThemedText style={styles.trustText}>
-              ✨ 30-day money-back guarantee • Cancel anytime
+              30-day money-back guarantee • Cancel anytime
             </ThemedText>
           </View>
         </BlurView>

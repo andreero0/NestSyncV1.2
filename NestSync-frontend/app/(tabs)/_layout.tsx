@@ -75,7 +75,7 @@ function FamilyDataInitializer() {
   // Enhanced debug logging for family data state and GraphQL queries
   useEffect(() => {
     if (__DEV__) {
-      console.log('🏠 FamilyDataInitializer: Complete family data state:', {
+      console.log('[FamilyDataInitializer] Complete family data state:', {
         // Query states
         familiesLoading,
         childrenLoading,
@@ -101,7 +101,7 @@ function FamilyDataInitializer() {
 
       // Separate detailed GraphQL query logging
       if (familiesError) {
-        console.error('🚨 FamilyDataInitializer: MY_FAMILIES_QUERY error:', {
+        console.error('[FamilyDataInitializer ERROR] MY_FAMILIES_QUERY error:', {
           error: familiesError.message,
           graphQLErrors: familiesError.graphQLErrors?.map(e => e.message),
           networkError: familiesError.networkError?.message,
@@ -109,11 +109,11 @@ function FamilyDataInitializer() {
       }
 
       if (!familiesLoading && families.length === 0 && !familiesError) {
-        console.warn('⚠️ FamilyDataInitializer: MY_FAMILIES_QUERY returned empty results - possible authentication issue');
+        console.warn('[FamilyDataInitializer WARN] MY_FAMILIES_QUERY returned empty results - possible authentication issue');
       }
 
       if (families.length > 0 && myFamilies.length === 0) {
-        console.warn('⚠️ FamilyDataInitializer: GraphQL returned families but store is empty - sync issue');
+        console.warn('[FamilyDataInitializer WARN] GraphQL returned families but store is empty - sync issue');
       }
     }
   }, [families, children, currentFamily, familiesLoading, childrenLoading, myFamilies, familiesError]);

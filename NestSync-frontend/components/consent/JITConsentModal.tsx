@@ -215,7 +215,7 @@ export function JITConsentModal() {
             {/* Canadian compliance note */}
             <View style={[styles.complianceNote, { backgroundColor: colors.surface }]}>
               <Text style={[styles.complianceText, { color: colors.textSecondary }]}>
-                🇨🇦 All data is stored in Canada and processed according to PIPEDA privacy standards. 
+                All data is stored in Canada and processed according to PIPEDA privacy standards. 
                 You can withdraw this consent anytime in Settings.
               </Text>
             </View>

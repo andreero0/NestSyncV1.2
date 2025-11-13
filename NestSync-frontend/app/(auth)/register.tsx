@@ -21,6 +21,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dropdown } from 'react-native-element-dropdown';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
 import { SignUpInput, CanadianProvince } from '../../lib/types/auth';
 import { NestSyncButton, NestSyncInput } from '@/components/ui';
@@ -442,7 +443,7 @@ export default function RegisterScreen() {
                   disabled={isLoading}
                 >
                   <View style={[styles.consentCheckbox, { borderColor: value ? colors.tint : colors.border }, value && { backgroundColor: colors.tint, borderColor: colors.tint }]}>
-                    {value && <Text style={styles.checkmark}>✓</Text>}
+                    {value && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
                   </View>
                 </TouchableOpacity>
                 <View style={styles.consentTextContainer}>
@@ -478,13 +479,13 @@ export default function RegisterScreen() {
                   disabled={isLoading}
                 >
                   <View style={[styles.consentCheckbox, { borderColor: value ? colors.tint : colors.border }, value && { backgroundColor: colors.tint, borderColor: colors.tint }]}>
-                    {value && <Text style={styles.checkmark}>✓</Text>}
+                    {value && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
                   </View>
                 </TouchableOpacity>
                 <View style={styles.consentTextContainer}>
                   <Text style={[styles.consentText, { color: colors.text }]}>
                     I agree to the{' '}
-                    <Text 
+                    <Text
                       style={[styles.consentLink, { color: colors.tint }]}
                       onPress={!isLoading ? () => setShowTermsModal(true) : undefined}
                     >
@@ -517,7 +518,7 @@ export default function RegisterScreen() {
                     disabled={isLoading}
                   >
                     <View style={[styles.consentCheckbox, { borderColor: value ? colors.tint : colors.border }, value && { backgroundColor: colors.tint, borderColor: colors.tint }]}>
-                      {value && <Text style={styles.checkmark}>✓</Text>}
+                      {value && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
                     </View>
                   </TouchableOpacity>
                   <View style={styles.consentTextContainer}>
@@ -543,7 +544,7 @@ export default function RegisterScreen() {
                     disabled={isLoading}
                   >
                     <View style={[styles.consentCheckbox, { borderColor: value ? colors.tint : colors.border }, value && { backgroundColor: colors.tint, borderColor: colors.tint }]}>
-                      {value && <Text style={styles.checkmark}>✓</Text>}
+                      {value && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
                     </View>
                   </TouchableOpacity>
                   <View style={styles.consentTextContainer}>
@@ -588,7 +589,7 @@ export default function RegisterScreen() {
       {/* Privacy Notice */}
       <View style={[styles.privacyNotice, { borderTopColor: colors.border }]}>
         <Text style={[styles.privacyText, { color: colors.textSecondary }]}>
-          🇨🇦 Your data stays in Canada and is protected under PIPEDA
+          Your data is stored in Canada and protected under PIPEDA
         </Text>
       </View>
 
@@ -679,11 +680,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
   },
   consentTextContainer: {
     flex: 1,

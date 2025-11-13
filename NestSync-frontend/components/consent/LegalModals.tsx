@@ -113,7 +113,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ isVisible, onClose, type
               </Text>
 
               <Text style={[styles.highlight, dynamicStyles.highlight]}>
-                🇨🇦 Your data stays in Canada and is protected under PIPEDA.
+                Your data stays in Canada and is protected under PIPEDA.
               </Text>
             </ScrollView>
           ),
