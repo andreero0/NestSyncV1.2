@@ -1,0 +1,361 @@
+name: PR Automation
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-label:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed files
+        id: changes
+        run: |
+          # Get list of changed files
+          git fetch origin ${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+
+          # Initialize flags
+          HAS_FRONTEND=false
+          HAS_BACKEND=false
+          HAS_DOCS=false
+          HAS_TESTS=false
+          HAS_CI=false
+          HAS_DOCKER=false
+
+          # Check for frontend changes
+          if echo "$CHANGED_FILES" | grep -q "^NestSync-frontend/"; then
+            HAS_FRONTEND=true
+          fi
+
+          # Check for backend changes
+          if echo "$CHANGED_FILES" | grep -q "^NestSync-backend/"; then
+            HAS_BACKEND=true
+          fi
+
+          # Check for documentation changes
+          if echo "$CHANGED_FILES" | grep -qE "\.(md|txt)$"; then
+            HAS_DOCS=true
+          fi
+
+          # Check for test changes
+          if echo "$CHANGED_FILES" | grep -qE "(test|spec)\.(ts|tsx|js|jsx|py)$"; then
+            HAS_TESTS=true
+          fi
+
+          # Check for CI/CD changes
+          if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
+            HAS_CI=true
+          fi
+
+          # Check for Docker changes
+          if echo "$CHANGED_FILES" | grep -qE "^docker/|Dockerfile"; then
+            HAS_DOCKER=true
+          fi
+
+          # Output results
+          echo "has_frontend=$HAS_FRONTEND" >> $GITHUB_OUTPUT
+          echo "has_backend=$HAS_BACKEND" >> $GITHUB_OUTPUT
+          echo "has_docs=$HAS_DOCS" >> $GITHUB_OUTPUT
+          echo "has_tests=$HAS_TESTS" >> $GITHUB_OUTPUT
+          echo "has_ci=$HAS_CI" >> $GITHUB_OUTPUT
+          echo "has_docker=$HAS_DOCKER" >> $GITHUB_OUTPUT
+
+      - name: Add labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [];
+
+            if ('${{ steps.changes.outputs.has_frontend }}' === 'true') {
+              labels.push('frontend');
+            }
+
+            if ('${{ steps.changes.outputs.has_backend }}' === 'true') {
+              labels.push('backend');
+            }
+
+            if ('${{ steps.changes.outputs.has_docs }}' === 'true') {
+              labels.push('documentation');
+            }
+
+            if ('${{ steps.changes.outputs.has_tests }}' === 'true') {
+              labels.push('tests');
+            }
+
+            if ('${{ steps.changes.outputs.has_ci }}' === 'true') {
+              labels.push('ci/cd');
+            }
+
+            if ('${{ steps.changes.outputs.has_docker }}' === 'true') {
+              labels.push('docker');
+            }
+
+            // Add size labels
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            const totalChanges = files.reduce((sum, file) => sum + file.changes, 0);
+
+            if (totalChanges < 10) {
+              labels.push('size/XS');
+            } else if (totalChanges < 50) {
+              labels.push('size/S');
+            } else if (totalChanges < 200) {
+              labels.push('size/M');
+            } else if (totalChanges < 500) {
+              labels.push('size/L');
+            } else {
+              labels.push('size/XL');
+            }
+
+            // Add labels to PR
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: labels
+              });
+            }
+
+  check-pr-description:
+    name: Check PR Description
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Check PR body
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+
+            // Check if PR description is empty or too short
+            if (body.length < 50) {
+              const comment = `## PR Description Needed
+
+            This PR needs a more detailed description. Please include:
+
+            - **What**: What changes are being made?
+            - **Why**: Why are these changes necessary?
+            - **How**: How were these changes implemented?
+            - **Testing**: How were these changes tested?
+
+            A good PR description helps reviewers understand your changes and speeds up the review process.`;
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['needs-description']
+              });
+            }
+
+            // Check for common sections
+            const hasTestingSection = /## Testing|### Testing|**Testing**/.test(body);
+            const hasChangelogSection = /## Changes|### Changes|**Changes**/.test(body);
+
+            if (!hasTestingSection) {
+              core.warning('PR description should include a Testing section');
+            }
+
+            if (!hasChangelogSection) {
+              core.warning('PR description should include a Changes section');
+            }
+
+  check-branch-name:
+    name: Check Branch Name
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Validate branch name
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+
+            // Valid patterns: feature/*, bugfix/*, hotfix/*, claude/*
+            const validPatterns = [
+              /^feature\/.+/,
+              /^bugfix\/.+/,
+              /^hotfix\/.+/,
+              /^claude\/.+/,
+              /^docs\/.+/,
+              /^refactor\/.+/,
+              /^test\/.+/
+            ];
+
+            const isValid = validPatterns.some(pattern => pattern.test(branch));
+
+            if (!isValid) {
+              const comment = `## Branch Naming Convention
+
+            The branch name \`${branch}\` doesn't follow the naming convention.
+
+            **Valid patterns:**
+            - \`feature/*\` - New features
+            - \`bugfix/*\` - Bug fixes
+            - \`hotfix/*\` - Urgent fixes
+            - \`claude/*\` - Claude Code automation
+            - \`docs/*\` - Documentation updates
+            - \`refactor/*\` - Code refactoring
+            - \`test/*\` - Test updates
+
+            Example: \`feature/add-user-authentication\``;
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['invalid-branch-name']
+              });
+            }
+
+  check-pipeda-compliance:
+    name: Check PIPEDA Compliance
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for compliance-related changes
+        id: compliance-check
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+
+          # Check for changes in sensitive areas
+          HAS_AUTH_CHANGES=false
+          HAS_DB_CHANGES=false
+          HAS_API_CHANGES=false
+
+          if echo "$CHANGED_FILES" | grep -qE "auth|consent|privacy"; then
+            HAS_AUTH_CHANGES=true
+          fi
+
+          if echo "$CHANGED_FILES" | grep -qE "models|database|migration"; then
+            HAS_DB_CHANGES=true
+          fi
+
+          if echo "$CHANGED_FILES" | grep -qE "graphql|api|endpoint"; then
+            HAS_API_CHANGES=true
+          fi
+
+          echo "has_auth_changes=$HAS_AUTH_CHANGES" >> $GITHUB_OUTPUT
+          echo "has_db_changes=$HAS_DB_CHANGES" >> $GITHUB_OUTPUT
+          echo "has_api_changes=$HAS_API_CHANGES" >> $GITHUB_OUTPUT
+
+      - name: Add compliance reminder
+        if: steps.compliance-check.outputs.has_auth_changes == 'true' || steps.compliance-check.outputs.has_db_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## PIPEDA Compliance Reminder
+
+            This PR modifies sensitive areas (authentication, database, or API). Please ensure:
+
+            - [ ] User consent is properly requested and documented
+            - [ ] Data is stored in Canadian regions (Supabase Canada)
+            - [ ] Audit trails are maintained for data changes
+            - [ ] Privacy-by-design principles are followed
+            - [ ] RLS policies are updated if needed
+
+            See [PIPEDA Compliance Guide](../docs/compliance/pipeda/) for details.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['pipeda-review-needed']
+            });
+
+  check-merge-conflicts:
+    name: Check Merge Conflicts
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for conflicts
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          if ! git merge-base origin/${{ github.base_ref }} HEAD > /dev/null; then
+            echo "::warning::Cannot find merge base"
+            exit 0
+          fi
+
+          if ! git merge --no-commit --no-ff origin/${{ github.base_ref }}; then
+            echo "::error::This PR has merge conflicts with ${{ github.base_ref }}"
+            git merge --abort
+            exit 1
+          fi
+
+          git merge --abort
+
+  pr-summary:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    needs: [auto-label, check-pr-description, check-branch-name, check-pipeda-compliance, check-merge-conflicts]
+    if: always() && github.event_name == 'pull_request'
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "### PR Automation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Checks:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Auto Label: ${{ needs.auto-label.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- PR Description: ${{ needs.check-pr-description.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch Name: ${{ needs.check-branch-name.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- PIPEDA Compliance: ${{ needs.check-pipeda-compliance.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Merge Conflicts: ${{ needs.check-merge-conflicts.result }}" >> $GITHUB_STEP_SUMMARY

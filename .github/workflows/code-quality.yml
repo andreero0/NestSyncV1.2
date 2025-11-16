@@ -1,0 +1,273 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript-quality:
+    name: TypeScript Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: NestSync-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd NestSync-frontend
+          npm ci --legacy-peer-deps
+
+      - name: TypeScript type checking
+        id: tsc
+        run: |
+          cd NestSync-frontend
+          npx tsc --noEmit --pretty > tsc-output.txt 2>&1 || true
+
+          # Check for type errors
+          if grep -q "error TS" tsc-output.txt; then
+            ERROR_COUNT=$(grep -c "error TS" tsc-output.txt || echo "0")
+            echo "type_errors=$ERROR_COUNT" >> $GITHUB_OUTPUT
+
+            echo "### TypeScript Type Errors" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Found $ERROR_COUNT type errors" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            head -n 50 tsc-output.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "type_errors=0" >> $GITHUB_OUTPUT
+            echo "### TypeScript Type Check" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No type errors found!" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Code complexity analysis
+        run: |
+          cd NestSync-frontend
+          npx eslint . --ext .ts,.tsx --format json --output-file complexity.json || true
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Code Complexity" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Complexity analysis complete. See artifacts for details." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload TypeScript quality results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: typescript-quality-results
+          path: |
+            NestSync-frontend/tsc-output.txt
+            NestSync-frontend/complexity.json
+          retention-days: 30
+
+  python-quality:
+    name: Python Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: NestSync-backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          cd NestSync-backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install mypy pylint radon flake8 black isort
+
+      - name: Type checking with mypy
+        id: mypy
+        run: |
+          cd NestSync-backend
+          mypy app --install-types --non-interactive --txt-report mypy-report > mypy-output.txt 2>&1 || true
+
+          # Check for type errors
+          if grep -q "error:" mypy-output.txt; then
+            ERROR_COUNT=$(grep -c "error:" mypy-output.txt || echo "0")
+            echo "type_errors=$ERROR_COUNT" >> $GITHUB_OUTPUT
+
+            echo "### mypy Type Errors" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Found $ERROR_COUNT type errors" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            head -n 50 mypy-output.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "type_errors=0" >> $GITHUB_OUTPUT
+            echo "### mypy Type Check" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No type errors found!" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Code style check with black
+        run: |
+          cd NestSync-backend
+          black --check app/ > black-output.txt 2>&1 || true
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Code Style (black)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if black --check app/; then
+            echo "Code style is consistent!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Code style issues found. Run 'black app/' to format." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Import sorting check with isort
+        run: |
+          cd NestSync-backend
+          isort --check-only app/ > isort-output.txt 2>&1 || true
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Import Sorting (isort)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if isort --check-only app/; then
+            echo "Imports are properly sorted!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Import sorting issues found. Run 'isort app/' to fix." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Linting with pylint
+        run: |
+          cd NestSync-backend
+          pylint app/ --output-format=json > pylint-report.json || true
+          pylint app/ --output-format=text > pylint-report.txt || true
+
+          # Parse score
+          if [ -f pylint-report.json ]; then
+            SCORE=$(python -c "
+          import json
+          try:
+              with open('pylint-report.json') as f:
+                  data = json.load(f)
+                  print(data.get('score', 'N/A'))
+          except:
+              print('N/A')
+          " || echo "N/A")
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Pylint Score" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Code quality score: $SCORE/10" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Complexity analysis with radon
+        run: |
+          cd NestSync-backend
+
+          # Cyclomatic complexity
+          radon cc app/ -a -j > radon-cc.json || true
+          radon cc app/ -a > radon-cc.txt || true
+
+          # Maintainability index
+          radon mi app/ -j > radon-mi.json || true
+          radon mi app/ > radon-mi.txt || true
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Code Complexity (radon)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Complexity analysis complete. See artifacts for details." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Python quality results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-quality-results
+          path: |
+            NestSync-backend/mypy-output.txt
+            NestSync-backend/mypy-report/
+            NestSync-backend/black-output.txt
+            NestSync-backend/isort-output.txt
+            NestSync-backend/pylint-report.json
+            NestSync-backend/pylint-report.txt
+            NestSync-backend/radon-*.json
+            NestSync-backend/radon-*.txt
+          retention-days: 30
+
+  code-metrics:
+    name: Code Metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better metrics
+
+      - name: Count lines of code
+        run: |
+          # Frontend metrics
+          FRONTEND_TS=$(find NestSync-frontend -name "*.ts" -o -name "*.tsx" | xargs wc -l | tail -1 | awk '{print $1}')
+          FRONTEND_JS=$(find NestSync-frontend -name "*.js" -o -name "*.jsx" | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo "0")
+
+          # Backend metrics
+          BACKEND_PY=$(find NestSync-backend/app -name "*.py" | xargs wc -l | tail -1 | awk '{print $1}')
+
+          echo "### Code Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend:**" >> $GITHUB_STEP_SUMMARY
+          echo "- TypeScript: $FRONTEND_TS lines" >> $GITHUB_STEP_SUMMARY
+          echo "- JavaScript: $FRONTEND_JS lines" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Backend:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Python: $BACKEND_PY lines" >> $GITHUB_STEP_SUMMARY
+
+      - name: Count files
+        run: |
+          FRONTEND_FILES=$(find NestSync-frontend/app -name "*.ts" -o -name "*.tsx" | wc -l)
+          BACKEND_FILES=$(find NestSync-backend/app -name "*.py" | wc -l)
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**File Counts:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend components: $FRONTEND_FILES" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend modules: $BACKEND_FILES" >> $GITHUB_STEP_SUMMARY
+
+  quality-summary:
+    name: Quality Summary
+    runs-on: ubuntu-latest
+    needs: [typescript-quality, python-quality, code-metrics]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "### Code Quality Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Job Results:**" >> $GITHUB_STEP_SUMMARY
+          echo "- TypeScript Quality: ${{ needs.typescript-quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Python Quality: ${{ needs.python-quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Metrics: ${{ needs.code-metrics.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.typescript-quality.result }}" == "success" ] && \
+             [ "${{ needs.python-quality.result }}" == "success" ] && \
+             [ "${{ needs.code-metrics.result }}" == "success" ]; then
+            echo "All code quality checks passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Some code quality checks need attention. Please review the individual job results." >> $GITHUB_STEP_SUMMARY
+          fi
