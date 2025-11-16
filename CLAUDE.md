@@ -213,6 +213,101 @@ async for session in get_async_session():
 
 ## Development Workflow Patterns
 
+### Design Consistency Audit Workflow
+
+**Purpose**: Systematically eliminate hardcoded values and ensure design system compliance across all components.
+
+**When to Use**:
+- When components have hardcoded colors, spacing, or typography
+- During design system migrations or updates
+- When onboarding new components to the design system
+- As part of quality assurance before feature releases
+
+**Audit Process**:
+
+1. **Identify Non-Compliant Components**
+   ```bash
+   # Search for hardcoded color values
+   grep -r "color: '#" NestSync-frontend/components/
+   grep -r "backgroundColor: '#" NestSync-frontend/app/
+
+   # Search for hardcoded spacing
+   grep -r "margin: [0-9]" NestSync-frontend/
+   grep -r "padding: [0-9]" NestSync-frontend/
+   ```
+
+2. **Replace with Design Tokens**
+   ```typescript
+   // ❌ INCORRECT - Hardcoded values
+   style={{
+     backgroundColor: '#ffffff',
+     color: '#000000',
+     padding: 16,
+     borderRadius: 8,
+   }}
+
+   // ✅ CORRECT - Design system tokens
+   import { NestSyncColors } from '@/constants/NestSyncColors';
+   import { Spacing } from '@/constants/Spacing';
+   import { BorderRadius } from '@/constants/BorderRadius';
+
+   style={{
+     backgroundColor: NestSyncColors.background.primary,
+     color: NestSyncColors.text.primary,
+     padding: Spacing.md,
+     borderRadius: BorderRadius.md,
+   }}
+   ```
+
+3. **Theme Context Integration**
+   ```typescript
+   // For components that need theme awareness
+   import { useTheme } from '@/contexts/ThemeContext';
+
+   export function ThemedComponent() {
+     const { colors, spacing } = useTheme();
+
+     return (
+       <View style={{ backgroundColor: colors.background }}>
+         <Text style={{ color: colors.text }}>Content</Text>
+       </View>
+     );
+   }
+   ```
+
+4. **Validation**
+   ```bash
+   # Run design compliance tests
+   npm run test:design-compliance
+
+   # Run visual regression to catch unintended changes
+   npm run test:visual
+
+   # Lint for code quality
+   npm run lint
+   ```
+
+5. **Documentation**
+   - Update `/design-documentation/validation/design-system-audit-report.md`
+   - Record findings in `/design-documentation/validation/lessons-learned-design-consistency.md`
+   - Add entries to CLAUDE.md if new patterns emerge
+
+**Recent Audit Results** (November 2025):
+- Fixed hardcoded colors in reorder components (2 parts)
+- Fixed timeline component hardcoded colors
+- Fixed settings screen hardcoded colors
+- Fixed home screen hardcoded colors
+- Fixed planner screen hardcoded colors
+- Fixed RetailerComparisonSheet hardcoded colors
+- Fixed PremiumFeatureGate hardcoded colors
+
+**Design System Resources**:
+- `/constants/NestSyncColors.ts` - Color palette
+- `/constants/Spacing.ts` - Spacing system
+- `/constants/BorderRadius.ts` - Border radius values
+- `/constants/Typography.ts` - Typography scale
+- `/design-documentation/design-system/` - Complete design system documentation
+
 ### GraphQL Resolver Development
 All resolvers follow this pattern for database access:
 
@@ -907,14 +1002,70 @@ NestSync/
 NestSync-frontend/
 ├── app/                    # Expo Router file-based routing
 │   ├── (auth)/            # Authentication screens
+│   ├── (subscription)/    # Subscription management
 │   ├── (tabs)/            # Main app navigation
 │   └── _layout.tsx        # Root layout with providers
-├── contexts/              # React contexts (theme, auth)
+│
+├── components/            # Reusable React components
+│   ├── analytics/         # Analytics dashboard components
+│   ├── cards/            # Card components (inventory, stats, etc.)
+│   ├── charts/           # Data visualization components
+│   ├── collaboration/    # Family sharing components
+│   ├── consent/          # PIPEDA consent management
+│   ├── dev/              # Development utilities
+│   ├── emergency/        # Emergency dashboard components
+│   ├── loading/          # Loading states and skeletons
+│   ├── modals/           # Modal dialogs
+│   ├── reorder/          # Reorder automation components
+│   ├── Collapsible.tsx   # Collapsible sections
+│   ├── ThemedText.tsx    # Theme-aware text component
+│   └── ThemedView.tsx    # Theme-aware view component
+│
+├── contexts/              # React contexts
+│   ├── AuthContext.tsx   # Authentication state
+│   └── ThemeContext.tsx  # Theme management
+│
+├── hooks/                 # Custom React hooks
+│   ├── useUniversalStorage.ts  # Cross-platform storage
+│   ├── useColorScheme.ts       # System color scheme detection
+│   └── ...
+│
 ├── lib/                   # Utilities and services
-│   ├── graphql/           # Apollo Client configuration
-│   └── storage/           # SecureStore and AsyncStorage wrappers
-└── constants/             # Colors, typography, styling
+│   ├── graphql/          # Apollo Client configuration
+│   │   ├── client.ts     # GraphQL client setup
+│   │   ├── mutations.ts  # GraphQL mutations
+│   │   └── queries.ts    # GraphQL queries
+│   └── storage/          # Storage services
+│       ├── SecureStorage.ts          # Secure token storage
+│       └── EmergencyStorageService.ts # Offline emergency data
+│
+├── constants/             # Design system constants
+│   ├── NestSyncColors.ts # Color palette
+│   ├── Spacing.ts        # Spacing scale
+│   ├── BorderRadius.ts   # Border radius values
+│   ├── Typography.ts     # Typography scale
+│   └── Colors.ts         # Theme colors
+│
+├── stores/               # Zustand state management
+│   └── authStore.ts      # Authentication store
+│
+├── tests/                # Playwright tests
+│   ├── visual-regression/  # Visual tests
+│   ├── accessibility/      # A11y tests
+│   ├── design-compliance/  # Design system tests
+│   └── e2e/               # End-to-end tests
+│
+└── scripts/              # Development scripts
+    ├── playwright-helper.js              # Server conflict detection
+    ├── dev-health-check.js              # Health check utility
+    └── migrate-deprecated-rn-web-apis.js # Migration scripts
 ```
+
+**Component Organization Principles**:
+- Group by feature domain (analytics, reorder, emergency)
+- Shared UI components at root level (ThemedText, Collapsible)
+- Design system tokens in `/constants/`
+- Cross-platform compatibility in `/hooks/` and `/lib/`
 
 ### Backend Organization  
 ```
@@ -933,15 +1084,83 @@ NestSync-backend/
 ## Testing Approach
 
 ### Frontend Testing
-Currently using Expo's built-in linting (`npm run lint`). No comprehensive testing framework configured yet.
+NestSync uses a comprehensive multi-layered testing strategy with specialized Playwright configurations:
 
-### Backend Testing  
+#### Test Types and Configurations
+
+**1. Visual Regression Testing**
+```bash
+# Run all visual regression tests
+npm run test:visual
+
+# Mobile viewport tests
+npm run test:visual:mobile
+
+# Desktop viewport tests
+npm run test:visual:desktop
+
+# Update snapshots
+npm run test:visual:update
+
+# View test report
+npm run test:visual:report
+```
+
+**Configuration**: `playwright.visual-regression.config.ts`
+- Captures screenshots across different screens and user states
+- Compares visual consistency between builds
+- Tests both mobile and desktop viewports
+- Generates HTML reports in `test-results/visual-regression-report`
+
+**2. Accessibility Testing**
+**Configuration**: `playwright.accessibility.config.ts`
+- WCAG AA compliance validation
+- Keyboard navigation testing
+- Screen reader compatibility checks
+- Color contrast verification
+
+**3. Design Compliance Testing**
+**Configuration**: `playwright.design-compliance.config.ts`
+- Validates adherence to NestSync design system
+- Checks for hardcoded colors and values
+- Verifies consistent spacing and typography
+- Ensures proper use of design tokens
+
+**4. Comprehensive E2E Testing**
+**Configuration**: `playwright.comprehensive-e2e.config.ts`
+- Full user journey testing
+- Multi-step workflow validation
+- Cross-platform functionality verification
+
+**5. Code Quality**
+```bash
+# ESLint with security rules
+npm run lint
+
+# Pre-commit hooks (includes security scanning)
+pre-commit run --all-files
+```
+
+### Backend Testing
 Testing infrastructure outlined in `requirements.txt` but commented out for production deployment:
 ```python
 # pytest>=7.4.3,<8.0.0
-# pytest-asyncio>=0.21.1,<1.0.0  
+# pytest-asyncio>=0.21.1,<1.0.0
 # pytest-cov>=4.1.0,<5.0.0
 ```
+
+### Test Credentials
+All testing uses the documented test account:
+- **Email**: parents@nestsync.com
+- **Password**: Shazam11#
+
+### CI/CD Testing Integration
+Pre-commit hooks automatically run before each commit:
+- **Semgrep**: Security vulnerability scanning
+- **Bandit**: Python security issues
+- **ESLint Security**: JavaScript/TypeScript security patterns
+- **Detect Secrets**: Hardcoded credentials detection
+- **Visual Regression**: Screenshot comparison tests
 
 ## Deployment & Production
 
@@ -1198,6 +1417,124 @@ Every feature implementation MUST follow this verification process:
 - Reference design-documentation/ for approved visual elements
 - Follow the psychology-driven UX patterns outlined in design documentation
 - Maintain consistency with Canadian context and PIPEDA compliance requirements
+
+## Git Workflow and Branch Management
+
+### Branch Naming Convention
+
+NestSync uses a structured branch naming convention for AI-assisted development:
+
+**Pattern**: `claude/[task-description]-[session-id]`
+
+**Examples**:
+- `claude/audit-design-consistency-011CV5i5rKDqrh7SH2yAgVpg`
+- `claude/fix-authentication-bug-[session-id]`
+- `claude/implement-premium-features-[session-id]`
+
+**Components**:
+1. **Prefix**: Always starts with `claude/`
+2. **Task Description**: Kebab-case description of the work
+3. **Session ID**: Unique identifier for the development session
+
+**Why This Matters**:
+- GitHub push permissions are configured to require `claude/` prefix
+- Session ID ensures branch uniqueness and traceability
+- Attempting to push to non-compliant branch names will fail with 403 error
+
+### Branch Lifecycle
+
+```bash
+# Create and switch to feature branch
+git checkout -b claude/[task-description]-[session-id]
+
+# Regular development commits
+git add .
+git commit -m "feat: implement feature X"
+
+# Push to remote (MUST include claude/ prefix)
+git push -u origin claude/[task-description]-[session-id]
+
+# Create pull request for review
+gh pr create --title "Feature: X" --body "Description"
+
+# After PR approval, merge to main
+git checkout main
+git merge claude/[task-description]-[session-id]
+git push origin main
+```
+
+### Commit Message Standards
+
+Follow conventional commit format:
+
+**Format**: `type(scope): description`
+
+**Types**:
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `style:` - Code style changes (formatting, no logic change)
+- `refactor:` - Code refactoring
+- `perf:` - Performance improvements
+- `test:` - Adding or updating tests
+- `chore:` - Maintenance tasks
+
+**Examples**:
+```bash
+git commit -m "feat(auth): add biometric authentication support"
+git commit -m "fix(inventory): resolve duplicate items in list"
+git commit -m "docs(claude): update development workflow patterns"
+git commit -m "refactor(components): migrate to design system tokens"
+```
+
+**Important**:
+- ❌ Never use emojis in commit messages
+- ❌ Never include Claude Code attribution or co-authorship
+- ✅ Focus on what the change accomplishes, not how it was created
+- ✅ Be clear and professional
+
+### Pull Request Workflow
+
+When creating pull requests:
+
+1. **Ensure clean branch history**
+   ```bash
+   # Review commits before PR
+   git log --oneline origin/main..HEAD
+
+   # Interactive rebase if needed
+   git rebase -i origin/main
+   ```
+
+2. **Create PR with comprehensive description**
+   ```bash
+   gh pr create --title "Feature: Add premium subscription management" \
+     --body "$(cat <<'EOF'
+   ## Summary
+   - Implement Stripe subscription integration
+   - Add subscription management UI
+   - Create GraphQL mutations for upgrades/downgrades
+
+   ## Test Plan
+   - [ ] Test subscription creation flow
+   - [ ] Verify payment processing
+   - [ ] Test upgrade/downgrade scenarios
+   - [ ] Validate PIPEDA compliance
+   EOF
+   )"
+   ```
+
+3. **Address review feedback**
+   ```bash
+   # Make requested changes
+   git add .
+   git commit -m "fix: address PR review feedback"
+   git push
+   ```
+
+4. **Merge after approval**
+   - Use "Squash and merge" for clean main branch history
+   - Ensure comprehensive commit message includes context
 
 ## Feature Integration Workflow - "Maybe" Keyword Automation
 
