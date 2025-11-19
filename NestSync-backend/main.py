@@ -432,6 +432,62 @@ async def internal_server_error_handler(request, exc):
 # GraphQL Endpoint Configuration
 # =============================================================================
 
+# Add introspection blocking middleware for GraphQL in production/staging
+@app.middleware("http")
+async def block_graphql_introspection(request: Request, call_next):
+    """
+    Block GraphQL introspection queries in production and staging environments
+
+    SECURITY: HIGH-001 - Prevents API schema exposure
+    CWE-200: Exposure of Sensitive Information to an Unauthorized Actor
+    """
+    # Only check GraphQL endpoint
+    if request.url.path == "/graphql" and ENVIRONMENT in ("production", "staging"):
+        # Only check POST requests (GraphQL queries)
+        if request.method == "POST":
+            # Read request body
+            body_bytes = await request.body()
+
+            try:
+                import json
+                body = json.loads(body_bytes.decode())
+                query = body.get("query", "")
+
+                # Check for introspection queries
+                # Block __schema and __type(...) but allow __typename (used for caching)
+                import re
+                has_schema = "__schema" in query
+                has_type_introspection = bool(re.search(r'__type\s*[\(\{]', query))
+
+                if has_schema or has_type_introspection:
+                    logger.warning(f"Blocked introspection query from {request.client.host}")
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "errors": [{
+                                "message": "GraphQL introspection is disabled in this environment",
+                                "extensions": {
+                                    "code": "INTROSPECTION_DISABLED",
+                                    "security": "Introspection queries are blocked for security reasons"
+                                }
+                            }]
+                        }
+                    )
+            except Exception:
+                # If we can't parse the body, let it through
+                # (it will fail at GraphQL validation anyway)
+                pass
+
+            # Reconstruct request with body for downstream processing
+            async def receive():
+                return {"type": "http.request", "body": body_bytes}
+
+            request._receive = receive
+
+    response = await call_next(request)
+    return response
+
+
 # Add specific OPTIONS handler for GraphQL endpoint BEFORE mounting router
 @app.options("/graphql")
 async def graphql_options():
@@ -444,13 +500,12 @@ enable_graphiql = ENVIRONMENT == "development" and os.getenv("ENABLE_GRAPHIQL", 
 # Log GraphQL security configuration for audit trail
 logger.info(f"GraphQL Security Configuration - Environment: {ENVIRONMENT}")
 logger.info(f"  GraphiQL: {'enabled' if enable_graphiql else 'disabled'}")
-logger.info(f"  Introspection: disabled (controlled at application level)")
+logger.info(f"  Introspection: {'allowed' if ENVIRONMENT == 'development' else 'BLOCKED by request validation'}")
 
 if ENVIRONMENT != "development":
-    logger.info("  Production security: GraphiQL and introspection disabled")
+    logger.info("  Production security: GraphiQL disabled, introspection blocked")
 
 # Configure GraphQL router with custom context
-# Note: Introspection is handled through middleware/context-level security
 graphql_app = GraphQLRouter(
     schema=schema,
     context_getter=create_graphql_context,
