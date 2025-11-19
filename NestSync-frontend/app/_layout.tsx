@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { secureLog } from '../lib/utils/secureLogger';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -14,7 +15,7 @@ if (Platform.OS !== 'web') {
     const { StripeProvider: StripeProviderImport } = require('@stripe/stripe-react-native');
     StripeProvider = StripeProviderImport;
   } catch (error) {
-    console.warn('Stripe React Native not available:', error);
+    secureLog.warn('Stripe React Native not available:', error);
   }
 }
 import * as SplashScreen from 'expo-splash-screen';
@@ -58,15 +59,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         if (__DEV__) {
-          console.log('AuthGuard: Starting authentication initialization...');
+          secureLog.info('AuthGuard: Starting authentication initialization...');
         }
         await initialize();
         if (__DEV__) {
-          console.log('AuthGuard: Authentication initialization completed');
+          secureLog.info('AuthGuard: Authentication initialization completed');
         }
       } catch (error) {
         // Critical auth error - should be logged in production
-        console.error('AuthGuard: Error during auth initialization:', error);
+        secureLog.error('AuthGuard: Error during auth initialization:', error);
       }
     };
 
@@ -79,12 +80,12 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     setShowSplash(false);
     
     if (__DEV__) {
-      console.log('AuthGuard: Splash screen completed, hiding native splash');
+      secureLog.info('AuthGuard: Splash screen completed, hiding native splash');
     }
     
     // Hide the native splash screen
     SplashScreen.hideAsync().catch((error) => {
-      console.error('Failed to hide native splash screen:', error);
+      secureLog.error('Failed to hide native splash screen:', error);
     });
   };
 
@@ -92,7 +93,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!isInitialized || !splashCompleted) return; // Wait for both auth and splash to complete
 
     if (__DEV__) {
-      console.log('AuthGuard: Auth initialized and splash completed, handling navigation...', {
+      secureLog.info('AuthGuard: Auth initialized and splash completed, handling navigation...', {
         isAuthenticated,
         segments,
         userOnboardingCompleted: user?.onboardingCompleted
@@ -109,7 +110,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!isAuthenticated && !inAuthGroup) {
       // User is not authenticated, redirect to login
       if (__DEV__) {
-        console.log('AuthGuard: Redirecting to login - user not authenticated');
+        secureLog.info('AuthGuard: Redirecting to login - user not authenticated');
       }
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
@@ -117,17 +118,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       if (user?.onboardingCompleted && !isDevelopmentBypass) {
         // Redirect to main app if onboarding is complete (unless dev bypass)
         if (__DEV__) {
-          console.log('AuthGuard: Redirecting to main app - onboarding completed');
+          secureLog.info('AuthGuard: Redirecting to main app - onboarding completed');
         }
         router.replace('/(tabs)');
       } else {
         // Redirect to onboarding if not complete or if dev bypass is active
         if (__DEV__ && isDevelopmentBypass) {
-          console.log('AuthGuard: Development bypass active - allowing onboarding access');
+          secureLog.info('AuthGuard: Development bypass active - allowing onboarding access');
         }
         if (!isOnboardingRoute) {
           if (__DEV__) {
-            console.log('AuthGuard: Redirecting to onboarding - not completed or dev bypass');
+            secureLog.info('AuthGuard: Redirecting to onboarding - not completed or dev bypass');
           }
           router.replace('/(auth)/onboarding');
         }
@@ -139,7 +140,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isInitialized && splashCompleted && !appIsReady) {
       if (__DEV__) {
-        console.log('AuthGuard: App is ready for navigation');
+        secureLog.info('AuthGuard: App is ready for navigation');
       }
       setAppIsReady(true);
     }
@@ -238,11 +239,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (error) {
       // Critical font loading error - should be logged in production
-      console.error('Font loading error:', error);
+      secureLog.error('Font loading error:', error);
       // Hide splash screen even if fonts fail to load to prevent infinite loading
       SplashScreen.hideAsync().catch((error) => {
         // Critical error - should be logged in production
-        console.error('Failed to hide splash screen after font error:', error);
+        secureLog.error('Failed to hide splash screen after font error:', error);
       });
     }
   }, [error]);

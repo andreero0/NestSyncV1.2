@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { secureLog } from '../../lib/utils/secureLogger';
 import {
   View,
   Text,
@@ -93,7 +94,7 @@ export default function LoginScreen() {
         Alert.alert('Biometric Sign In Failed', response.error);
       }
     } catch (error) {
-      console.error('Biometric login error:', error);
+      secureLog.error('Biometric login error:', error);
     }
   };
 
@@ -133,7 +134,7 @@ export default function LoginScreen() {
       }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      console.error('Login error:', error);
+      secureLog.error('Login error:', error);
 
       // Handle unexpected errors with user-friendly messages
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.';

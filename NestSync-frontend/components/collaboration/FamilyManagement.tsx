@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { secureLog } from '../../lib/utils/secureLogger';
 import {
   View,
   Text,
@@ -120,7 +121,7 @@ export default function FamilyManagement({ onClose }: FamilyManagementProps) {
     user = authResult.user;
   } catch {
     // Fallback for testing when AuthContext is not available
-    console.warn('AuthContext not available, using fallback user data for testing');
+    secureLog.warn('AuthContext not available, using fallback user data for testing');
     user = { id: 'test-user-id', email: 'parents@nestsync.com' };
   }
 

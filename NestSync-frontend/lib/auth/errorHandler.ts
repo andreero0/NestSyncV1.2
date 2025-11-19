@@ -5,6 +5,7 @@
  */
 
 import { Alert } from 'react-native';
+import { secureLog } from '../utils/secureLogger';
 
 export interface AuthError {
   code: string;
@@ -234,7 +235,7 @@ export function showAuthError(rawError: string, onRetry?: () => void, onContactS
   );
 
   // Log technical details for debugging (never shown to user)
-  console.error(`Auth Error [${authError.code}]: ${rawError}`);
+  secureLog.error(`Auth Error [${authError.code}]: ${rawError}`);
 
   // TODO: Send error telemetry for critical errors
   if (authError.severity === 'critical') {
@@ -273,7 +274,7 @@ export function handleAuthError(
   const authError = parseAuthError(rawError);
 
   // Log context-specific information
-  console.error(`Auth Error in ${context} [${authError.code}]: ${rawError}`);
+  secureLog.error(`Auth Error in ${context} [${authError.code}]: ${rawError}`);
 
   // Show appropriate user interface
   showAuthError(rawError, options.onRetry, options.onContactSupport);
@@ -302,7 +303,7 @@ export function contactSupport(): void {
         text: 'Email Support',
         onPress: () => {
           // TODO: Open email app with pre-filled support email
-          console.log('Opening email to support@nestsync.ca');
+          secureLog.info('Opening email to support@nestsync.ca');
         }
       }
     ]

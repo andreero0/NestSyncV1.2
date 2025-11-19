@@ -22,6 +22,7 @@
  */
 
 import { Platform } from 'react-native';
+import { secureLog } from '../utils/secureLogger';
 import { CanadianProvince } from '../../types/subscription';
 
 // Platform-specific Stripe imports
@@ -36,7 +37,7 @@ if (Platform.OS !== 'web') {
     useConfirmPayment = StripeModule.useConfirmPayment;
     useStripe = StripeModule.useStripe;
   } catch (error) {
-    console.warn('[Stripe] React Native SDK not available:', error);
+    secureLog.warn('[Stripe] React Native SDK not available:', error);
   }
 }
 
@@ -134,10 +135,10 @@ class StripeService {
       }
 
       this.initialized = true;
-      console.log('[Stripe] Service initialized successfully');
+      secureLog.info('[Stripe] Service initialized successfully');
       return true;
     } catch (error) {
-      console.error('[Stripe] Initialization failed:', error);
+      secureLog.error('[Stripe] Initialization failed:', error);
       this.initialized = false;
       return false;
     }
@@ -178,7 +179,7 @@ class StripeService {
         clientSecret: data.clientSecret,
       };
     } catch (error: any) {
-      console.error('[Stripe] Failed to create setup intent:', error);
+      secureLog.error('[Stripe] Failed to create setup intent:', error);
       return {
         success: false,
         error: this.getUserFriendlyError(error.message || 'Failed to prepare payment method setup'),
@@ -240,7 +241,7 @@ class StripeService {
         errorCode: 'SETUP_INCOMPLETE',
       };
     } catch (error: any) {
-      console.error('[Stripe] Card setup confirmation failed:', error);
+      secureLog.error('[Stripe] Card setup confirmation failed:', error);
       return {
         success: false,
         error: this.getUserFriendlyError(error.message || 'Failed to save payment method'),
@@ -290,7 +291,7 @@ class StripeService {
         clientSecret: data.clientSecret,
       };
     } catch (error: any) {
-      console.error('[Stripe] Failed to create payment intent:', error);
+      secureLog.error('[Stripe] Failed to create payment intent:', error);
       return {
         success: false,
         error: this.getUserFriendlyError(error.message || 'Failed to prepare payment'),
@@ -365,7 +366,7 @@ class StripeService {
         status: paymentIntent?.status,
       };
     } catch (error: any) {
-      console.error('[Stripe] Payment confirmation failed:', error);
+      secureLog.error('[Stripe] Payment confirmation failed:', error);
       return {
         success: false,
         error: this.getUserFriendlyError(error.message || 'Failed to process payment'),
@@ -412,7 +413,7 @@ class StripeService {
           : undefined,
       };
     } catch (error: any) {
-      console.error('[Stripe] 3D Secure authentication failed:', error);
+      secureLog.error('[Stripe] 3D Secure authentication failed:', error);
       return {
         success: false,
         error: this.getUserFriendlyError(error.message || '3D Secure authentication failed'),

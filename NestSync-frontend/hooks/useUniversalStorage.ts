@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureLog } from '../lib/utils/secureLogger';
 
 interface StorageOptions {
   secure?: boolean;
@@ -48,7 +49,7 @@ export function useUniversalStorage(
         setData(value);
       } catch (error) {
         // Critical storage error - should be logged in production
-        console.error(`Failed to load ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
+        secureLog.error(`Failed to load ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
       } finally {
         setLoading(false);
       }
@@ -82,7 +83,7 @@ export function useUniversalStorage(
       setData(value);
     } catch (error) {
       // Critical storage error - should be logged in production
-      console.error(`Failed to set ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
+      secureLog.error(`Failed to set ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
       throw error;
     }
   };
@@ -147,7 +148,7 @@ function isJWTExpired(token: string, bufferMinutes: number = 5): boolean {
     // JWT tokens have 3 parts separated by dots: header.payload.signature
     const parts = token.split('.');
     if (parts.length !== 3) {
-      console.warn('[StorageHelpers] Invalid JWT format (expected 3 parts), treating as expired');
+      secureLog.warn('[StorageHelpers] Invalid JWT format (expected 3 parts), treating as expired');
       return true;
     }
 
@@ -156,7 +157,7 @@ function isJWTExpired(token: string, bufferMinutes: number = 5): boolean {
 
     // Check if expiration claim exists
     if (!payload.exp) {
-      console.warn('[StorageHelpers] JWT missing expiration claim (exp), treating as expired');
+      secureLog.warn('[StorageHelpers] JWT missing expiration claim (exp), treating as expired');
       return true;
     }
 
@@ -167,7 +168,7 @@ function isJWTExpired(token: string, bufferMinutes: number = 5): boolean {
 
     if (isExpired && __DEV__) {
       const expiryDate = new Date(expiryTime);
-      console.log('[StorageHelpers] Token expired or expiring soon', {
+      secureLog.info('[StorageHelpers] Token expired or expiring soon', {
         expiryTime: expiryDate.toISOString(),
         bufferMinutes,
         now: new Date().toISOString(),
@@ -177,7 +178,7 @@ function isJWTExpired(token: string, bufferMinutes: number = 5): boolean {
     return isExpired;
   } catch (error) {
     // If we can't parse the token, treat it as expired for safety
-    console.warn('[StorageHelpers] Failed to parse JWT token, treating as expired:', error);
+    secureLog.warn('[StorageHelpers] Failed to parse JWT token, treating as expired:', error);
     return true;
   }
 }
@@ -195,7 +196,7 @@ export const StorageHelpers = {
       }
     } catch (error) {
       // Critical storage error - should be logged in production
-      console.error(`Failed to set ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
+      secureLog.error(`Failed to set ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
       throw error;
     }
   },
@@ -211,7 +212,7 @@ export const StorageHelpers = {
       }
     } catch (error) {
       // Critical storage error - should be logged in production
-      console.error(`Failed to get ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
+      secureLog.error(`Failed to get ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
       return null;
     }
   },
@@ -227,7 +228,7 @@ export const StorageHelpers = {
       }
     } catch (error) {
       // Critical storage error - should be logged in production
-      console.error(`Failed to remove ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
+      secureLog.error(`Failed to remove ${secure ? 'secure' : 'async'} storage item ${key}:`, error);
     }
   },
 
@@ -235,7 +236,7 @@ export const StorageHelpers = {
   async setAccessToken(token: string): Promise<void> {
     if (__DEV__) {
       const parts = token.split('.');
-      console.log(`[StorageHelpers] Storing access token: ${parts.length} parts, length: ${token.length}`);
+      secureLog.info(`[StorageHelpers] Storing access token: ${parts.length} parts, length: ${token.length}`);
     }
     await this.setItem(STORAGE_KEYS.ACCESS_TOKEN, token, true);
   },
@@ -249,7 +250,7 @@ export const StorageHelpers = {
         // Log token format for debugging
         if (__DEV__) {
           const parts = token.split('.');
-          console.log(`[StorageHelpers] Access token format: ${parts.length} parts, returning to authStore for validation`);
+          secureLog.info(`[StorageHelpers] Access token format: ${parts.length} parts, returning to authStore for validation`);
         }
         // Return token regardless of expiration - let authStore handle validation and refresh
         return token;
@@ -265,7 +266,7 @@ export const StorageHelpers = {
           // Log token format for debugging
           if (__DEV__) {
             const parts = sessionToken.split('.');
-            console.log(`[StorageHelpers] Session access token format: ${parts.length} parts, returning to authStore for validation`);
+            secureLog.info(`[StorageHelpers] Session access token format: ${parts.length} parts, returning to authStore for validation`);
           }
           // Return token regardless of expiration - let authStore handle validation and refresh
           return sessionToken;
@@ -274,7 +275,7 @@ export const StorageHelpers = {
 
       return null;
     } catch (error) {
-      console.error('[StorageHelpers] Error getting access token:', error);
+      secureLog.error('[StorageHelpers] Error getting access token:', error);
       return null;
     }
   },
@@ -282,7 +283,7 @@ export const StorageHelpers = {
   async setRefreshToken(token: string): Promise<void> {
     if (__DEV__) {
       const parts = token.split('.');
-      console.log(`[StorageHelpers] Storing refresh token: ${parts.length} parts, length: ${token.length}`);
+      secureLog.info(`[StorageHelpers] Storing refresh token: ${parts.length} parts, length: ${token.length}`);
     }
     await this.setItem(STORAGE_KEYS.REFRESH_TOKEN, token, true);
   },
@@ -296,12 +297,12 @@ export const StorageHelpers = {
         // Log token format for debugging
         const parts = token.split('.');
         if (__DEV__) {
-          console.log(`[StorageHelpers] Refresh token format: ${parts.length} parts`);
+          secureLog.info(`[StorageHelpers] Refresh token format: ${parts.length} parts`);
         }
 
         // Basic validation but DON'T clear on failure
         if (parts.length !== 3) {
-          console.warn(`[StorageHelpers] Refresh token has unexpected format (${parts.length} parts), but returning anyway`);
+          secureLog.warn(`[StorageHelpers] Refresh token has unexpected format (${parts.length} parts), but returning anyway`);
           // Let backend decide if it's valid - DON'T clear here!
         }
 
@@ -317,7 +318,7 @@ export const StorageHelpers = {
         if (sessionToken) {
           if (__DEV__) {
             const parts = sessionToken.split('.');
-            console.log(`[StorageHelpers] Session refresh token format: ${parts.length} parts`);
+            secureLog.info(`[StorageHelpers] Session refresh token format: ${parts.length} parts`);
           }
           return sessionToken;  // Return even if format questionable
         }
@@ -325,7 +326,7 @@ export const StorageHelpers = {
 
       return null;
     } catch (error) {
-      console.error('[StorageHelpers] Error getting refresh token:', error);
+      secureLog.error('[StorageHelpers] Error getting refresh token:', error);
       return null;
     }
   },
@@ -350,7 +351,7 @@ export const StorageHelpers = {
       return session;
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to parse user session:', error);
+        secureLog.error('Failed to parse user session:', error);
       }
       return null;
     }
@@ -382,7 +383,7 @@ export const StorageHelpers = {
       return JSON.parse(settingsData);
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to parse biometric settings:', error);
+        secureLog.error('Failed to parse biometric settings:', error);
       }
       return null;
     }
@@ -407,7 +408,7 @@ export const StorageHelpers = {
       return JSON.parse(stateData);
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to parse onboarding state:', error);
+        secureLog.error('Failed to parse onboarding state:', error);
       }
       return null;
     }
@@ -428,7 +429,7 @@ export const StorageHelpers = {
       return JSON.parse(preferencesData);
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to parse user preferences:', error);
+        secureLog.error('Failed to parse user preferences:', error);
       }
       return null;
     }
@@ -473,7 +474,7 @@ export const StorageHelpers = {
       };
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to get storage info:', error);
+        secureLog.error('Failed to get storage info:', error);
       }
       return {
         hasSecureData: false,
@@ -499,7 +500,7 @@ export const BiometricHelpers = {
       return hasHardware && isEnrolled;
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to check biometric availability:', error);
+        secureLog.error('Failed to check biometric availability:', error);
       }
       return false;
     }
@@ -508,7 +509,7 @@ export const BiometricHelpers = {
   async authenticateWithBiometrics(): Promise<boolean> {
     if (Platform.OS === 'web') {
       if (__DEV__) {
-        console.log('Biometric authentication not available on web');
+        secureLog.info('Biometric authentication not available on web');
       }
       return false;
     }
@@ -536,7 +537,7 @@ export const BiometricHelpers = {
       return result.success;
     } catch (error) {
       if (__DEV__) {
-        console.error('Biometric authentication failed:', error);
+        secureLog.error('Biometric authentication failed:', error);
       }
       return false;
     }

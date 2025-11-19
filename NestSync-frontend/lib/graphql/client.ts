@@ -13,6 +13,7 @@ import {
   ApolloLink,
   Observable,
 } from '@apollo/client';
+import { secureLog } from '../utils/secureLogger';
 import { setContext } from '@apollo/client/link/context';
 import { ErrorLink } from '@apollo/client/link/error';
 import { RetryLink } from '@apollo/client/link/retry';
@@ -98,7 +99,7 @@ const getWebSocketUrl = (httpUrl: string): string => {
   // Development-only logging that reports the result of secure URL generation
   // The URL has already been validated by getWebSocketUrl() function above
   if (__DEV__) {
-    console.log(`WebSocket URL generated: ${wsUrl} (from ${httpUrl})`);
+    secureLog.info(`WebSocket URL generated: ${wsUrl} (from ${httpUrl})`);
   }
 
   return wsUrl;
@@ -123,7 +124,7 @@ if (typeof global !== 'undefined') {
       polyfill();
     } catch (error) {
       if (__DEV__) {
-        console.warn('ReadableStream polyfill not available:', error);
+        secureLog.warn('ReadableStream polyfill not available:', error);
       }
     }
   }
@@ -134,7 +135,7 @@ if (typeof global !== 'undefined') {
       polyfill();
     } catch (error) {
       if (__DEV__) {
-        console.warn('TextEncoder polyfill not available:', error);
+        secureLog.warn('TextEncoder polyfill not available:', error);
       }
     }
   }
@@ -179,7 +180,7 @@ const wsLink = new GraphQLWsLink(
         // Development-only logging that reports connection protocol type
         // The protocol selection is handled securely by getWebSocketUrl() function
         if (__DEV__) {
-          console.log('WebSocket connection params:', {
+          secureLog.info('WebSocket connection params:', {
             hasToken: !!accessToken,
             endpoint: GRAPHQL_WS_ENDPOINT,
             protocol: GRAPHQL_WS_ENDPOINT.startsWith('wss://') ? 'encrypted' : 'unencrypted',
@@ -196,7 +197,7 @@ const wsLink = new GraphQLWsLink(
         };
       } catch (error) {
         if (__DEV__) {
-          console.error('Failed to get access token for WebSocket connection:', error);
+          secureLog.error('Failed to get access token for WebSocket connection:', error);
         }
         // Return empty params on error to allow connection without auth
         // (server will handle unauthorized access appropriately)
@@ -208,7 +209,7 @@ const wsLink = new GraphQLWsLink(
       const shouldRetry = closeEvent.code !== 4401; // Don't retry on authentication failure
       
       if (__DEV__) {
-        console.log('WebSocket close event:', {
+        secureLog.info('WebSocket close event:', {
           code: closeEvent.code,
           reason: closeEvent.reason,
           willRetry: shouldRetry,
@@ -222,7 +223,7 @@ const wsLink = new GraphQLWsLink(
       // Exponential backoff: 1s, 2s, 4s, 8s, 16s
       const delay = Math.min(1000 * Math.pow(2, attempt - 1), 16000);
       if (__DEV__) {
-        console.log(`WebSocket retry attempt ${attempt}, waiting ${delay}ms`);
+        secureLog.info(`WebSocket retry attempt ${attempt}, waiting ${delay}ms`);
       }
       return new Promise(resolve => setTimeout(resolve, delay));
     },
@@ -233,12 +234,12 @@ const wsLink = new GraphQLWsLink(
         // Connection is already established securely via getWebSocketUrl() validation
         if (__DEV__) {
           const protocol = GRAPHQL_WS_ENDPOINT.startsWith('wss://') ? 'encrypted (wss://)' : 'unencrypted (ws://)';
-          console.log(`WebSocket connected for GraphQL subscriptions using ${protocol}`);
+          secureLog.info(`WebSocket connected for GraphQL subscriptions using ${protocol}`);
         }
       },
       closed: (event) => {
         if (__DEV__) {
-          console.log('WebSocket connection closed:', {
+          secureLog.info('WebSocket connection closed:', {
             code: event.code,
             reason: event.reason || 'No reason provided',
             wasClean: event.wasClean,
@@ -248,7 +249,7 @@ const wsLink = new GraphQLWsLink(
       error: (error) => {
         // Enhanced error handling with actionable information
         if (__DEV__) {
-          console.error('WebSocket error occurred:', {
+          secureLog.error('WebSocket error occurred:', {
             error: error,
             endpoint: GRAPHQL_WS_ENDPOINT,
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -259,7 +260,7 @@ const wsLink = new GraphQLWsLink(
           // This is a security control that alerts developers, not a vulnerability
           // Provide troubleshooting hints
           if (GRAPHQL_WS_ENDPOINT.startsWith('ws://') && process.env.NODE_ENV === 'production') {
-            console.error('SECURITY ERROR: Unencrypted WebSocket (ws://) detected in production!');
+            secureLog.error('SECURITY ERROR: Unencrypted WebSocket (ws://) detected in production!');
           }
         }
       },
@@ -287,7 +288,7 @@ const authLink = setContext(async (_, { headers }) => {
     };
   } catch (error) {
     if (__DEV__) {
-      console.error('Failed to get access token for GraphQL request:', error);
+      secureLog.error('Failed to get access token for GraphQL request:', error);
     }
     return { headers };
   }
@@ -310,7 +311,7 @@ const performGlobalTokenRefresh = async (retryCount: number = 0): Promise<string
   // If a refresh is already in progress, wait for it
   if (globalTokenRefreshPromise) {
     if (__DEV__) {
-      console.log('Token refresh already in progress, waiting...');
+      secureLog.info('Token refresh already in progress, waiting...');
     }
     return await globalTokenRefreshPromise;
   }
@@ -325,14 +326,14 @@ const performGlobalTokenRefresh = async (retryCount: number = 0): Promise<string
 
       if (!refreshToken) {
         if (__DEV__) {
-          console.warn('No refresh token available for global refresh');
+          secureLog.warn('No refresh token available for global refresh');
         }
         await clearTokens();
         return null;
       }
 
       if (__DEV__) {
-        console.log(`Performing global token refresh... (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
+        secureLog.info(`Performing global token refresh... (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
       }
 
       // Import the mutation here to avoid circular imports
@@ -358,7 +359,7 @@ const performGlobalTokenRefresh = async (retryCount: number = 0): Promise<string
         await StorageHelpers.setRefreshToken(data.refreshToken.session.refreshToken);
 
         if (__DEV__) {
-          console.log('Global token refresh successful');
+          secureLog.info('Global token refresh successful');
         }
         return data.refreshToken.session.accessToken;
       } else {
@@ -374,10 +375,10 @@ const performGlobalTokenRefresh = async (retryCount: number = 0): Promise<string
 
       if (__DEV__) {
         if (isNetworkError) {
-          console.error('Network error during token refresh, attempt:', retryCount + 1, error.message || error);
-          console.error('Backend may be unreachable. Check if server is running on:', GRAPHQL_ENDPOINT);
+          secureLog.error('Network error during token refresh, attempt:', retryCount + 1, error.message || error);
+          secureLog.error('Backend may be unreachable. Check if server is running on:', GRAPHQL_ENDPOINT);
         } else {
-          console.error('Global token refresh error:', error);
+          secureLog.error('Global token refresh error:', error);
         }
       }
 
@@ -385,7 +386,7 @@ const performGlobalTokenRefresh = async (retryCount: number = 0): Promise<string
       if (isNetworkError && retryCount < MAX_RETRIES) {
         const delay = RETRY_DELAY_MS[retryCount];
         if (__DEV__) {
-          console.log(`Retrying token refresh in ${delay}ms...`);
+          secureLog.info(`Retrying token refresh in ${delay}ms...`);
         }
 
         // Wait before retrying
@@ -415,14 +416,14 @@ export const ensureValidToken = async (bufferMinutes: number = 10): Promise<stri
     
     if (!accessToken) {
       if (__DEV__) {
-        console.log('No access token available');
+        secureLog.info('No access token available');
       }
       return null;
     }
     
     if (isTokenExpiringSoon(accessToken, bufferMinutes)) {
       if (__DEV__) {
-        console.log(`Token expiring within ${bufferMinutes} minutes, refreshing...`);
+        secureLog.info(`Token expiring within ${bufferMinutes} minutes, refreshing...`);
       }
       const newToken = await performGlobalTokenRefresh();
       return newToken;
@@ -431,7 +432,7 @@ export const ensureValidToken = async (bufferMinutes: number = 10): Promise<stri
     return accessToken;
   } catch (error) {
     if (__DEV__) {
-      console.error('Error ensuring valid token:', error);
+      secureLog.error('Error ensuring valid token:', error);
     }
     return null;
   }
@@ -461,7 +462,7 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
 
   if (isAuthError && !operation.getContext().skipTokenRefresh && !isRateLimited) {
     if (__DEV__) {
-      console.log('Authentication error detected, attempting token refresh...');
+      secureLog.info('Authentication error detected, attempting token refresh...');
     }
     
     return new Observable((observer) => {
@@ -471,7 +472,7 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
           
           if (newAccessToken) {
             if (__DEV__) {
-              console.log('Token refresh successful, retrying operation...');
+              secureLog.info('Token refresh successful, retrying operation...');
             }
             
             // Update the operation context with the new token
@@ -490,7 +491,7 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
                 next: (result) => observer.next(result),
                 error: (retryError) => {
                   if (__DEV__) {
-                    console.error('Retry operation failed after token refresh:', retryError);
+                    secureLog.error('Retry operation failed after token refresh:', retryError);
                   }
                   observer.error(retryError);
                 },
@@ -501,13 +502,13 @@ const tokenRefreshLink = new ErrorLink(({ error, operation, forward }) => {
             }
           } else {
             if (__DEV__) {
-              console.warn('Token refresh failed, forwarding original error');
+              secureLog.warn('Token refresh failed, forwarding original error');
             }
             observer.error(error);
           }
         } catch (refreshError) {
           if (__DEV__) {
-            console.error('Error during token refresh:', refreshError);
+            secureLog.error('Error during token refresh:', refreshError);
           }
           observer.error(error);
         }
@@ -568,7 +569,7 @@ const errorLoggingLink = new ErrorLink(({ error, operation, forward }) => {
 
   // Handle specific validation errors
   if (error.message && error.message.includes('validation error for Session')) {
-    console.warn('Supabase session validation error detected, attempting to transform response');
+    secureLog.warn('Supabase session validation error detected, attempting to transform response');
 
     // Try to extract the response data and transform it
     if (error.networkError && 'result' in error.networkError) {
@@ -577,9 +578,9 @@ const errorLoggingLink = new ErrorLink(({ error, operation, forward }) => {
         try {
           const transformedData = transformResponseData(networkError.result.data);
           networkError.result.data = transformedData;
-          console.log('Response data transformed to handle validation error');
+          secureLog.info('Response data transformed to handle validation error');
         } catch (transformError) {
-          console.error('Failed to transform response data:', transformError);
+          secureLog.error('Failed to transform response data:', transformError);
         }
       }
     }
@@ -592,14 +593,14 @@ const errorLoggingLink = new ErrorLink(({ error, operation, forward }) => {
 
       // Don't log validation errors as errors since we're handling them
       if (!message.includes('validation error for Session')) {
-        console.error(
+        secureLog.error(
           `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`
         );
       }
 
       // Handle specific error types (non-auth)
       if (extensions?.code === 'PIPEDA_COMPLIANCE_ERROR') {
-        console.error('PIPEDA compliance error:', message);
+        secureLog.error('PIPEDA compliance error:', message);
       }
     });
   }
@@ -608,25 +609,25 @@ const errorLoggingLink = new ErrorLink(({ error, operation, forward }) => {
   if (error.networkError && __DEV__) {
     // Don't log validation errors as network errors
     if (!error.networkError.message.includes('validation error for Session')) {
-      console.error('Network error:', error.networkError.message);
+      secureLog.error('Network error:', error.networkError.message);
     }
 
     // Check if it's a server error with status code
     if ('statusCode' in error.networkError) {
       const statusCode = (error.networkError as any).statusCode;
-      console.error('Status:', statusCode);
+      secureLog.error('Status:', statusCode);
 
       switch (statusCode) {
         case 403:
-          console.error('Access forbidden - insufficient permissions');
+          secureLog.error('Access forbidden - insufficient permissions');
           break;
         case 429:
-          console.error('Rate limit exceeded (429) - handled by RetryLink');
+          secureLog.error('Rate limit exceeded (429) - handled by RetryLink');
           break;
         case 500:
         case 502:
         case 503:
-          console.error('Server error - handled by RetryLink if retryable');
+          secureLog.error('Server error - handled by RetryLink if retryable');
           break;
       }
     }
@@ -636,7 +637,7 @@ const errorLoggingLink = new ErrorLink(({ error, operation, forward }) => {
   if (error && !error.graphQLErrors && !error.networkError && __DEV__) {
     // Don't log validation errors
     if (!error.message.includes('validation error for Session')) {
-      console.error('Other Apollo Client error:', error.message);
+      secureLog.error('Other Apollo Client error:', error.message);
     }
   }
 });
@@ -654,7 +655,7 @@ const rateLimitingRetryLink = new RetryLink({
     
     if (isMutation) {
       if (__DEV__) {
-        console.log('Not retrying mutation operation');
+        secureLog.info('Not retrying mutation operation');
       }
       return false;
     }
@@ -671,7 +672,7 @@ const rateLimitingRetryLink = new RetryLink({
     
     if (isAuthError || hasAuthGraphQLError) {
       if (__DEV__) {
-        console.log('Not retrying authentication error');
+        secureLog.info('Not retrying authentication error');
       }
       return false;
     }
@@ -689,7 +690,7 @@ const rateLimitingRetryLink = new RetryLink({
     if (attempt <= maxAttempts && (isRateLimited || isNetworkError)) {
       if (__DEV__) {
         const errorType = isRateLimited ? 'Rate limit' : 'Network';
-        console.log(`${errorType} error - retry attempt ${attempt}/${maxAttempts}`);
+        secureLog.info(`${errorType} error - retry attempt ${attempt}/${maxAttempts}`);
       }
       
       // Update rate limit feedback for UI
@@ -735,7 +736,7 @@ const rateLimitingRetryLink = new RetryLink({
         const finalDelay = Math.round(jitter);
         
         if (__DEV__) {
-          console.log(`Rate limit retry delay: ${finalDelay}ms (server: ${retryAfter}s)`);
+          secureLog.info(`Rate limit retry delay: ${finalDelay}ms (server: ${retryAfter}s)`);
         }
         
         // Update feedback manager with actual delay
@@ -751,7 +752,7 @@ const rateLimitingRetryLink = new RetryLink({
         const finalDelay = Math.round(jitter);
         
         if (__DEV__) {
-          console.log(`Rate limit exponential backoff: ${finalDelay}ms (attempt ${attempt})`);
+          secureLog.info(`Rate limit exponential backoff: ${finalDelay}ms (attempt ${attempt})`);
         }
         
         // Update feedback manager
@@ -765,7 +766,7 @@ const rateLimitingRetryLink = new RetryLink({
       const networkDelay = 1000 * attempt; // 1s, 2s
       
       if (__DEV__) {
-        console.log(`Network error retry delay: ${networkDelay}ms`);
+        secureLog.info(`Network error retry delay: ${networkDelay}ms`);
       }
       
       return networkDelay;
@@ -856,7 +857,7 @@ export const apolloClient = new ApolloClient({
             keyArgs: false,
             merge(existing, incoming, { args, readField }) {
               // CRITICAL FIX: Always return incoming data to prevent cache normalization issues
-              console.log('Apollo Cache: myChildren merge called', {
+              secureLog.info('Apollo Cache: myChildren merge called', {
                 existing,
                 incoming,
                 args,
@@ -866,7 +867,7 @@ export const apolloClient = new ApolloClient({
 
               // Always use incoming data for fresh queries (no pagination cursor)
               if (!args?.after) {
-                console.log('Apollo Cache: Fresh query, returning incoming data:', incoming);
+                secureLog.info('Apollo Cache: Fresh query, returning incoming data:', incoming);
                 // Ensure we're not returning null/undefined
                 return incoming || { edges: [], pageInfo: { hasNextPage: false, hasPreviousPage: false } };
               }
@@ -877,12 +878,12 @@ export const apolloClient = new ApolloClient({
                   ...incoming,
                   edges: [...(existing.edges || []), ...(incoming.edges || [])],
                 };
-                console.log('Apollo Cache: Pagination merge result:', mergedResult);
+                secureLog.info('Apollo Cache: Pagination merge result:', mergedResult);
                 return mergedResult;
               }
 
               // Fallback to incoming data
-              console.log('Apollo Cache: Fallback to incoming data:', incoming);
+              secureLog.info('Apollo Cache: Fallback to incoming data:', incoming);
               return incoming || { edges: [], pageInfo: { hasNextPage: false, hasPreviousPage: false } };
             },
           },
@@ -923,7 +924,7 @@ export const apolloClient = new ApolloClient({
               // CRITICAL FIX: For fresh queries (no pagination), always use incoming data
               // This prevents cache normalization from causing empty edges arrays
               if (existing.length === 0 || !incoming.length) {
-                console.log('ChildConnection edges: Using incoming data for fresh query:', incoming);
+                secureLog.info('ChildConnection edges: Using incoming data for fresh query:', incoming);
                 return incoming;
               }
 
@@ -940,7 +941,7 @@ export const apolloClient = new ApolloClient({
               );
 
               const result = [...existing, ...uniqueIncoming];
-              console.log('ChildConnection edges: Merged result:', result);
+              secureLog.info('ChildConnection edges: Merged result:', result);
               return result;
             },
           },
@@ -993,11 +994,11 @@ export const clearApolloCache = async (): Promise<void> => {
   try {
     await apolloClient.clearStore();
     if (__DEV__) {
-      console.log('Apollo cache cleared successfully');
+      secureLog.info('Apollo cache cleared successfully');
     }
   } catch (error) {
     if (__DEV__) {
-      console.error('Failed to clear Apollo cache:', error);
+      secureLog.error('Failed to clear Apollo cache:', error);
     }
   }
 };
@@ -1007,11 +1008,11 @@ export const resetApolloCache = async (): Promise<void> => {
   try {
     await apolloClient.resetStore();
     if (__DEV__) {
-      console.log('Apollo cache reset successfully');
+      secureLog.info('Apollo cache reset successfully');
     }
   } catch (error) {
     if (__DEV__) {
-      console.error('Failed to reset Apollo cache:', error);
+      secureLog.error('Failed to reset Apollo cache:', error);
     }
   }
 };
@@ -1032,7 +1033,7 @@ export const checkGraphQLConnection = async (): Promise<boolean> => {
     return response.ok;
   } catch (error) {
     if (__DEV__) {
-      console.warn('GraphQL connection health check failed:', error);
+      secureLog.warn('GraphQL connection health check failed:', error);
     }
     return false;
   }
@@ -1062,7 +1063,7 @@ export const safeQuery = async (query: any, variables?: any): Promise<any> => {
 
   if (!isConnected) {
     if (__DEV__) {
-      console.warn('GraphQL server is not available. Skipping query.');
+      secureLog.warn('GraphQL server is not available. Skipping query.');
     }
     throw new Error('Network unavailable - GraphQL server not responding');
   }
@@ -1078,7 +1079,7 @@ export const safeQuery = async (query: any, variables?: any): Promise<any> => {
     return result;
   } catch (error) {
     if (__DEV__) {
-      console.error('GraphQL query failed after connection check:', error);
+      secureLog.error('GraphQL query failed after connection check:', error);
     }
     throw error;
   }

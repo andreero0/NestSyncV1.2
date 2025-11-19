@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { secureLog } from '../../lib/utils/secureLogger';
 import {
   View,
   Text,
@@ -83,7 +84,7 @@ export default function ForgotPasswordScreen() {
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       // Critical auth error - should be logged in production
-      console.error('Password reset error:', error);
+      secureLog.error('Password reset error:', error);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
   };

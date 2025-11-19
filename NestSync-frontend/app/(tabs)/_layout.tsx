@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
+import { secureLog } from '../../lib/utils/secureLogger';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -38,7 +39,7 @@ function FamilyDataInitializer() {
       if (children.length > 0 && families.length === 0 && !familiesError) {
         try {
           if (__DEV__) {
-            console.log('FamilyDataInitializer: Creating default family for user with children but no families');
+            secureLog.info('FamilyDataInitializer: Creating default family for user with children but no families');
           }
 
           await createFamily({
@@ -47,14 +48,14 @@ function FamilyDataInitializer() {
             familyType: 'PERSONAL'
           });
         } catch (error) {
-          console.error('Failed to create default family:', error);
+          secureLog.error('Failed to create default family:', error);
         }
       }
 
       // Auto-select first family if none selected but families exist
       if (families.length > 0 && !currentFamilyId) {
         if (__DEV__) {
-          console.log('FamilyDataInitializer: Auto-selecting first family:', families[0]);
+          secureLog.info('FamilyDataInitializer: Auto-selecting first family:', families[0]);
         }
         setCurrentFamily(families[0]);
       }
@@ -75,7 +76,7 @@ function FamilyDataInitializer() {
   // Enhanced debug logging for family data state and GraphQL queries
   useEffect(() => {
     if (__DEV__) {
-      console.log('[FamilyDataInitializer] Complete family data state:', {
+      secureLog.info('[FamilyDataInitializer] Complete family data state:', {
         // Query states
         familiesLoading,
         childrenLoading,
@@ -101,7 +102,7 @@ function FamilyDataInitializer() {
 
       // Separate detailed GraphQL query logging
       if (familiesError) {
-        console.error('[FamilyDataInitializer ERROR] MY_FAMILIES_QUERY error:', {
+        secureLog.error('[FamilyDataInitializer ERROR] MY_FAMILIES_QUERY error:', {
           error: familiesError.message,
           graphQLErrors: familiesError.graphQLErrors?.map(e => e.message),
           networkError: familiesError.networkError?.message,
@@ -109,11 +110,11 @@ function FamilyDataInitializer() {
       }
 
       if (!familiesLoading && families.length === 0 && !familiesError) {
-        console.warn('[FamilyDataInitializer WARN] MY_FAMILIES_QUERY returned empty results - possible authentication issue');
+        secureLog.warn('[FamilyDataInitializer WARN] MY_FAMILIES_QUERY returned empty results - possible authentication issue');
       }
 
       if (families.length > 0 && myFamilies.length === 0) {
-        console.warn('[FamilyDataInitializer WARN] GraphQL returned families but store is empty - sync issue');
+        secureLog.warn('[FamilyDataInitializer WARN] GraphQL returned families but store is empty - sync issue');
       }
     }
   }, [families, children, currentFamily, familiesLoading, childrenLoading, myFamilies, familiesError]);
