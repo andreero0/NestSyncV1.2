@@ -1,0 +1,30 @@
+#!/bin/bash
+
+echo "🔐 Generating Secure Secrets for NestSync"
+echo "=========================================="
+echo ""
+
+echo "SECRET_KEY (64-byte random):"
+openssl rand -base64 64 | tr -d '\n'
+echo ""
+echo ""
+
+echo "=========================================="
+echo "📋 Deployment Instructions"
+echo "=========================================="
+echo ""
+echo "1. Copy the SECRET_KEY above"
+echo "2. Add to Railway environment variables:"
+echo "   - Navigate to Railway project settings"
+echo "   - Variables tab > Add Variable"
+echo "   - Name: SECRET_KEY"
+echo "   - Value: [paste the generated key]"
+echo ""
+echo "3. Redeploy application to apply changes"
+echo ""
+echo "⚠️  SECURITY WARNING:"
+echo "   - Never commit secrets to git"
+echo "   - Never share secrets in chat/email"
+echo "   - Keep secrets in Railway/Supabase dashboards only"
+echo ""
+echo "✅ Strong secret generated successfully!"
