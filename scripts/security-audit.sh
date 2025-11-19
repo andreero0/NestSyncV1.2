@@ -88,7 +88,10 @@ echo ""
 
 echo -e "${BLUE}[2/10]${NC} Checking rate limiting configuration..."
 
-if grep -q "RATE_LIMITING_ENABLED=false" NestSync-backend/.env* 2>/dev/null; then
+# First check if there's a production validator (most important)
+if grep -q 'validate_rate_limiting_production' NestSync-backend/app/config/settings.py 2>/dev/null; then
+    echo -e "${GREEN}   ✅ Rate limiting has production validation (blocks production bypass)${NC}"
+elif grep -q "RATE_LIMITING_ENABLED=false" NestSync-backend/.env* 2>/dev/null; then
     echo -e "${RED}   ❌ CRITICAL: Rate limiting can be disabled via environment variable${NC}"
     CRITICAL_COUNT=$((CRITICAL_COUNT + 1))
 elif grep -q 'rate_limiting_enabled.*Field.*default=True' NestSync-backend/app/config/settings.py 2>/dev/null; then
