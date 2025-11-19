@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { secureLog } from '../../lib/utils/secureLogger';
 import {
   View,
   Text,
@@ -127,7 +128,7 @@ export default function ResetPasswordScreen() {
       }
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      console.error('Password reset error:', err);
+      secureLog.error('Password reset error:', err);
       
       if (err.networkError) {
         setError('Unable to connect to the server. Please check your internet connection.');

@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { secureLog } from '../../lib/utils/secureLogger';
 import {
   View,
   Text,
@@ -81,12 +82,12 @@ export default function OnboardingScreen() {
               }
             });
             if (__DEV__) {
-              console.log('Successfully updated MY_CHILDREN_QUERY cache');
+              secureLog.info('Successfully updated MY_CHILDREN_QUERY cache');
             }
           }
         } catch (cacheError) {
           if (__DEV__) {
-            console.log('MY_CHILDREN_QUERY not in cache yet, will be fetched on dashboard load');
+            secureLog.info('MY_CHILDREN_QUERY not in cache yet, will be fetched on dashboard load');
           }
         }
       }
@@ -174,7 +175,7 @@ export default function OnboardingScreen() {
       setOnboardingData(prev => ({ ...prev, currentPhase: 1 }));
     } catch (error) {
       if (__DEV__) {
-        console.error('Error updating persona preferences:', error);
+        secureLog.error('Error updating persona preferences:', error);
       }
       Alert.alert('Error', 'Failed to save preferences. Please try again.');
     }
@@ -237,7 +238,7 @@ export default function OnboardingScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       if (__DEV__) {
-        console.log('Starting onboarding completion');
+        secureLog.info('Starting onboarding completion');
       }
 
       // CRITICAL: Ensure we have a valid token before starting sequential mutations
@@ -270,7 +271,7 @@ export default function OnboardingScreen() {
         // CRITICAL FIX: Check for GraphQL errors first, then response success
         if (errors && errors.length > 0) {
           if (__DEV__) {
-            console.error('GraphQL errors during child creation:', errors);
+            secureLog.error('GraphQL errors during child creation:', errors);
           }
           throw new Error(`GraphQL Error: ${errors[0].message}`);
         }
@@ -281,13 +282,13 @@ export default function OnboardingScreen() {
 
         const createdChild = data.createChild.child;
         if (__DEV__) {
-          console.log('Child created successfully');
+          secureLog.info('Child created successfully');
         }
 
         // Step 2: Set initial inventory if any items were added
         if (onboardingData.inventory.length > 0) {
           if (__DEV__) {
-            console.log('Setting initial inventory...');
+            secureLog.info('Setting initial inventory...');
           }
           
           // Validate token again before second mutation (extra safety)
@@ -315,7 +316,7 @@ export default function OnboardingScreen() {
             // Check for GraphQL errors first
             if (inventoryErrors && inventoryErrors.length > 0) {
               if (__DEV__) {
-                console.error('GraphQL errors during inventory setup:', inventoryErrors);
+                secureLog.error('GraphQL errors during inventory setup:', inventoryErrors);
               }
               throw new Error(`GraphQL Error: ${inventoryErrors[0].message}`);
             }
@@ -325,14 +326,14 @@ export default function OnboardingScreen() {
             }
             
             if (__DEV__) {
-              console.log('Initial inventory set successfully');
+              secureLog.info('Initial inventory set successfully');
             }
           } catch (inventoryError) {
             if (__DEV__) {
-              console.error('Inventory creation error:', inventoryError);
+              secureLog.error('Inventory creation error:', inventoryError);
               if (inventoryError instanceof ApolloError) {
-                console.error('GraphQL errors:', inventoryError.graphQLErrors);
-                console.error('Network error:', inventoryError.networkError);
+                secureLog.error('GraphQL errors:', inventoryError.graphQLErrors);
+                secureLog.error('Network error:', inventoryError.networkError);
               }
             }
             if (inventoryError instanceof ApolloError) {
@@ -346,7 +347,7 @@ export default function OnboardingScreen() {
 
         // Step 3: Complete onboarding in backend  
         if (__DEV__) {
-          console.log('Completing onboarding in backend...');
+          secureLog.info('Completing onboarding in backend...');
         }
         
         // Final token validation before completing onboarding
@@ -360,7 +361,7 @@ export default function OnboardingScreen() {
         // Check for GraphQL errors first
         if (completionErrors && completionErrors.length > 0) {
           if (__DEV__) {
-            console.error('GraphQL errors during onboarding completion:', completionErrors);
+            secureLog.error('GraphQL errors during onboarding completion:', completionErrors);
           }
           throw new Error(`GraphQL Error: ${completionErrors[0].message}`);
         }
@@ -373,16 +374,16 @@ export default function OnboardingScreen() {
         await complete();
         
         if (__DEV__) {
-          console.log('Onboarding completed successfully!');
+          secureLog.info('Onboarding completed successfully!');
         }
         router.replace('/(tabs)');
         
       } catch (childError) {
         if (__DEV__) {
-          console.error('Child creation error:', childError);
+          secureLog.error('Child creation error:', childError);
           if (childError instanceof ApolloError) {
-            console.error('GraphQL errors:', childError.graphQLErrors);
-            console.error('Network error:', childError.networkError);
+            secureLog.error('GraphQL errors:', childError.graphQLErrors);
+            secureLog.error('Network error:', childError.networkError);
           }
         }
         if (childError instanceof ApolloError) {
@@ -395,7 +396,7 @@ export default function OnboardingScreen() {
       
     } catch (error) {
       if (__DEV__) {
-        console.error('Error completing onboarding:', error);
+        secureLog.error('Error completing onboarding:', error);
       }
 
       // Enhanced error handling with specific messaging for token issues

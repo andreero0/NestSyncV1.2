@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { secureLog } from '../utils/secureLogger';
 import { StorageHelpers } from '../../hooks/useUniversalStorage';
 import { createMMKVStorage, storageAdapter, type IStorage } from './StorageAdapter';
 
@@ -63,13 +64,13 @@ class EmergencyStorageService {
 
       if (__DEV__) {
         const storageType = storageAdapter.getStorageType();
-        console.log(`EmergencyStorageService initialized successfully using ${storageType}`);
+        secureLog.info(`EmergencyStorageService initialized successfully using ${storageType}`);
       }
     } catch (error) {
       // Use console.warn instead of console.warn to avoid red screen in development
       if (__DEV__) {
-        console.warn('Failed to initialize EmergencyStorageService:', error);
-        console.warn('Emergency storage will fall back to web localStorage where available');
+        secureLog.warn('Failed to initialize EmergencyStorageService:', error);
+        secureLog.warn('Emergency storage will fall back to web localStorage where available');
       }
       this.initializationFailed = true;
       this.isInitialized = false;
@@ -106,7 +107,7 @@ class EmergencyStorageService {
       }
       return null;
     } catch (error) {
-      console.warn('Failed to get string for key:', key, error);
+      secureLog.warn('Failed to get string for key:', key, error);
       return null;
     }
   }
@@ -125,7 +126,7 @@ class EmergencyStorageService {
       }
       return false;
     } catch (error) {
-      console.warn('Failed to set string for key:', key, error);
+      secureLog.warn('Failed to set string for key:', key, error);
       return false;
     }
   }
@@ -144,7 +145,7 @@ class EmergencyStorageService {
       }
       return false;
     } catch (error) {
-      console.warn('Failed to delete key:', key, error);
+      secureLog.warn('Failed to delete key:', key, error);
       return false;
     }
   }
@@ -161,7 +162,7 @@ class EmergencyStorageService {
       }
       return [];
     } catch (error) {
-      console.warn('Failed to get all keys:', error);
+      secureLog.warn('Failed to get all keys:', error);
       return [];
     }
   }
@@ -216,7 +217,7 @@ class EmergencyStorageService {
     } catch (error) {
       // Fallback to generating a random key without persistent storage
       if (__DEV__) {
-        console.warn('Failed to access key storage, using session-only encryption key:', error);
+        secureLog.warn('Failed to access key storage, using session-only encryption key:', error);
       }
       return this.generateRandomKey();
     }
@@ -244,9 +245,9 @@ class EmergencyStorageService {
       // Update index of emergency profiles
       await this.updateEmergencyProfileIndex(profile.childId);
 
-      console.log(`Emergency profile stored for child: ${profile.childName}`);
+      secureLog.info(`Emergency profile stored for child: ${profile.childName}`);
     } catch (error) {
-      console.warn('Failed to store emergency profile:', error);
+      secureLog.warn('Failed to store emergency profile:', error);
       throw new Error('Failed to store emergency profile');
     }
   }
@@ -267,7 +268,7 @@ class EmergencyStorageService {
 
       return JSON.parse(profileData) as EmergencyProfile;
     } catch (error) {
-      console.warn('Failed to retrieve emergency profile:', error);
+      secureLog.warn('Failed to retrieve emergency profile:', error);
       return null;
     }
   }
@@ -282,7 +283,7 @@ class EmergencyStorageService {
       // Return empty array if storage is not available
       if (!this.isStorageAvailable()) {
         if (__DEV__) {
-          console.warn('Storage not available for getAllEmergencyProfiles, returning empty array');
+          secureLog.warn('Storage not available for getAllEmergencyProfiles, returning empty array');
         }
         return [];
       }
@@ -299,7 +300,7 @@ class EmergencyStorageService {
 
       return profiles;
     } catch (error) {
-      console.warn('Failed to retrieve emergency profiles:', error);
+      secureLog.warn('Failed to retrieve emergency profiles:', error);
       return [];
     }
   }
@@ -356,7 +357,7 @@ class EmergencyStorageService {
         }
       }
     } catch (error) {
-      console.warn('Failed to record emergency contact usage:', error);
+      secureLog.warn('Failed to record emergency contact usage:', error);
     }
   }
 
@@ -393,7 +394,7 @@ class EmergencyStorageService {
 
       return stats;
     } catch (error) {
-      console.warn('Failed to get emergency usage stats:', error);
+      secureLog.warn('Failed to get emergency usage stats:', error);
       return { totalEmergencyCalls: 0 };
     }
   }
@@ -445,9 +446,9 @@ class EmergencyStorageService {
         }
       }
 
-      console.log(`Cleared ${deletedCount} emergency data entries`);
+      secureLog.info(`Cleared ${deletedCount} emergency data entries`);
     } catch (error) {
-      console.warn('Failed to clear emergency data:', error);
+      secureLog.warn('Failed to clear emergency data:', error);
     }
   }
 
@@ -489,7 +490,7 @@ class EmergencyStorageService {
         initializationStatus: 'ready'
       };
     } catch (error) {
-      console.warn('Storage health check failed:', error);
+      secureLog.warn('Storage health check failed:', error);
       return {
         isHealthy: false,
         totalProfiles: 0,
@@ -541,7 +542,7 @@ class EmergencyStorageService {
         this.storage.set('emergency-mode-active', isActive);
       }
     } catch (error) {
-      console.warn('Failed to set emergency mode:', error);
+      secureLog.warn('Failed to set emergency mode:', error);
     }
   }
 
@@ -553,7 +554,7 @@ class EmergencyStorageService {
       return this.isStorageAvailable() && this.storage ?
         this.storage.getBoolean('emergency-mode-active') ?? false : false;
     } catch (error) {
-      console.warn('Failed to get emergency mode status:', error);
+      secureLog.warn('Failed to get emergency mode status:', error);
       return false;
     }
   }

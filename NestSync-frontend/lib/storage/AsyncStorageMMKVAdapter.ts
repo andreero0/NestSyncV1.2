@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureLog } from '../utils/secureLogger';
 import { Platform } from 'react-native';
 
 /**
@@ -113,13 +114,13 @@ export class AsyncStorageMMKVAdapter {
       this.isInitialized = true;
 
       if (__DEV__) {
-        console.log(`AsyncStorageMMKVAdapter initialized for ${this.id} with ${this.keysCache.length} keys`);
+        secureLog.info(`AsyncStorageMMKVAdapter initialized for ${this.id} with ${this.keysCache.length} keys`);
       }
     } catch (error) {
       // Graceful failure - don't throw to prevent app crashes
       this.isInitialized = true;
       if (__DEV__) {
-        console.warn('Failed to initialize AsyncStorage cache:', error);
+        secureLog.warn('Failed to initialize AsyncStorage cache:', error);
       }
     }
   }
@@ -148,7 +149,7 @@ export class AsyncStorageMMKVAdapter {
       // Ensure we don't get stuck in uninitialized state
       this.isInitialized = true;
       if (__DEV__) {
-        console.warn('AsyncStorage initialization failed, continuing with empty cache:', error);
+        secureLog.warn('AsyncStorage initialization failed, continuing with empty cache:', error);
       }
     }
   }
@@ -200,7 +201,7 @@ export class AsyncStorageMMKVAdapter {
       })
       .catch(error => {
         if (__DEV__) {
-          console.warn(`Background load failed for key ${key}:`, error);
+          secureLog.warn(`Background load failed for key ${key}:`, error);
         }
       });
   }
@@ -213,7 +214,7 @@ export class AsyncStorageMMKVAdapter {
       return value ? this.decrypt(value) : null;
     } catch (error) {
       if (__DEV__) {
-        console.warn(`Failed to get ${key} from AsyncStorage:`, error);
+        secureLog.warn(`Failed to get ${key} from AsyncStorage:`, error);
       }
       return null;
     }
@@ -247,7 +248,7 @@ export class AsyncStorageMMKVAdapter {
       this.encrypt(value)
     ).catch(error => {
       if (__DEV__) {
-        console.warn(`Failed to save ${key} to AsyncStorage:`, error);
+        secureLog.warn(`Failed to save ${key} to AsyncStorage:`, error);
       }
     });
   }
@@ -308,7 +309,7 @@ export class AsyncStorageMMKVAdapter {
     if (isClient() && !isSSR()) {
       AsyncStorage.removeItem(this.getFullKey(key)).catch(error => {
         if (__DEV__) {
-          console.warn(`Failed to remove ${key} from AsyncStorage:`, error);
+          secureLog.warn(`Failed to remove ${key} from AsyncStorage:`, error);
         }
       });
     }
@@ -343,7 +344,7 @@ export class AsyncStorageMMKVAdapter {
       this.lastKeysUpdate = Date.now();
     } catch (error) {
       if (__DEV__) {
-        console.warn('Failed to update keys cache:', error);
+        secureLog.warn('Failed to update keys cache:', error);
       }
     }
   }
@@ -360,7 +361,7 @@ export class AsyncStorageMMKVAdapter {
       keys.forEach(key => {
         AsyncStorage.removeItem(this.getFullKey(key)).catch(error => {
           if (__DEV__) {
-            console.warn(`Failed to remove ${key} during clearAll:`, error);
+            secureLog.warn(`Failed to remove ${key} during clearAll:`, error);
           }
         });
       });

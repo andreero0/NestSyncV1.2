@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { secureLog } from '../../lib/utils/secureLogger';
 import {
   View,
   Text,
@@ -164,7 +165,7 @@ export default function RegisterScreen() {
       }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      console.error('Registration error:', error);
+      secureLog.error('Registration error:', error);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
   };

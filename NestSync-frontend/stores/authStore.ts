@@ -5,6 +5,7 @@
  */
 
 import { create } from 'zustand';
+import { secureLog } from '../lib/utils/secureLogger';
 import { subscribeWithSelector } from 'zustand/middleware';
 import AuthService from '../lib/auth/AuthService';
 import {
@@ -98,7 +99,7 @@ export const useAuthStore = create<AuthState>()(
 
       try {
         if (__DEV__) {
-          console.log('Starting auth initialization...');
+          secureLog.info('Starting auth initialization...');
         }
 
         // PRIORITY 1 FIX: Proactive token validation on app launch
@@ -108,7 +109,7 @@ export const useAuthStore = create<AuthState>()(
         if (!accessToken) {
           // No token - user needs to login
           if (__DEV__) {
-            console.log('No access token found, user needs to login');
+            secureLog.info('No access token found, user needs to login');
           }
           set({
             isAuthenticated: false,
@@ -120,14 +121,14 @@ export const useAuthStore = create<AuthState>()(
 
         // Validate token expiration (CRITICAL NEW LOGIC)
         if (__DEV__) {
-          console.log('Checking token expiration status...');
+          secureLog.info('Checking token expiration status...');
         }
 
         const isExpired = isTokenExpiringSoon(accessToken, 5); // 5 min buffer
 
         if (isExpired) {
           if (__DEV__) {
-            console.log('[TOKEN] Token expired/expiring, attempting automatic refresh...');
+            secureLog.info('[TOKEN] Token expired/expiring, attempting automatic refresh...');
           }
 
           // Attempt automatic token refresh
@@ -137,7 +138,7 @@ export const useAuthStore = create<AuthState>()(
             if (!newToken) {
               // Refresh failed - clear everything and force re-login
               if (__DEV__) {
-                console.log('[TOKEN] Token refresh failed, forcing re-login');
+                secureLog.info('[TOKEN] Token refresh failed, forcing re-login');
               }
               await StorageHelpers.clearTokens();
               set({
@@ -152,12 +153,12 @@ export const useAuthStore = create<AuthState>()(
             }
 
             if (__DEV__) {
-              console.log('[TOKEN] Token refreshed successfully');
+              secureLog.info('[TOKEN] Token refreshed successfully');
             }
           } catch (refreshError) {
             // Refresh threw an error - clean state and force re-login
             if (__DEV__) {
-              console.error('[TOKEN] Token refresh error:', refreshError);
+              secureLog.error('[TOKEN] Token refresh error:', refreshError);
             }
             await StorageHelpers.clearTokens();
             set({
@@ -172,7 +173,7 @@ export const useAuthStore = create<AuthState>()(
           }
         } else {
           if (__DEV__) {
-            console.log('[TOKEN] Token is valid, proceeding with normal initialization');
+            secureLog.info('[TOKEN] Token is valid, proceeding with normal initialization');
           }
         }
 
@@ -182,7 +183,7 @@ export const useAuthStore = create<AuthState>()(
             // Set 10-second timeout
             const timeoutId = setTimeout(() => {
               if (__DEV__) {
-                console.log('Auth service initialization timed out');
+                secureLog.info('Auth service initialization timed out');
               }
               reject(new Error('Authentication initialization timed out'));
             }, 10000);
@@ -205,11 +206,11 @@ export const useAuthStore = create<AuthState>()(
         try {
           isAuthenticated = await initializeWithTimeout();
           if (__DEV__) {
-            console.log('Auth service initialized successfully, isAuthenticated:', isAuthenticated);
+            secureLog.info('Auth service initialized successfully, isAuthenticated:', isAuthenticated);
           }
         } catch (error) {
           if (__DEV__) {
-            console.log('Auth service initialization failed, falling back to offline mode:', error);
+            secureLog.info('Auth service initialization failed, falling back to offline mode:', error);
           }
           initError = error as Error;
           // Continue with fallback logic even if initialization fails
@@ -233,7 +234,7 @@ export const useAuthStore = create<AuthState>()(
                 biometricSettings = await StorageHelpers.getBiometricSettings();
               } catch (bioError) {
                 if (__DEV__) {
-                  console.log('Biometric check failed, defaulting to unavailable:', bioError);
+                  secureLog.info('Biometric check failed, defaulting to unavailable:', bioError);
                 }
               }
 
@@ -243,12 +244,12 @@ export const useAuthStore = create<AuthState>()(
                 consentVersion = await StorageHelpers.getConsentVersion();
               } catch (consentError) {
                 if (__DEV__) {
-                  console.log('Consent version check failed:', consentError);
+                  secureLog.info('Consent version check failed:', consentError);
                 }
               }
 
               if (__DEV__) {
-                console.log('Setting authenticated state with user data');
+                secureLog.info('Setting authenticated state with user data');
               }
               set({
                 user,
@@ -265,7 +266,7 @@ export const useAuthStore = create<AuthState>()(
               });
             } else {
               if (__DEV__) {
-                console.log('No valid user/session found, setting unauthenticated state');
+                secureLog.info('No valid user/session found, setting unauthenticated state');
               }
               set({
                 isAuthenticated: false,
@@ -275,7 +276,7 @@ export const useAuthStore = create<AuthState>()(
             }
           } catch (userError) {
             if (__DEV__) {
-              console.log('Failed to get current user, proceeding as unauthenticated:', userError);
+              secureLog.info('Failed to get current user, proceeding as unauthenticated:', userError);
             }
             set({
               isAuthenticated: false,
@@ -286,7 +287,7 @@ export const useAuthStore = create<AuthState>()(
         } else {
           // Not authenticated or initialization failed - fallback mode
           if (__DEV__) {
-            console.log('Initializing in fallback mode (offline/unauthenticated)');
+            secureLog.info('Initializing in fallback mode (offline/unauthenticated)');
           }
           
           // Check biometric availability for non-authenticated users (with fallback)
@@ -295,7 +296,7 @@ export const useAuthStore = create<AuthState>()(
             biometricsAvailable = await BiometricHelpers.isBiometricAvailable();
           } catch (bioError) {
             if (__DEV__) {
-              console.log('Biometric check failed in fallback mode:', bioError);
+              secureLog.info('Biometric check failed in fallback mode:', bioError);
             }
           }
 
@@ -309,7 +310,7 @@ export const useAuthStore = create<AuthState>()(
         }
       } catch (error) {
         // Critical auth error - should be logged in production
-        console.error('Critical auth initialization error:', error);
+        secureLog.error('Critical auth initialization error:', error);
         
         // Always ensure initialization completes to prevent infinite loading
         set({
@@ -321,7 +322,7 @@ export const useAuthStore = create<AuthState>()(
       }
       
       if (__DEV__) {
-        console.log('Auth initialization completed');
+        secureLog.info('Auth initialization completed');
       }
     },
 
@@ -355,7 +356,7 @@ export const useAuthStore = create<AuthState>()(
 
         return response;
       } catch (error) {
-        console.error('Sign up error:', error);
+        secureLog.error('Sign up error:', error);
         set({
           error: 'Sign up failed. Please try again.',
           isLoading: false,
@@ -397,7 +398,7 @@ export const useAuthStore = create<AuthState>()(
 
         return response;
       } catch (error) {
-        console.error('Sign in error:', error);
+        secureLog.error('Sign in error:', error);
         set({
           error: 'Sign in failed. Please try again.',
           isLoading: false,
@@ -473,7 +474,7 @@ export const useAuthStore = create<AuthState>()(
         });
       } catch (error) {
         // Critical auth error - should be logged in production
-        console.error('Sign out error:', error);
+        secureLog.error('Sign out error:', error);
         // Clear local state even if server call fails
         set({
           user: null,
@@ -677,7 +678,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: false });
       } catch (error) {
         // Critical auth error - should be logged in production
-        console.error('Refresh user error:', error);
+        secureLog.error('Refresh user error:', error);
         set({ 
           error: 'Failed to refresh user data',
           isLoading: false,
@@ -719,7 +720,7 @@ export const useAuthStore = create<AuthState>()(
       // Only allow in development mode
       if (!__DEV__) {
         if (__DEV__) {
-          console.warn('resetOnboardingForDev is only available in development mode');
+          secureLog.warn('resetOnboardingForDev is only available in development mode');
         }
         return {
           success: false,
@@ -756,10 +757,10 @@ export const useAuthStore = create<AuthState>()(
         await StorageHelpers.clearOnboardingState();
 
         if (__DEV__) {
-          console.log('[DEV] Onboarding status reset successfully (local state only)');
+          secureLog.info('[DEV] Onboarding status reset successfully (local state only)');
         }
         if (__DEV__) {
-          console.log('[DEV] Note: Backend still shows onboarding as completed, but app will show onboarding flow');
+          secureLog.info('[DEV] Note: Backend still shows onboarding as completed, but app will show onboarding flow');
         }
         
         return {
@@ -768,7 +769,7 @@ export const useAuthStore = create<AuthState>()(
         };
       } catch (error) {
         if (__DEV__) {
-          console.error('[DEV] Error resetting onboarding status:', error);
+          secureLog.error('[DEV] Error resetting onboarding status:', error);
         }
         set({
           error: 'Failed to reset onboarding status. Please try again.',

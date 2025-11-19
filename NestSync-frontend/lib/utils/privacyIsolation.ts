@@ -5,6 +5,7 @@
  */
 
 import { apolloClient, clearApolloCache, resetApolloCache } from '../graphql/client';
+import { secureLog } from './secureLogger';
 import { StorageHelpers } from '../../hooks/useUniversalStorage';
 
 interface UserSessionInfo {
@@ -41,7 +42,7 @@ export class PrivacyIsolationManager {
       return JSON.parse(info);
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to get cache isolation info:', error);
+        secureLog.error('Failed to get cache isolation info:', error);
       }
       return null;
     }
@@ -55,7 +56,7 @@ export class PrivacyIsolationManager {
       await StorageHelpers.setItem(CACHE_ISOLATION_KEY, JSON.stringify(info), false);
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to set cache isolation info:', error);
+        secureLog.error('Failed to set cache isolation info:', error);
       }
     }
   }
@@ -68,7 +69,7 @@ export class PrivacyIsolationManager {
       await StorageHelpers.removeItem(CACHE_ISOLATION_KEY, false);
     } catch (error) {
       if (__DEV__) {
-        console.error('Failed to clear cache isolation info:', error);
+        secureLog.error('Failed to clear cache isolation info:', error);
       }
     }
   }
@@ -80,7 +81,7 @@ export class PrivacyIsolationManager {
   async ensureCacheIsolationOnSignIn(userInfo: { userId: string; email: string }): Promise<void> {
     try {
       if (__DEV__) {
-        console.log('🔒 PRIVACY: Ensuring cache isolation for user sign-in');
+        secureLog.info('🔒 PRIVACY: Ensuring cache isolation for user sign-in');
       }
 
       // Get previous user info
@@ -93,22 +94,22 @@ export class PrivacyIsolationManager {
 
       if (isDifferentUser) {
         if (__DEV__) {
-          console.log('🔒 PRIVACY: Different user detected, clearing Apollo cache');
+          secureLog.info('🔒 PRIVACY: Different user detected, clearing Apollo cache');
           if (previousUser) {
-            console.log(`Previous user: ${previousUser.email} (${previousUser.userId})`);
+            secureLog.info(`Previous user: ${previousUser.email} (${previousUser.userId})`);
           }
-          console.log(`New user: ${userInfo.email} (${userInfo.userId})`);
+          secureLog.info(`New user: ${userInfo.email} (${userInfo.userId})`);
         }
 
         // CRITICAL: Reset Apollo cache to prevent cross-user data leaks
         await resetApolloCache();
         
         if (__DEV__) {
-          console.log('✅ PRIVACY: Apollo cache reset completed');
+          secureLog.info('✅ PRIVACY: Apollo cache reset completed');
         }
       } else {
         if (__DEV__) {
-          console.log('🔒 PRIVACY: Same user, cache isolation already maintained');
+          secureLog.info('🔒 PRIVACY: Same user, cache isolation already maintained');
         }
       }
 
@@ -124,12 +125,12 @@ export class PrivacyIsolationManager {
       this.currentUser = newUserInfo;
 
       if (__DEV__) {
-        console.log('🔒 PRIVACY: Cache isolation ensured for', userInfo.email);
+        secureLog.info('🔒 PRIVACY: Cache isolation ensured for', userInfo.email);
       }
 
     } catch (error) {
       if (__DEV__) {
-        console.error('🚨 PRIVACY ERROR: Failed to ensure cache isolation:', error);
+        secureLog.error('🚨 PRIVACY ERROR: Failed to ensure cache isolation:', error);
       }
       // On error, clear cache as safety measure
       await this.forceCacheClear('Error during cache isolation');
@@ -143,7 +144,7 @@ export class PrivacyIsolationManager {
   async ensureCacheIsolationOnSignOut(): Promise<void> {
     try {
       if (__DEV__) {
-        console.log('🔒 PRIVACY: Clearing cache on user sign-out');
+        secureLog.info('🔒 PRIVACY: Clearing cache on user sign-out');
       }
 
       // Clear Apollo cache completely
@@ -154,12 +155,12 @@ export class PrivacyIsolationManager {
       this.currentUser = null;
 
       if (__DEV__) {
-        console.log('✅ PRIVACY: Complete cache clear on sign-out completed');
+        secureLog.info('✅ PRIVACY: Complete cache clear on sign-out completed');
       }
 
     } catch (error) {
       if (__DEV__) {
-        console.error('🚨 PRIVACY ERROR: Failed to clear cache on sign-out:', error);
+        secureLog.error('🚨 PRIVACY ERROR: Failed to clear cache on sign-out:', error);
       }
       // Force clear as safety measure
       await this.forceCacheClear('Error during sign-out cache clear');
@@ -172,7 +173,7 @@ export class PrivacyIsolationManager {
   async forceCacheClear(reason: string): Promise<void> {
     try {
       if (__DEV__) {
-        console.log('🚨 PRIVACY: Force clearing all caches -', reason);
+        secureLog.info('🚨 PRIVACY: Force clearing all caches -', reason);
       }
 
       // Clear Apollo cache
@@ -186,15 +187,15 @@ export class PrivacyIsolationManager {
       this.currentUser = null;
 
       if (__DEV__) {
-        console.log('✅ PRIVACY: Force cache clear completed');
+        secureLog.info('✅ PRIVACY: Force cache clear completed');
       }
 
     } catch (error) {
       if (__DEV__) {
-        console.error('🚨 PRIVACY CRITICAL ERROR: Failed to force clear cache:', error);
+        secureLog.error('🚨 PRIVACY CRITICAL ERROR: Failed to force clear cache:', error);
       }
       // This is a critical privacy failure - we should log this in production
-      console.error('CRITICAL PRIVACY ERROR: Failed to clear user cache');
+      secureLog.error('CRITICAL PRIVACY ERROR: Failed to clear user cache');
     }
   }
 
@@ -215,7 +216,7 @@ export class PrivacyIsolationManager {
       if (!cacheInfo || !session) {
         // Mismatch between cache info and session
         if (__DEV__) {
-          console.warn('🔒 PRIVACY: Cache integrity issue - info/session mismatch');
+          secureLog.warn('🔒 PRIVACY: Cache integrity issue - info/session mismatch');
         }
         return false;
       }
@@ -228,16 +229,16 @@ export class PrivacyIsolationManager {
         cacheInfo.email === sessionUserEmail;
 
       if (!integrityOk && __DEV__) {
-        console.error('🚨 PRIVACY: Cache integrity violation detected');
-        console.error('Cache info:', cacheInfo);
-        console.error('Session info:', { userId: sessionUserId, email: sessionUserEmail });
+        secureLog.error('🚨 PRIVACY: Cache integrity violation detected');
+        secureLog.error('Cache info:', cacheInfo);
+        secureLog.error('Session info:', { userId: sessionUserId, email: sessionUserEmail });
       }
 
       return integrityOk;
 
     } catch (error) {
       if (__DEV__) {
-        console.error('🚨 PRIVACY ERROR: Failed to verify cache integrity:', error);
+        secureLog.error('🚨 PRIVACY ERROR: Failed to verify cache integrity:', error);
       }
       return false;
     }
@@ -300,7 +301,7 @@ export const usePrivacyIsolation = () => {
 export const emergencyPrivacyClear = async (reason: string): Promise<void> => {
   try {
     if (__DEV__) {
-      console.log('🚨 EMERGENCY PRIVACY CLEAR:', reason);
+      secureLog.info('🚨 EMERGENCY PRIVACY CLEAR:', reason);
     }
 
     // Clear all storage
@@ -310,14 +311,14 @@ export const emergencyPrivacyClear = async (reason: string): Promise<void> => {
     await privacyIsolationManager.forceCacheClear(`Emergency clear: ${reason}`);
     
     if (__DEV__) {
-      console.log('✅ EMERGENCY PRIVACY CLEAR: Completed');
+      secureLog.info('✅ EMERGENCY PRIVACY CLEAR: Completed');
     }
 
   } catch (error) {
     if (__DEV__) {
-      console.error('🚨 EMERGENCY PRIVACY CLEAR FAILED:', error);
+      secureLog.error('🚨 EMERGENCY PRIVACY CLEAR FAILED:', error);
     }
     // This is critical - log to production monitoring if available
-    console.error('CRITICAL: Emergency privacy clear failed');
+    secureLog.error('CRITICAL: Emergency privacy clear failed');
   }
 };

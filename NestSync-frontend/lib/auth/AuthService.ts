@@ -4,6 +4,7 @@
  * Implements Canadian PIPEDA compliance and user persona optimization
  */
 
+import { secureLog, createAuthMetadata } from '../utils/secureLogger';
 import { apolloClient, clearApolloCache } from '../graphql/client';
 import { StorageHelpers, BiometricHelpers } from '../../hooks/useUniversalStorage';
 import { privacyIsolationManager } from '../utils/privacyIsolation';
@@ -120,7 +121,7 @@ export class AuthService {
         const isExpiringSoon = this.isTokenExpiringSoon(accessToken, 10); // 10 minute buffer
 
         if (isExpiringSoon) {
-          console.log('Token expiring soon, attempting proactive refresh...');
+          secureLog.info('Token expiring soon, attempting proactive refresh...');
           const refreshResult = await this.refreshTokenProactively();
 
           if (refreshResult.success && refreshResult.session) {
@@ -129,7 +130,7 @@ export class AuthService {
             this.isInitialized = true;
             return true;
           } else {
-            console.log('Proactive token refresh failed, clearing session');
+            secureLog.info('Proactive token refresh failed, clearing session');
             await this.clearSession();
             this.isInitialized = true;
             return false;
@@ -156,7 +157,7 @@ export class AuthService {
         } catch (error: any) {
           // Check if error is token expiration
           if (this.isTokenExpirationError(error)) {
-            console.log('Token expired during initialization, attempting refresh...');
+            secureLog.info('Token expired during initialization, attempting refresh...');
             const refreshResult = await this.refreshTokenProactively();
 
             if (refreshResult.success && refreshResult.session) {
@@ -167,7 +168,7 @@ export class AuthService {
             }
           }
 
-          console.log('Stored session is invalid, clearing...', error);
+          secureLog.info('Stored session is invalid, clearing...', error);
           await this.clearSession();
         }
       }
@@ -175,7 +176,7 @@ export class AuthService {
       this.isInitialized = true;
       return false;
     } catch (error) {
-      console.error('Failed to initialize auth service:', error);
+      secureLog.error('Failed to initialize auth service:', error);
       this.isInitialized = true;
       return false;
     }
@@ -264,12 +265,12 @@ export class AuthService {
         error: response.error || 'Sign up failed',
       };
     } catch (error: any) {
-      console.error('Sign up error:', error);
+      secureLog.error('Sign up error:', error);
 
 
       // Handle other validation errors
       if (error.message && error.message.includes('validation error')) {
-        console.warn('General validation error encountered during sign up, attempting to continue with partial data');
+        secureLog.warn('General validation error encountered during sign up, attempting to continue with partial data');
 
         // Try to extract any successful registration data despite validation errors
         if (error.response && error.response.data && error.response.data.signUp) {
@@ -291,7 +292,7 @@ export class AuthService {
                 session: partialResponse.session,
               };
             } catch (recoveryError) {
-              console.error('Failed to recover from sign up validation error:', recoveryError);
+              secureLog.error('Failed to recover from sign up validation error:', recoveryError);
             }
           }
         }
@@ -336,7 +337,7 @@ export class AuthService {
       });
       return { connected: true };
     } catch (error: any) {
-      console.log('Server connectivity check failed:', error);
+      secureLog.info('Server connectivity check failed:', error);
       
       // Check if it's a network error
       if (error.networkError) {
@@ -423,7 +424,7 @@ export class AuthService {
         try {
           await this.storeSession(userProfile, response.session);
         } catch (storageError) {
-          console.warn('Failed to store session, proceeding with in-memory session:', storageError);
+          secureLog.warn('Failed to store session, proceeding with in-memory session:', storageError);
         }
 
         // Set current user and session
@@ -443,12 +444,12 @@ export class AuthService {
         error: response.error || 'Sign in failed',
       };
     } catch (error: any) {
-      console.error('Sign in error:', error);
+      secureLog.error('Sign in error:', error);
 
 
       // Handle other validation errors
       if (error.message && error.message.includes('validation error')) {
-        console.warn('General validation error encountered, attempting to continue with partial data');
+        secureLog.warn('General validation error encountered, attempting to continue with partial data');
 
         // Try to extract any successful authentication data despite validation errors
         if (error.response && error.response.data && error.response.data.signIn) {
@@ -470,7 +471,7 @@ export class AuthService {
                 session: partialResponse.session,
               };
             } catch (recoveryError) {
-              console.error('Failed to recover from validation error:', recoveryError);
+              secureLog.error('Failed to recover from validation error:', recoveryError);
             }
           }
         }
@@ -558,7 +559,7 @@ export class AuthService {
           };
         }
       } catch (error) {
-        console.log('Session expired, clearing biometric session');
+        secureLog.info('Session expired, clearing biometric session');
         await this.clearSession();
       }
 
@@ -567,7 +568,7 @@ export class AuthService {
         error: 'Session expired, please sign in again',
       };
     } catch (error) {
-      console.error('Biometric sign in error:', error);
+      secureLog.error('Biometric sign in error:', error);
       return {
         success: false,
         error: 'Biometric sign in failed',
@@ -598,7 +599,7 @@ export class AuthService {
         error: response?.error,
       };
     } catch (error) {
-      console.error('Sign out error:', error);
+      secureLog.error('Sign out error:', error);
       
       // CRITICAL: Still clear cache and session on error for privacy
       await privacyIsolationManager.ensureCacheIsolationOnSignOut();
@@ -628,7 +629,7 @@ export class AuthService {
         error: response?.error,
       };
     } catch (error) {
-      console.error('Reset password error:', error);
+      secureLog.error('Reset password error:', error);
       return {
         success: false,
         error: 'Password reset failed. Please try again.',
@@ -653,7 +654,7 @@ export class AuthService {
         error: response?.error,
       };
     } catch (error) {
-      console.error('Change password error:', error);
+      secureLog.error('Change password error:', error);
       return {
         success: false,
         error: 'Password change failed. Please try again.',
@@ -689,7 +690,7 @@ export class AuthService {
         user: response?.user as UserProfile,
       };
     } catch (error) {
-      console.error('Update profile error:', error);
+      secureLog.error('Update profile error:', error);
       return {
         success: false,
         error: 'Profile update failed. Please try again.',
@@ -720,7 +721,7 @@ export class AuthService {
         error: response?.error,
       };
     } catch (error) {
-      console.error('Update consent error:', error);
+      secureLog.error('Update consent error:', error);
       return {
         success: false,
         error: 'Consent update failed. Please try again.',
@@ -747,7 +748,7 @@ export class AuthService {
         return this.currentUser;
       }
     } catch (error) {
-      console.error('Get current user error:', error);
+      secureLog.error('Get current user error:', error);
     }
 
     return null;
@@ -766,7 +767,7 @@ export class AuthService {
 
       return data?.myConsents || null;
     } catch (error) {
-      console.error('Get user consents error:', error);
+      secureLog.error('Get user consents error:', error);
       return null;
     }
   }
@@ -806,7 +807,7 @@ export class AuthService {
         message: 'Biometric authentication enabled successfully',
       };
     } catch (error) {
-      console.error('Setup biometrics error:', error);
+      secureLog.error('Setup biometrics error:', error);
       return {
         success: false,
         error: 'Failed to setup biometric authentication',
@@ -830,7 +831,7 @@ export class AuthService {
         message: 'Biometric authentication disabled',
       };
     } catch (error) {
-      console.error('Disable biometrics error:', error);
+      secureLog.error('Disable biometrics error:', error);
       return {
         success: false,
         error: 'Failed to disable biometric authentication',
@@ -913,12 +914,12 @@ export class AuthService {
    */
   async attemptAuthenticationRecovery(credentials?: { email: string; password?: string }): Promise<AuthResponse> {
     try {
-      console.log('Attempting authentication recovery...');
+      secureLog.info('Attempting authentication recovery...');
 
       // Strategy 1: Try to recover from stored session
       const storedSession = await this.getStoredSession();
       if (storedSession && storedSession.user) {
-        console.log('Recovered authentication from stored session');
+        secureLog.info('Recovered authentication from stored session');
 
         // Verify session is still valid by checking if user exists
         try {
@@ -935,13 +936,13 @@ export class AuthService {
             };
           }
         } catch (verificationError) {
-          console.warn('Stored session verification failed:', verificationError);
+          secureLog.warn('Stored session verification failed:', verificationError);
         }
       }
 
       // Strategy 2: Try silent re-authentication if credentials provided
       if (credentials && credentials.email && credentials.password) {
-        console.log('Attempting silent re-authentication...');
+        secureLog.info('Attempting silent re-authentication...');
 
         try {
           // Clear any corrupted state first
@@ -950,16 +951,16 @@ export class AuthService {
           // Attempt fresh sign-in
           const retryResult = await this.signIn(credentials);
           if (retryResult.success) {
-            console.log('Silent re-authentication successful');
+            secureLog.info('Silent re-authentication successful');
             return retryResult;
           }
         } catch (retryError) {
-          console.warn('Silent re-authentication failed:', retryError);
+          secureLog.warn('Silent re-authentication failed:', retryError);
         }
       }
 
       // Strategy 3: Clear corrupted state and request fresh login
-      console.log('Clearing corrupted authentication state');
+      secureLog.info('Clearing corrupted authentication state');
       await this.clearSession();
 
       return {
@@ -969,7 +970,7 @@ export class AuthService {
       };
 
     } catch (error) {
-      console.error('Authentication recovery failed:', error);
+      secureLog.error('Authentication recovery failed:', error);
 
       // Last resort: Clear everything
       await this.clearSession();
@@ -1016,7 +1017,7 @@ export class AuthService {
           };
         }
       } catch (validationError) {
-        console.warn('Session validation failed, attempting recovery:', validationError);
+        secureLog.warn('Session validation failed, attempting recovery:', validationError);
 
         // Try to recover from storage
         const recoveryResult = await this.attemptAuthenticationRecovery();
@@ -1032,7 +1033,7 @@ export class AuthService {
       return { valid: false, recovered: false };
 
     } catch (error) {
-      console.error('Session validation and recovery failed:', error);
+      secureLog.error('Session validation and recovery failed:', error);
       return { valid: false, recovered: false };
     }
   }
@@ -1082,12 +1083,12 @@ export class AuthService {
       const isExpiring = Date.now() > (expiryTime - bufferTime);
 
       if (isExpiring) {
-        console.log(`Token expires at ${new Date(expiryTime).toISOString()}, expiring within ${bufferMinutes} minutes`);
+        secureLog.info(`Token expires at ${new Date(expiryTime).toISOString()}, expiring within ${bufferMinutes} minutes`);
       }
 
       return isExpiring;
     } catch (error) {
-      console.error('Failed to parse JWT token for expiry check:', error);
+      secureLog.error('Failed to parse JWT token for expiry check:', error);
       return true; // If we can't parse, assume it's expired
     }
   }
@@ -1115,13 +1116,13 @@ export class AuthService {
     try {
       // STEP 1: Check network connectivity BEFORE attempting token refresh
       // This prevents unnecessary token refresh attempts when offline
-      console.log('Checking network connectivity before token refresh...');
+      secureLog.info('Checking network connectivity before token refresh...');
       const connectivityCheck = await this.checkServerConnectivity();
 
       if (!connectivityCheck.connected) {
         // Network is unavailable - provide clear feedback
         const errorMessage = connectivityCheck.error || 'Unable to connect to server. Please check your internet connection.';
-        console.warn('Token refresh aborted: Network unavailable');
+        secureLog.warn('Token refresh aborted: Network unavailable');
 
         return {
           success: false,
@@ -1131,7 +1132,7 @@ export class AuthService {
         };
       }
 
-      console.log('Network connectivity confirmed, proceeding with token refresh...');
+      secureLog.info('Network connectivity confirmed, proceeding with token refresh...');
 
       // STEP 2: Attempt token refresh with retry logic (handled by client.ts)
       // Import the client's global token refresh function
@@ -1151,7 +1152,7 @@ export class AuthService {
           const refreshToken = await StorageHelpers.getRefreshToken();
 
           if (!refreshToken) {
-            console.warn('No refresh token available after successful access token refresh');
+            secureLog.warn('No refresh token available after successful access token refresh');
             return {
               success: false,
               error: 'No refresh token available',
@@ -1167,7 +1168,7 @@ export class AuthService {
           // Store updated session
           await this.storeSession(data.me as UserProfile, newSession);
 
-          console.log('Token refresh completed successfully');
+          secureLog.info('Token refresh completed successfully');
           return {
             success: true,
             message: 'Token refreshed successfully',
@@ -1178,7 +1179,7 @@ export class AuthService {
       }
 
       // STEP 3: Handle refresh failure with graceful degradation
-      console.warn('Token refresh failed: No new access token received');
+      secureLog.warn('Token refresh failed: No new access token received');
 
       // Check if it's a network issue or authentication issue
       const retryConnectivity = await this.checkServerConnectivity();
@@ -1192,7 +1193,7 @@ export class AuthService {
 
       // Not a network issue - likely an authentication problem
       // Clear session since refresh token is likely invalid
-      console.log('Token refresh failed with valid network - clearing session');
+      secureLog.info('Token refresh failed with valid network - clearing session');
       await this.clearSession();
 
       return {
@@ -1201,7 +1202,7 @@ export class AuthService {
         requiresLogin: true,
       };
     } catch (error: any) {
-      console.error('Proactive token refresh error:', error);
+      secureLog.error('Proactive token refresh error:', error);
 
       // STEP 4: Enhanced error handling with network detection
       const isNetworkError =
@@ -1212,7 +1213,7 @@ export class AuthService {
 
       if (isNetworkError) {
         // Network error - preserve session, user might come back online
-        console.warn('Token refresh failed due to network error - session preserved');
+        secureLog.warn('Token refresh failed due to network error - session preserved');
         return {
           success: false,
           error: 'Unable to refresh token due to network issues. Please check your connection and try again.',
@@ -1220,7 +1221,7 @@ export class AuthService {
       }
 
       // Non-network error - likely authentication issue, clear session
-      console.warn('Token refresh failed due to authentication error - clearing session');
+      secureLog.warn('Token refresh failed due to authentication error - clearing session');
       await this.clearSession();
 
       return {

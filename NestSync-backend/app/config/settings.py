@@ -70,7 +70,42 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=300, env="RATE_LIMIT_REQUESTS")  # Increased for dashboard polling
     rate_limit_window: int = Field(default=300, env="RATE_LIMIT_WINDOW")  # 5 minutes - more reasonable window
     rate_limiting_enabled: bool = Field(default=True, env="RATE_LIMITING_ENABLED")  # Toggle rate limiting on/off
-    
+
+    @validator("rate_limiting_enabled")
+    def validate_rate_limiting_production(cls, v, values):
+        """
+        Enforce rate limiting in production environments
+        SECURITY: Prevents DoS attacks and API abuse - CRITICAL for PIPEDA compliance
+        """
+        environment = values.get("environment", "development")
+
+        # CRITICAL: Rate limiting cannot be disabled in production
+        if environment == "production" and not v:
+            raise ValueError(
+                "SECURITY ERROR: Rate limiting cannot be disabled in production environment. "
+                "This is a critical security requirement for PIPEDA compliance and DoS prevention. "
+                "Set RATE_LIMITING_ENABLED=true or remove the environment variable."
+            )
+
+        # WARNING: Rate limiting should be enabled in staging
+        if environment == "staging" and not v:
+            logger.warning(
+                "Rate limiting is DISABLED in staging environment. "
+                "This should only be done for load testing purposes. "
+                "Re-enable before promoting to production."
+            )
+
+        return v
+
+    @validator("rate_limit_requests")
+    def validate_rate_limit_reasonable(cls, v):
+        """Ensure rate limits are reasonable"""
+        if v < 10:
+            raise ValueError("Rate limit too restrictive (minimum 10 requests)")
+        if v > 10000:
+            raise ValueError("Rate limit too permissive (maximum 10000 requests)")
+        return v
+
     # =============================================================================
     # CORS Configuration
     # =============================================================================
