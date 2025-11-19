@@ -88,22 +88,6 @@ export default function PlannerScreen() {
   //   refetch: refetchEnhanced,
   // } = useEnhancedAnalytics({ childId });
 
-  // Fetch inventory data
-  const {
-    data: inventoryData,
-    loading: inventoryLoading,
-    error: inventoryError
-  } = useQuery(GET_INVENTORY_ITEMS_QUERY, {
-    variables: {
-      childId,
-      productType: 'DIAPER',
-      limit: 500
-    },
-    skip: !childId,
-    pollInterval: 30000,
-    fetchPolicy: Platform.OS === 'web' ? 'cache-first' : 'cache-and-network',
-  });
-  
   // Auto-set stored child if we have a valid childId but no stored value
   useEffect(() => {
     if (childId && !storedChildId) {
@@ -116,24 +100,6 @@ export default function PlannerScreen() {
     setStoredView(currentView);
   }, [currentView, setStoredView]);
 
-  // Persist filter state when it changes
-  useEffect(() => {
-    setStoredFilter(activeFilter);
-  }, [activeFilter, setStoredFilter]);
-
-  // Set filter from URL params when component mounts or params change
-  useEffect(() => {
-    // Always sync activeFilter with URL params when params change
-    // This fixes the "Critical Items only works on second click" bug
-    if (params.filter) {
-      setActiveFilter(params.filter);
-      // Switch to inventory view when navigating from traffic light cards
-      if (params.filter !== 'all') {
-        setCurrentView('inventory');
-      }
-    }
-  }, [params.filter]);
-
   // Set view from URL params when component mounts or params change
   useEffect(() => {
     if (params.view) {
@@ -141,68 +107,6 @@ export default function PlannerScreen() {
     }
   }, [params.view]);
 
-  // Process inventory items into categories
-  const inventoryItems: InventoryItem[] = useMemo(() => {
-    if (!inventoryData?.getInventoryItems?.edges) return [];
-
-    return inventoryData.getInventoryItems.edges
-      .map((edge: any) => edge.node);
-      // Note: Don't filter by quantityRemaining > 0 here, as critical items can have 0 quantity
-  }, [inventoryData]);
-  
-  // Filter items by traffic light categories - must match useInventoryTrafficLight.ts logic exactly
-  const filteredItems = useMemo(() => {
-    if (activeFilter === 'all') return inventoryItems;
-
-    return inventoryItems.filter((item) => {
-      const quantity = item.quantityRemaining || 0;
-
-      switch (activeFilter) {
-        case 'critical':
-          // Critical items: 0 quantity OR ≤3 days remaining OR expired
-          return quantity === 0 || item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry <= 3);
-        case 'low':
-          // Low stock items: 4-7 days remaining (only if quantity > 0)
-          return quantity > 0 && item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7;
-        case 'stocked':
-          // Well stocked items: >7 days remaining (only if quantity > 0) OR no expiry data with quantity > 0
-          return quantity > 0 && (
-            (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry > 7) ||
-            (item.daysUntilExpiry === null || item.daysUntilExpiry === undefined)
-          );
-        case 'pending':
-          return false; // Future functionality for pending orders
-        default:
-          return true;
-      }
-    });
-  }, [inventoryItems, activeFilter]);
-  
-  // Generate filter summary - must match useInventoryTrafficLight.ts logic exactly
-  const filterSummary = useMemo(() => {
-    const counts = {
-      all: inventoryItems.length,
-      critical: inventoryItems.filter(item => {
-        const quantity = item.quantityRemaining || 0;
-        return quantity === 0 || item.isExpired || (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry <= 3);
-      }).length,
-      low: inventoryItems.filter(item => {
-        const quantity = item.quantityRemaining || 0;
-        return quantity > 0 && item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7;
-      }).length,
-      stocked: inventoryItems.filter(item => {
-        const quantity = item.quantityRemaining || 0;
-        return quantity > 0 && (
-          (item.daysUntilExpiry !== null && item.daysUntilExpiry !== undefined && item.daysUntilExpiry > 7) ||
-          (item.daysUntilExpiry === null || item.daysUntilExpiry === undefined)
-        );
-      }).length,
-      pending: 0
-    };
-
-    return counts;
-  }, [inventoryItems]);
-  
   // Sample timeline data - keeping existing functionality
   const plannerItems: PlannerItem[] = [
     {
@@ -257,73 +161,6 @@ export default function PlannerScreen() {
     }
   };
   
-  // Helper functions for inventory display
-  const getFilterColor = (filter: FilterType) => {
-    switch (filter) {
-      case 'critical':
-        return NestSyncColors.trafficLight.critical;
-      case 'low':
-        return NestSyncColors.trafficLight.low;
-      case 'stocked':
-        return NestSyncColors.trafficLight.stocked;
-      case 'pending':
-        return NestSyncColors.trafficLight.pending;
-      default:
-        return colors.tint;
-    }
-  };
-  
-  const getFilterLabel = (filter: FilterType) => {
-    switch (filter) {
-      case 'critical':
-        return 'Critical Items';
-      case 'low':
-        return 'Low Stock';
-      case 'stocked':
-        return 'Well Stocked';
-      case 'pending':
-        return 'Pending Orders';
-      default:
-        return 'All Items';
-    }
-  };
-  
-  const getDaysLabel = (item: InventoryItem) => {
-    if (item.isExpired) return 'EXPIRED';
-    if (item.daysUntilExpiry === null || item.daysUntilExpiry === undefined) return 'No expiry data';
-    if (item.daysUntilExpiry <= 0) return 'Expires today';
-    if (item.daysUntilExpiry === 1) return '1 day left';
-    return `${item.daysUntilExpiry} days left`;
-  };
-  
-  const getDaysColor = (item: InventoryItem) => {
-    if (item.isExpired || (item.daysUntilExpiry != null && item.daysUntilExpiry <= 3)) {
-      return NestSyncColors.trafficLight.critical;
-    }
-    if (item.daysUntilExpiry != null && item.daysUntilExpiry >= 4 && item.daysUntilExpiry <= 7) {
-      return NestSyncColors.trafficLight.low;
-    }
-    return NestSyncColors.trafficLight.stocked;
-  };
-
-  // Handler functions for inventory item interaction
-  const handleInventoryItemPress = (item: InventoryItem) => {
-    setSelectedInventoryItem(item);
-    setEditModalVisible(true);
-  };
-
-  const handleEditModalClose = () => {
-    setEditModalVisible(false);
-    setSelectedInventoryItem(null);
-  };
-
-  const handleEditSuccess = (message: string) => {
-    // Show success feedback (could add toast notification here)
-    console.log('Edit success:', message);
-    setEditModalVisible(false);
-    setSelectedInventoryItem(null);
-    // The inventory query will automatically refetch due to the mutations' refetchQueries
-  };
 
   return (
     <SafeAreaProvider>
@@ -332,61 +169,10 @@ export default function PlannerScreen() {
         <ThemedView style={styles.header}>
           <ThemedText type="title" style={styles.headerTitle}>Dashboard</ThemedText>
           <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {currentView === 'planner' ? 'Upcoming tasks and insights' :
-             currentView === 'analytics' ? 'Usage patterns and predictions' :
-             'Inventory management'}
+            {currentView === 'planner' ? 'Upcoming tasks and insights' : 'Usage patterns and predictions'}
           </ThemedText>
         </ThemedView>
 
-        {/* Canadian Trust Indicator - temporarily hidden with analytics */}
-
-        {/* Filter Toggle - only show in inventory view */}
-        {currentView === 'inventory' && (
-          <ThemedView style={styles.filterSection}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
-              {['all', 'critical', 'low', 'stocked', 'pending'].map((filter) => {
-                const filterType = filter as FilterType;
-                const isActive = activeFilter === filterType;
-                const count = filterSummary[filterType];
-                
-                return (
-                  <TouchableOpacity
-                    key={filter}
-                    style={[
-                      styles.filterButton,
-                      {
-                        backgroundColor: isActive ? getFilterColor(filterType) : colors.surface,
-                        borderColor: isActive ? getFilterColor(filterType) : colors.border
-                      }
-                    ]}
-                    onPress={() => {
-                      setActiveFilter(filterType);
-                      router.setParams({ filter: filterType });
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Filter by ${getFilterLabel(filterType)}`}
-                  >
-                    <Text style={[
-                      styles.filterText,
-                      { color: isActive ? colors.background : colors.text }
-                    ]}>
-                      {getFilterLabel(filterType)}
-                    </Text>
-                    {count > 0 && (
-                      <Text style={[
-                        styles.filterCount,
-                        { color: isActive ? colors.background : colors.textSecondary }
-                      ]}>
-                        ({count})
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </ThemedView>
-        )}
-        
         {/* View Toggle - Analytics temporarily hidden */}
         <ThemedView style={styles.viewToggle}>
           <TouchableOpacity
@@ -410,7 +196,6 @@ export default function PlannerScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            ref={analyticsButtonRef}
             style={[
               styles.toggleButton,
               { backgroundColor: currentView === 'analytics' ? colors.tint : colors.surface },
@@ -592,31 +377,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     opacity: 0.85,
   },
-  filterSection: {
-    marginHorizontal: 20,
-    marginBottom: 15,
-  },
-  filterScrollView: {
-    flexGrow: 0,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  filterText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  filterCount: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
   viewToggle: {
     flexDirection: 'row',
     marginHorizontal: 20,
@@ -721,40 +481,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 280,
-  },
-  inventoryItem: {
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  inventoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  inventoryInfo: {
-    flex: 1,
-  },
-  inventoryTitle: {
-    fontSize: 16,
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  inventoryQuantity: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  inventoryStatus: {
-    alignItems: 'flex-end',
-  },
-  inventoryDays: {
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 24,
-  },
-  inventoryChevron: {
-    marginLeft: 12,
   },
   summaryCard: {
     padding: 20,

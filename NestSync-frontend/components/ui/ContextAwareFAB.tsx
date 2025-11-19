@@ -362,6 +362,45 @@ export function ContextAwareFAB() {
         router.push('/planner?view=planner');
       },
     },
+    inventory: {
+      // Dedicated inventory tab FAB
+      icon: 'cube.box.fill',
+      accessibilityLabel: 'Add inventory item',
+      action: () => {
+        if (actionsDisabled) {
+          Alert.alert(
+            'Loading...',
+            'Please wait while we load your data',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+
+        if (showAddFirstChild) {
+          Alert.alert(
+            'Welcome to NestSync!',
+            'Add your first child to start tracking inventory.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Add Child', onPress: () => console.log('Navigate to child creation') }
+            ]
+          );
+          return;
+        }
+
+        if (!selectedChildId) {
+          Alert.alert(
+            'Please Select a Child',
+            'Choose which child you\'d like to add inventory for.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+
+        setAddInventoryModalVisible(true);
+      },
+      backgroundColor: '#10B981', // Green for inventory
+    },
     settings: {
       icon: 'questionmark.circle.fill',
       accessibilityLabel: 'Get help and support',
