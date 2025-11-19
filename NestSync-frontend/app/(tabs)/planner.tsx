@@ -14,12 +14,7 @@ import { useChildren } from '@/hooks/useChildren';
 import { formatDiaperSize } from '@/utils/formatters';
 import { EditInventoryModal } from '@/components/modals/EditInventoryModal';
 import { ReorderSuggestionsContainer } from '@/components/reorder/ReorderSuggestionsContainer';
-import { TrialProgressCard } from '@/components/reorder/TrialProgressCard';
-import { useTrialDaysRemaining } from '@/components/reorder/TrialCountdownBanner';
-import { PremiumUpgradeModal } from '@/components/reorder/PremiumUpgradeModal';
-import { useAnalyticsAccess } from '@/hooks/useFeatureAccess';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
-import { useTrialOnboarding } from '@/hooks/useTrialOnboarding';
 // Analytics imports temporarily disabled - preserved for future enhancement
 // import { useAnalyticsDashboard } from '@/hooks/useAnalytics';
 // import { useEnhancedAnalytics } from '@/hooks/useEnhancedAnalytics';
@@ -99,28 +94,13 @@ export default function PlannerScreen() {
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
 
-  // Premium upgrade modal state
-  const [premiumUpgradeModalVisible, setPremiumUpgradeModalVisible] = useState(false);
-  
   // Use childId from params or default to first child
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [storedChildId, setStoredChildId] = useAsyncStorage('nestsync_selected_child_id');
 
-  // Analytics access and trial management
-  const hasAnalyticsAccess = useAnalyticsAccess();
-  const trialDaysRemaining = useTrialDaysRemaining();
+  // Analytics access - now free for all users
+  const hasAnalyticsAccess = true;
 
-  // Trial onboarding tooltips for analytics discovery
-  const {
-    showAnalyticsTooltip,
-    canShowTooltips,
-    TooltipComponent
-  } = useTrialOnboarding();
-
-  // Refs for tooltip positioning
-  const analyticsButtonRef = useRef(null);
-  const trialProgressCardRef = useRef(null);
-  
   // Fetch children data using centralized hook
   const { children, loading: childrenLoading } = useChildren({ first: 10 });
   
@@ -198,16 +178,6 @@ export default function PlannerScreen() {
       setCurrentView(params.view);
     }
   }, [params.view]);
-
-  // Show analytics discovery tooltip for trial users when they switch to analytics view
-  useEffect(() => {
-    if (canShowTooltips && currentView === 'analytics' && !hasAnalyticsAccess && trialProgressCardRef.current) {
-      const timer = setTimeout(() => {
-        showAnalyticsTooltip(trialProgressCardRef.current);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [canShowTooltips, currentView, hasAnalyticsAccess, showAnalyticsTooltip]);
 
   // Process inventory items into categories
   const inventoryItems: InventoryItem[] = useMemo(() => {
@@ -393,35 +363,6 @@ export default function PlannerScreen() {
     // The inventory query will automatically refetch due to the mutations' refetchQueries
   };
 
-  // Handle premium upgrade requirement from reorder component
-  const handleUpgradeRequired = () => {
-    setPremiumUpgradeModalVisible(true);
-  };
-
-  // Handle analytics navigation from trial progress card
-  const handleAnalyticsNavigate = () => {
-    setCurrentView('analytics');
-    router.setParams({ view: 'analytics' });
-  };
-
-  // Handle learn more navigation from trial progress card
-  const handleLearnMore = () => {
-    router.push('/(subscription)/subscription-management');
-  };
-
-  // Handle premium upgrade modal close
-  const handleUpgradeModalClose = () => {
-    setPremiumUpgradeModalVisible(false);
-  };
-
-  // Handle successful premium upgrade
-  const handleUpgradeSuccess = () => {
-    setPremiumUpgradeModalVisible(false);
-    // TODO: Refresh subscription status or refetch data
-  };
-
-
-
   return (
     <SafeAreaProvider>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -556,44 +497,25 @@ export default function PlannerScreen() {
           showsVerticalScrollIndicator={false}
         >
           {currentView === 'analytics' ? (
-            /* Analytics View - Trial Progress or Premium Content */
+            /* Analytics View - Free for All Users */
             <ThemedView style={styles.section}>
-              {!hasAnalyticsAccess ? (
-                <View ref={trialProgressCardRef}>
-                  <TrialProgressCard
-                    daysRemaining={trialDaysRemaining}
-                    totalTrialDays={14}
-                    onUpgradePress={handleUpgradeRequired}
-                    onAnalyticsNavigate={handleAnalyticsNavigate}
-                    onLearnMorePress={handleLearnMore}
-                    style={{ marginHorizontal: 0 }}
-                  />
-                </View>
-              ) : (
-                /* Premium Analytics Dashboard */
-                <View style={[styles.comingSoonContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <IconSymbol
-                    name="chart.line.uptrend.xyaxis"
-                    size={48}
-                    color={colors.tint}
-                    style={styles.comingSoonIcon}
-                  />
-                  <ThemedText type="title" style={[styles.comingSoonTitle, { color: colors.text }]}>
-                    Premium Analytics Dashboard
-                  </ThemedText>
-                  <ThemedText style={[styles.comingSoonText, { color: colors.textSecondary }]}>
-                    Your premium analytics experience is being finalized.
-                  </ThemedText>
-                  <ThemedText style={[styles.comingSoonSubtext, { color: colors.textSecondary }]}>
-                    Advanced pattern tracking, predictive insights, and optimization recommendations coming soon.
-                  </ThemedText>
-                  <View style={[styles.comingSoonBadge, { backgroundColor: colors.success }]}>
-                    <ThemedText style={[styles.comingSoonBadgeText, { color: colors.background }]}>
-                      Premium Active
-                    </ThemedText>
-                  </View>
-                </View>
-              )}
+              <View style={[styles.comingSoonContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <IconSymbol
+                  name="chart.line.uptrend.xyaxis"
+                  size={48}
+                  color={colors.tint}
+                  style={styles.comingSoonIcon}
+                />
+                <ThemedText type="title" style={[styles.comingSoonTitle, { color: colors.text }]}>
+                  Analytics Dashboard
+                </ThemedText>
+                <ThemedText style={[styles.comingSoonText, { color: colors.textSecondary }]}>
+                  Your analytics experience is being finalized.
+                </ThemedText>
+                <ThemedText style={[styles.comingSoonSubtext, { color: colors.textSecondary }]}>
+                  Pattern tracking, usage insights, and recommendations coming soon - free for all users.
+                </ThemedText>
+              </View>
             </ThemedView>
           ) : currentView === 'planner' ? (
             /* Planner View - Predictive Cards for Future Needs */
@@ -616,7 +538,6 @@ export default function PlannerScreen() {
                       childId={childId}
                       initialFilter="all"
                       context="planner"
-                      onUpgradeRequired={handleUpgradeRequired}
                       compact={true}
                       limit={3}
                       showPagination={false}
@@ -839,17 +760,6 @@ export default function PlannerScreen() {
             inventoryItem={selectedInventoryItem}
           />
         )}
-
-        {/* Premium Upgrade Modal */}
-        <PremiumUpgradeModal
-          visible={premiumUpgradeModalVisible}
-          onClose={handleUpgradeModalClose}
-          onSuccess={handleUpgradeSuccess}
-          feature="analytics"
-        />
-
-        {/* Trial Onboarding Tooltips */}
-        {TooltipComponent}
       </SafeAreaView>
     </SafeAreaProvider>
   );

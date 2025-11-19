@@ -15,7 +15,6 @@ from .analytics_resolvers import AnalyticsQueries
 from .collaboration_resolvers import CollaborationMutations, CollaborationQueries
 from .emergency_resolvers import EmergencyMutations, EmergencyQueries
 from .reorder_resolvers import ReorderMutations, ReorderQueries
-from .subscription_resolvers import SubscriptionQueries, SubscriptionMutations
 # from .observability_resolvers import ObservabilityQuery, ObservabilityMutation  # Temporarily disabled for testing
 from .types import (
     UserProfile,
@@ -133,29 +132,6 @@ class Query:
     get_reorder_suggestions: List[ReorderSuggestion] = strawberry.field(resolver=ReorderQueries.get_reorder_suggestions)
     get_subscription_status: Optional[SubscriptionStatus] = strawberry.field(resolver=ReorderQueries.get_subscription_status)
 
-    # Premium subscription queries
-    # Batch 1 (T026-T029)
-    available_plans = strawberry.field(resolver=SubscriptionQueries.available_plans)
-    subscription_plan = strawberry.field(resolver=SubscriptionQueries.subscription_plan)
-    my_trial_progress = strawberry.field(resolver=SubscriptionQueries.my_trial_progress)
-    my_payment_methods = strawberry.field(resolver=SubscriptionQueries.my_payment_methods)
-
-    # Batch 2 (T036, T040)
-    my_subscription = strawberry.field(resolver=SubscriptionQueries.my_subscription)
-    cancellation_preview = strawberry.field(resolver=SubscriptionQueries.cancellation_preview)
-
-    # Batch 3 (T041-T045)
-    my_billing_history = strawberry.field(resolver=SubscriptionQueries.my_billing_history)
-    billing_record = strawberry.field(resolver=SubscriptionQueries.billing_record)
-    download_invoice = strawberry.field(resolver=SubscriptionQueries.download_invoice)
-    check_feature_access = strawberry.field(resolver=SubscriptionQueries.check_feature_access)
-    my_feature_access = strawberry.field(resolver=SubscriptionQueries.my_feature_access)
-
-    # Batch 4 (T047-T048, T050)
-    calculate_tax = strawberry.field(resolver=SubscriptionQueries.calculate_tax)
-    tax_rates = strawberry.field(resolver=SubscriptionQueries.tax_rates)
-    compliance_report = strawberry.field(resolver=SubscriptionQueries.compliance_report)
-
     # Observability queries - Real-time system monitoring
     # Temporarily disabled for testing
     # monitoring_dashboard = strawberry.field(resolver=ObservabilityQuery.monitoring_dashboard)
@@ -247,25 +223,6 @@ class Mutation:
     create_manual_order = strawberry.field(resolver=ReorderMutations.create_manual_order)
     cancel_order = strawberry.field(resolver=ReorderMutations.cancel_order)
     trigger_prediction_update = strawberry.field(resolver=ReorderMutations.trigger_prediction_update)
-
-    # Premium subscription mutations
-    # Batch 1 (T030-T033)
-    start_trial = strawberry.field(resolver=SubscriptionMutations.start_trial)
-    track_trial_event = strawberry.field(resolver=SubscriptionMutations.track_trial_event)
-    add_payment_method = strawberry.field(resolver=SubscriptionMutations.add_payment_method)
-    remove_payment_method = strawberry.field(resolver=SubscriptionMutations.remove_payment_method)
-
-    # Batch 2 (T035, T037-T039)
-    subscribe = strawberry.field(resolver=SubscriptionMutations.subscribe)
-    change_subscription_plan = strawberry.field(resolver=SubscriptionMutations.change_subscription_plan)
-    cancel_subscription_premium = strawberry.field(resolver=SubscriptionMutations.cancel_subscription, name="cancelSubscriptionPremium")
-    request_refund = strawberry.field(resolver=SubscriptionMutations.request_refund)
-
-    # Batch 3 (T046)
-    sync_feature_access = strawberry.field(resolver=SubscriptionMutations.sync_feature_access)
-
-    # Batch 4 (T049)
-    update_billing_province = strawberry.field(resolver=SubscriptionMutations.update_billing_province)
 
     # Observability mutations - System monitoring control
     # Temporarily disabled for testing

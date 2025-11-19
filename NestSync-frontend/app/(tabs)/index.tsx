@@ -24,10 +24,6 @@ import { QuickLogModal } from '@/components/modals/QuickLogModal';
 import { AddInventoryModal } from '@/components/modals/AddInventoryModal';
 import { AddChildModal } from '@/components/modals/AddChildModal';
 import PresenceIndicators from '@/components/collaboration/PresenceIndicators';
-import { TrialCountdownBanner } from '@/components/reorder/TrialCountdownBanner';
-import { PremiumUpgradeModal } from '@/components/reorder/PremiumUpgradeModal';
-import { useAnalyticsAccess } from '@/hooks/useFeatureAccess';
-import { useTrialOnboarding } from '@/hooks/useTrialOnboarding';
 import { useAuthStore } from '@/stores/authStore';
 
 const { width } = Dimensions.get('window');
@@ -71,22 +67,11 @@ export default function HomeScreen() {
   const [quickLogModalVisible, setQuickLogModalVisible] = useState(false);
   const [addInventoryModalVisible, setAddInventoryModalVisible] = useState(false);
   const [addChildModalVisible, setAddChildModalVisible] = useState(false);
-  const [premiumUpgradeModalVisible, setPremiumUpgradeModalVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
 
   // Refs for tooltip positioning
   const trafficLightRef = useRef(null);
   const reorderButtonRef = useRef(null);
-
-  // Trial onboarding tooltips
-  const {
-    showWelcomeTooltip,
-    showAnalyticsTooltip,
-    showReorderTooltip,
-    canShowTooltips,
-    isInitialized: tooltipInitialized,
-    TooltipComponent
-  } = useTrialOnboarding();
   
   // GraphQL queries - using centralized useChildren hook
   const { children, loading: childrenLoading } = useChildren({
@@ -148,18 +133,6 @@ export default function HomeScreen() {
       }
     }
   }, [children, selectedChildId, storedChildId, setStoredChildId]);
-
-  // Show welcome tooltip for trial users after data loads
-  useEffect(() => {
-    if (canShowTooltips && tooltipInitialized && selectedChildId && !childrenLoading && children.length > 0) {
-      // Delay slightly to ensure UI is fully rendered
-      const timer = setTimeout(() => {
-        showWelcomeTooltip();
-      }, 1500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [canShowTooltips, tooltipInitialized, selectedChildId, childrenLoading, children.length, showWelcomeTooltip]);
 
   // Handle child selection with persistence
   const handleChildSelect = async (childId: string) => {
@@ -335,10 +308,6 @@ export default function HomeScreen() {
           );
           return;
         }
-        // Show reorder tooltip on first interaction if trial user
-        if (canShowTooltips && tooltipInitialized) {
-          showReorderTooltip(reorderButtonRef.current);
-        }
         router.push({
           pathname: '/reorder-suggestions-simple',
           params: { childId: selectedChildId }
@@ -465,13 +434,6 @@ export default function HomeScreen() {
               )}
             </View>
           </ThemedView>
-
-          {/* Trial Countdown Banner - Show for trial users */}
-          <TrialCountdownBanner
-            onUpgradePress={() => {
-              router.push('/subscription-management');
-            }}
-          />
 
           {/* No Children State */}
           {noChildrenState && (
@@ -681,20 +643,6 @@ export default function HomeScreen() {
           onClose={() => setAddChildModalVisible(false)}
           onSuccess={handleModalSuccess}
         />
-
-        <PremiumUpgradeModal
-          visible={premiumUpgradeModalVisible}
-          onClose={() => setPremiumUpgradeModalVisible(false)}
-          onUpgradeSuccess={(planId: string) => {
-            setPremiumUpgradeModalVisible(false);
-            handleModalSuccess(`Successfully upgraded to ${planId}!`);
-          }}
-          feature="reorder"
-          testID="home-premium-upgrade"
-        />
-
-        {/* Trial Onboarding Tooltips */}
-        {TooltipComponent}
       </SafeAreaView>
     </SafeAreaProvider>
   );
