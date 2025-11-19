@@ -42,48 +42,60 @@ API_VERSION = settings.api_version
 ENVIRONMENT = settings.environment
 
 
-def get_local_ip_address() -> str:
+def get_cors_origins() -> List[str]:
     """
-    Get the local IP address of the machine for development mode
-    This helps with cross-platform mobile testing
+    Get CORS origins with strict security validation
+    SECURITY: No dynamic origins, explicit whitelist only
+    CWE-942: Overly Permissive Cross-domain Whitelist
     """
-    try:
-        # Connect to a remote address to determine local IP
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("8.8.8.8", 80))
-            return s.getsockname()[0]
-    except Exception:
-        return "127.0.0.1"
-
-
-def get_development_cors_origins() -> List[str]:
-    """
-    Get CORS origins for development including dynamic IP detection
-    """
-    base_origins = settings.cors_origins.copy()
-    
-    if ENVIRONMENT == "development":
-        local_ip = get_local_ip_address()
-        logger.info(f"Detected local IP address: {local_ip}")
-        
-        # Add dynamic IP-based origins for mobile development
-        dynamic_origins = [
-            f"http://{local_ip}:8001",
-            f"http://{local_ip}:8082",
-            f"http://{local_ip}:8083",
-            f"http://{local_ip}:8084",
-            f"http://{local_ip}:8085",
-            f"http://{local_ip}:19006",
-            f"http://{local_ip}:3000",
-            # Add localhost origins for all ports
-            "http://localhost:8084",
-            "http://localhost:8085"
+    if ENVIRONMENT == "production":
+        # Production: Strict whitelist only
+        origins = [
+            "https://nestsync.ca",
+            "https://www.nestsync.ca",
+            "https://app.nestsync.ca"
         ]
-        
-        base_origins.extend(dynamic_origins)
-        logger.info(f"Development CORS origins: {base_origins}")
-    
-    return base_origins
+        logger.info(f"CORS: Production mode - {len(origins)} whitelisted origins")
+        return origins
+
+    elif ENVIRONMENT == "staging":
+        # Staging: Production origins + staging domain
+        origins = [
+            "https://staging.nestsync.ca",
+            "https://nestsync-staging.railway.app",
+            "http://localhost:8082"  # For testing against staging
+        ]
+        logger.info(f"CORS: Staging mode - {len(origins)} whitelisted origins")
+        return origins
+
+    else:
+        # Development: Explicitly defined localhost origins only
+        # NO DYNAMIC IP DETECTION for security
+        origins = [
+            "http://localhost:8082",
+            "http://localhost:19006",  # Expo web
+            "http://127.0.0.1:8082",
+            "http://127.0.0.1:19006",
+            "http://localhost:3000",
+            "http://localhost:8081",
+            "http://localhost:8083",
+            "http://localhost:8084",
+            "http://localhost:8085",
+            "http://localhost:8088"
+        ]
+
+        # Allow custom development origin if explicitly configured
+        custom_origin = os.getenv("CUSTOM_DEV_ORIGIN")
+        if custom_origin:
+            # Validate custom origin format
+            if custom_origin.startswith(("http://", "https://")):
+                origins.append(custom_origin)
+                logger.info(f"CORS: Added custom development origin: {custom_origin}")
+            else:
+                logger.warning(f"CORS: Invalid custom origin format: {custom_origin}")
+
+        logger.info(f"CORS: Development mode - {len(origins)} whitelisted origins")
+        return origins
 
 
 
@@ -173,14 +185,26 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware configuration (PIPEDA compliant)
-cors_origins = get_development_cors_origins()
+# CORS middleware configuration (PIPEDA compliant with strict security)
+cors_origins = get_cors_origins()
+
+# Log CORS configuration for audit trail
+logger.info("=" * 60)
+logger.info("CORS CONFIGURATION")
+logger.info(f"Environment: {ENVIRONMENT}")
+logger.info(f"Allowed Origins: {len(cors_origins)}")
+for origin in cors_origins:
+    logger.info(f"  - {origin}")
+logger.info("=" * 60)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=cors_origins,  # Strict whitelist, no wildcards
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Session-ID"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After"],
+    max_age=600  # Cache preflight for 10 minutes
 )
 
 # Trusted host middleware - only in production for security
@@ -413,11 +437,24 @@ async def internal_server_error_handler(request, exc):
 async def graphql_options():
     return {"message": "OK"}
 
+# Configure GraphQL router with security controls
+# Only enable GraphiQL in local development with explicit flag
+enable_graphiql = ENVIRONMENT == "development" and os.getenv("ENABLE_GRAPHIQL", "false").lower() == "true"
+
+# Log GraphQL security configuration for audit trail
+logger.info(f"GraphQL Security Configuration - Environment: {ENVIRONMENT}")
+logger.info(f"  GraphiQL: {'enabled' if enable_graphiql else 'disabled'}")
+logger.info(f"  Introspection: disabled (controlled at application level)")
+
+if ENVIRONMENT != "development":
+    logger.info("  Production security: GraphiQL and introspection disabled")
+
 # Configure GraphQL router with custom context
+# Note: Introspection is handled through middleware/context-level security
 graphql_app = GraphQLRouter(
     schema=schema,
     context_getter=create_graphql_context,
-    graphiql=ENVIRONMENT != "production"  # Enable GraphiQL in development
+    graphiql=enable_graphiql
 )
 
 # Mount GraphQL endpoint

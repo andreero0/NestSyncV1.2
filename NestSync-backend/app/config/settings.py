@@ -4,10 +4,14 @@ PIPEDA-compliant Canadian diaper planning application
 """
 
 import os
+import math
+import logging
 from typing import Optional, List
 from pydantic_settings import BaseSettings
 from pydantic import validator, Field
 from functools import lru_cache
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -104,6 +108,106 @@ class Settings(BaseSettings):
             raise ValueError("Rate limit too restrictive (minimum 10 requests)")
         if v > 10000:
             raise ValueError("Rate limit too permissive (maximum 10000 requests)")
+        return v
+
+    @validator("secret_key")
+    def validate_secret_key_strength(cls, v):
+        """
+        Validate JWT secret key has adequate entropy
+        SECURITY: Prevents token forgery via weak secret brute force
+        CWE-798: Use of Hard-coded Credentials
+        """
+        # Minimum length requirement
+        if len(v) < 64:
+            raise ValueError(
+                f"SECRET_KEY must be at least 64 characters for adequate security. "
+                f"Current length: {len(v)}. "
+                "Generate a secure key with: openssl rand -base64 64"
+            )
+
+        # Maximum length (prevent DoS)
+        if len(v) > 512:
+            raise ValueError(
+                "SECRET_KEY too long (max 512 characters). "
+                "This may indicate misconfiguration."
+            )
+
+        # Check for common weak patterns
+        weak_patterns = [
+            "your-production-jwt-secret",
+            "change-this-secret",
+            "secret-key-here",
+            "jwt-secret",
+            "12345",
+            "password",
+            "admin",
+            "secret",
+            "test",
+            "demo",
+            "example",
+            "sample",
+            "default",
+            "changeme",
+            "placeholder"
+        ]
+
+        v_lower = v.lower()
+        for pattern in weak_patterns:
+            if pattern in v_lower:
+                raise ValueError(
+                    f"SECRET_KEY contains weak pattern: '{pattern}'. "
+                    "Use a cryptographically random secret. "
+                    "Generate with: openssl rand -base64 64"
+                )
+
+        # Calculate Shannon entropy
+        entropy = cls._calculate_entropy(v)
+        min_entropy_bits = 256  # Minimum 256 bits of entropy
+
+        if entropy < min_entropy_bits:
+            raise ValueError(
+                f"SECRET_KEY has insufficient entropy: {entropy:.1f} bits. "
+                f"Minimum required: {min_entropy_bits} bits. "
+                "Use a cryptographically random secret. "
+                "Generate with: openssl rand -base64 64"
+            )
+
+        logger.info(f"SECRET_KEY validated: {len(v)} characters, {entropy:.1f} bits entropy")
+        return v
+
+    @staticmethod
+    def _calculate_entropy(secret: str) -> float:
+        """Calculate Shannon entropy of secret string in bits"""
+        if not secret:
+            return 0.0
+
+        # Count character frequencies
+        char_counts = {}
+        for char in secret:
+            char_counts[char] = char_counts.get(char, 0) + 1
+
+        # Calculate Shannon entropy
+        entropy = 0.0
+        secret_len = len(secret)
+
+        for count in char_counts.values():
+            probability = count / secret_len
+            entropy -= probability * math.log2(probability)
+
+        # Multiply by length to get total entropy in bits
+        return entropy * secret_len
+
+    @validator("supabase_jwt_secret")
+    def validate_supabase_jwt_secret(cls, v):
+        """
+        Validate Supabase JWT secret strength
+        SECURITY: Supabase JWT secrets should be at least 32 characters
+        """
+        if len(v) < 32:
+            raise ValueError(
+                "SUPABASE_JWT_SECRET must be at least 32 characters. "
+                "This should be provided by Supabase in your project settings."
+            )
         return v
 
     # =============================================================================
