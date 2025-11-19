@@ -161,13 +161,27 @@ export default function TabLayout() {
           options={{
             title: 'Home',
             tabBarIcon: ({ color, focused }) => (
-              <IconSymbol 
-                size={focused ? 30 : 28} 
-                name={focused ? "house.fill" : "house"} 
-                color={color} 
+              <IconSymbol
+                size={focused ? 30 : 28}
+                name={focused ? "house.fill" : "house"}
+                color={color}
               />
             ),
             tabBarAccessibilityLabel: 'Home tab. View your dashboard and recent diaper activity.',
+          }}
+        />
+        <Tabs.Screen
+          name="inventory"
+          options={{
+            title: 'Inventory',
+            tabBarIcon: ({ color, focused }) => (
+              <IconSymbol
+                size={focused ? 30 : 28}
+                name={focused ? "cube.box.fill" : "cube.box"}
+                color={color}
+              />
+            ),
+            tabBarAccessibilityLabel: 'Inventory tab. Complete inventory management with filters.',
           }}
         />
         <Tabs.Screen
@@ -175,13 +189,13 @@ export default function TabLayout() {
           options={{
             title: 'Planner',
             tabBarIcon: ({ color, focused }) => (
-              <IconSymbol 
-                size={focused ? 30 : 28} 
-                name={focused ? "calendar.circle.fill" : "calendar.circle"} 
-                color={color} 
+              <IconSymbol
+                size={focused ? 30 : 28}
+                name={focused ? "calendar.circle.fill" : "calendar.circle"}
+                color={color}
               />
             ),
-            tabBarAccessibilityLabel: 'Planner tab. View timeline and inventory management.',
+            tabBarAccessibilityLabel: 'Planner tab. Future-focused planning with reorder suggestions and analytics.',
           }}
         />
         <Tabs.Screen

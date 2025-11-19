@@ -7,12 +7,9 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors , NestSyncColors } from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { GET_INVENTORY_ITEMS_QUERY } from '@/lib/graphql/queries';
 import { useChildren } from '@/hooks/useChildren';
-import { formatDiaperSize } from '@/utils/formatters';
-import { EditInventoryModal } from '@/components/modals/EditInventoryModal';
 import { ReorderSuggestionsContainer } from '@/components/reorder/ReorderSuggestionsContainer';
 import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 // Analytics imports temporarily disabled - preserved for future enhancement
@@ -35,8 +32,7 @@ import { useAsyncStorage } from '@/hooks/useUniversalStorage';
 //   QuickActionsCard,
 // } from '@/components/analytics';
 
-type PlannerView = 'planner' | 'analytics' | 'inventory';
-type FilterType = 'all' | 'critical' | 'low' | 'stocked' | 'pending';
+type PlannerView = 'planner' | 'analytics';
 
 interface PlannerItem {
   id: string;
@@ -47,52 +43,18 @@ interface PlannerItem {
   status: 'completed' | 'upcoming' | 'overdue';
 }
 
-interface InventoryItem {
-  id: string;
-  childId: string;
-  productType: string;
-  brand: string;
-  productName?: string;
-  size: string;
-  quantityTotal: number;
-  quantityRemaining: number;
-  quantityReserved: number;
-  purchaseDate: string;
-  costCad?: number;
-  expiryDate?: string;
-  storageLocation?: string;
-  isOpened: boolean;
-  openedDate?: string;
-  notes?: string;
-  qualityRating?: number;
-  wouldRebuy?: boolean;
-  createdAt: string;
-  quantityAvailable: number;
-  usagePercentage: number;
-  isExpired: boolean;
-  daysUntilExpiry?: number;
-}
-
 export default function PlannerScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme as keyof typeof Colors ?? 'light'];
-  const params = useLocalSearchParams<{ filter?: FilterType; childId?: string; view?: PlannerView }>();
-  
+  const params = useLocalSearchParams<{ childId?: string; view?: PlannerView }>();
+
   // Persist planner state across navigation
   const [storedView, setStoredView] = useAsyncStorage('nestsync_planner_view');
-  const [storedFilter, setStoredFilter] = useAsyncStorage('nestsync_planner_filter');
-  
+
   // Initialize state from params OR stored values (params take precedence)
   const [currentView, setCurrentView] = useState<PlannerView>(
     params.view || (storedView as PlannerView) || 'planner'
   );
-  const [activeFilter, setActiveFilter] = useState<FilterType>(
-    params.filter || (storedFilter as FilterType) || 'all'
-  );
-  
-  // Modal state for editing inventory items
-  const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
-  const [editModalVisible, setEditModalVisible] = useState(false);
 
   // Use childId from params or default to first child
   const [selectedChildId, setSelectedChildId] = useState<string>('');
@@ -468,26 +430,6 @@ export default function PlannerScreen() {
               Analytics
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              { backgroundColor: currentView === 'inventory' ? colors.tint : colors.surface },
-              { borderColor: colors.border }
-            ]}
-            onPress={() => {
-              setCurrentView('inventory');
-              router.setParams({ view: 'inventory' });
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Switch to inventory view"
-          >
-            <Text style={[
-              styles.toggleText,
-              { color: currentView === 'inventory' ? colors.background : colors.text }
-            ]}>
-              Inventory
-            </Text>
-          </TouchableOpacity>
         </ThemedView>
 
         {/* Timeline Content */}
@@ -616,150 +558,12 @@ export default function PlannerScreen() {
               ))}
               </ThemedView>
             </>
-          ) : (
-            /* Inventory View - Filtered Items */
-            <ThemedView style={styles.section}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                {getFilterLabel(activeFilter)} {activeFilter !== 'all' && `(${filteredItems.length} items)`}
-              </ThemedText>
-              
-              {/* Loading state */}
-              {inventoryLoading && (
-                <View style={[styles.loadingContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <ActivityIndicator size="small" color={colors.tint} />
-                  <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-                    Loading inventory...
-                  </ThemedText>
-                </View>
-              )}
-              
-              {/* Error state */}
-              {inventoryError && (
-                <View style={[styles.errorContainer, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-                  <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.error} />
-                  <ThemedText style={[styles.errorText, { color: colors.error }]}>
-                    Unable to load inventory. Please try again.
-                  </ThemedText>
-                </View>
-              )}
-              
-              {/* Empty state */}
-              {!inventoryLoading && !inventoryError && filteredItems.length === 0 && (
-                <View style={[styles.emptyContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <IconSymbol 
-                    name={activeFilter === 'critical' ? 'checkmark.circle.fill' : 'cube.box.fill'} 
-                    size={32} 
-                    color={colors.textSecondary} 
-                  />
-                  <ThemedText type="defaultSemiBold" style={[styles.emptyTitle, { color: colors.text }]}>
-                    {activeFilter === 'critical' ? 'Great job!' : 
-                     activeFilter === 'low' ? 'No low stock items' :
-                     activeFilter === 'pending' ? 'No pending orders' :
-                     'No inventory found'}
-                  </ThemedText>
-                  <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
-                    {activeFilter === 'critical' ? 'No critical items need attention right now' :
-                     activeFilter === 'low' ? 'All your items are well stocked' :
-                     activeFilter === 'pending' ? 'You have no orders in transit' :
-                     'Add some inventory to start tracking'}
-                  </ThemedText>
-                </View>
-              )}
-              
-              {/* Inventory items */}
-              {filteredItems.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.inventoryItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  onPress={() => handleInventoryItemPress(item)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Edit ${item.brand} ${formatDiaperSize(item.size)} diapers, ${item.quantityRemaining} remaining. Tap to edit or delete.`}
-                  accessibilityHint="Double tap to open edit modal"
-                >
-                  <View style={styles.inventoryHeader}>
-                    <View style={styles.inventoryInfo}>
-                      <ThemedText type="defaultSemiBold" style={styles.inventoryTitle}>
-                        {item.brand} {formatDiaperSize(item.size)}
-                      </ThemedText>
-                      <ThemedText style={[styles.inventoryQuantity, { color: colors.text }]}>
-                        {item.quantityRemaining} diapers remaining
-                      </ThemedText>
-                    </View>
-                    <View style={styles.inventoryStatus}>
-                      <ThemedText style={[styles.inventoryDays, { color: getDaysColor(item) }]}>
-                        {getDaysLabel(item)}
-                      </ThemedText>
-                    </View>
-                    <IconSymbol 
-                      name="chevron.right" 
-                      size={16} 
-                      color={colors.textSecondary} 
-                      style={styles.inventoryChevron}
-                    />
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ThemedView>
-          )}
-
-          {/* Filter Summary - only show when in inventory view */}
-          {currentView === 'inventory' && (
-            <ThemedView style={styles.section}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Inventory Summary
-              </ThemedText>
-              
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={styles.summaryHeader}>
-                  <IconSymbol name="cube.box.fill" size={28} color={colors.accent} />
-                  <ThemedText type="defaultSemiBold">Inventory Status</ThemedText>
-                </View>
-                <View style={styles.summaryStats}>
-                  <View style={styles.summaryStatItem}>
-                    <ThemedText type="title" style={[styles.summaryStatNumber, { color: NestSyncColors.trafficLight.critical }]}>
-                      {filterSummary.critical}
-                    </ThemedText>
-                    <ThemedText style={[styles.summaryStatLabel, { color: colors.textSecondary }]}>
-                      Critical
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.summaryStatDivider, { backgroundColor: colors.border }]} />
-                  <View style={styles.summaryStatItem}>
-                    <ThemedText type="title" style={[styles.summaryStatNumber, { color: NestSyncColors.trafficLight.low }]}>
-                      {filterSummary.low}
-                    </ThemedText>
-                    <ThemedText style={[styles.summaryStatLabel, { color: colors.textSecondary }]}>
-                      Low Stock
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.summaryStatDivider, { backgroundColor: colors.border }]} />
-                  <View style={styles.summaryStatItem}>
-                    <ThemedText type="title" style={[styles.summaryStatNumber, { color: NestSyncColors.trafficLight.stocked }]}>
-                      {filterSummary.stocked}
-                    </ThemedText>
-                    <ThemedText style={[styles.summaryStatLabel, { color: colors.textSecondary }]}>
-                      Well Stocked
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
-            </ThemedView>
           )}
 
 
           {/* Bottom spacing for tab bar */}
           <View style={{ height: 100 }} />
         </ScrollView>
-
-        {/* Edit Inventory Modal */}
-        {selectedInventoryItem && (
-          <EditInventoryModal
-            visible={editModalVisible}
-            onClose={handleEditModalClose}
-            onSuccess={handleEditSuccess}
-            inventoryItem={selectedInventoryItem}
-          />
-        )}
       </SafeAreaView>
     </SafeAreaProvider>
   );
