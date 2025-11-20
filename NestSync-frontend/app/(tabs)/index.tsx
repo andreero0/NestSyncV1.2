@@ -313,15 +313,6 @@ export default function HomeScreen() {
           params: { childId: selectedChildId }
         });
       }
-    },
-    {
-      id: 'more',
-      title: 'More',
-      icon: 'ellipsis.circle',
-      color: actionsDisabled ? colors.textSecondary : colors.textSecondary,
-      onPress: () => {
-        Alert.alert('Coming Soon', 'More features will be available in future updates!');
-      }
     }
   ];
 
@@ -522,41 +513,51 @@ export default function HomeScreen() {
               Quick Actions
             </ThemedText>
 
-            {/* Top Row - 3 buttons */}
-            <View style={styles.quickActionsRow}>
-              {topRowActions.map((action) => (
-                <TouchableOpacity
-                  key={action.id}
-                  style={[styles.quickActionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  onPress={action.onPress}
-                  accessibilityRole="button"
-                  accessibilityLabel={action.title}
-                >
-                  <IconSymbol name={action.icon as any} size={24} color={action.color} />
-                  <ThemedText style={[styles.quickActionText, { color: colors.text }]}>
-                    {action.title}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+            {/* Primary Actions Group */}
+            <View style={styles.actionGroup}>
+              <ThemedText style={[styles.actionGroupLabel, { color: colors.textSecondary }]}>
+                Daily Tasks
+              </ThemedText>
+              <View style={styles.quickActionsRow}>
+                {topRowActions.slice(0, 2).map((action) => (
+                  <TouchableOpacity
+                    key={action.id}
+                    style={[styles.quickActionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={action.onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={action.title}
+                  >
+                    <IconSymbol name={action.icon as any} size={24} color={action.color} />
+                    <ThemedText style={[styles.quickActionText, { color: colors.text }]}>
+                      {action.title}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
-            {/* Bottom Row - 3 buttons */}
-            <View style={styles.quickActionsRow}>
-              {bottomRowActions.map((action) => (
-                <TouchableOpacity
-                  key={action.id}
-                  ref={action.id === 'reorder' ? reorderButtonRef : null}
-                  style={[styles.quickActionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  onPress={action.onPress}
-                  accessibilityRole="button"
-                  accessibilityLabel={action.title}
-                >
-                  <IconSymbol name={action.icon as any} size={24} color={action.color} />
-                  <ThemedText style={[styles.quickActionText, { color: colors.text }]}>
-                    {action.title}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+            {/* Planning & Tools Group */}
+            <View style={styles.actionGroup}>
+              <ThemedText style={[styles.actionGroupLabel, { color: colors.textSecondary }]}>
+                Planning & Tools
+              </ThemedText>
+              <View style={styles.quickActionsRow}>
+                {[topRowActions[2], ...bottomRowActions].map((action) => (
+                  <TouchableOpacity
+                    key={action.id}
+                    ref={action.id === 'reorder' ? reorderButtonRef : null}
+                    style={[styles.quickActionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={action.onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={action.title}
+                  >
+                    <IconSymbol name={action.icon as any} size={24} color={action.color} />
+                    <ThemedText style={[styles.quickActionText, { color: colors.text }]}>
+                      {action.title}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </ThemedView>
 
@@ -760,6 +761,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 16,
+  },
+  actionGroup: {
+    marginBottom: 20,
+  },
+  actionGroupLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+    marginLeft: 4,
+    opacity: 0.6,
   },
   quickActionsRow: {
     flexDirection: 'row',

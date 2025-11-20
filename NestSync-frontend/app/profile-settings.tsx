@@ -489,13 +489,16 @@ export default function ProfileSettingsScreen() {
 
             {/* Privacy Notice */}
             <ThemedView style={[styles.privacyNotice, { backgroundColor: colors.surface, borderColor: colors.info }]}>
-              <IconSymbol name="checkmark.shield.fill" size={24} color={colors.info} />
+              <View style={styles.privacyIcons}>
+                <IconSymbol name="mappin.circle.fill" size={24} color={colors.info} style={styles.privacyIcon} />
+                <IconSymbol name="checkmark.shield.fill" size={24} color={colors.info} />
+              </View>
               <View style={styles.privacyContent}>
                 <ThemedText type="defaultSemiBold" style={[styles.privacyTitle, { color: colors.info }]}>
                   Canadian Privacy Protection
                 </ThemedText>
                 <ThemedText style={[styles.privacyDescription, { color: colors.textSecondary }]}>
-                  Your personal information is stored securely in Canada and protected under PIPEDA regulations.
+                  Your data is stored securely in Canada and protected under PIPEDA regulations.
                   You can update, export, or delete your data at any time from Settings.
                 </ThemedText>
               </View>
@@ -781,6 +784,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     marginBottom: 20,
     gap: 12,
+  },
+  privacyIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  privacyIcon: {
+    marginRight: 4,
   },
   privacyContent: {
     flex: 1,

@@ -230,6 +230,9 @@ export default function InventoryScreen() {
           <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
             Complete inventory management
           </ThemedText>
+          <ThemedText style={[styles.supportiveText, { color: colors.textSecondary }]}>
+            Track your supply with peace of mind
+          </ThemedText>
         </ThemedView>
 
         {/* Filter Section */}
@@ -442,10 +445,18 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
-    marginBottom: 24,
+    marginBottom: 4,
     lineHeight: 24,
     fontWeight: '400',
     opacity: 0.85,
+  },
+  supportiveText: {
+    fontSize: 14,
+    marginBottom: 20,
+    lineHeight: 20,
+    fontWeight: '400',
+    opacity: 0.7,
+    fontStyle: 'italic',
   },
   filterSection: {
     marginHorizontal: 20,

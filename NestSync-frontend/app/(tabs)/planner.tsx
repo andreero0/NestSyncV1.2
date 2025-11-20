@@ -171,6 +171,9 @@ export default function PlannerScreen() {
           <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
             {currentView === 'planner' ? 'Upcoming tasks and insights' : 'Usage patterns and predictions'}
           </ThemedText>
+          <ThemedText style={[styles.supportiveText, { color: colors.textSecondary }]}>
+            {currentView === 'planner' ? 'What\'s coming up for you' : 'Your family\'s rhythm and patterns'}
+          </ThemedText>
         </ThemedView>
 
         {/* View Toggle - Analytics temporarily hidden */}
@@ -372,10 +375,18 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
-    marginBottom: 24,
+    marginBottom: 4,
     lineHeight: 24,
     fontWeight: '400',
     opacity: 0.85,
+  },
+  supportiveText: {
+    fontSize: 14,
+    marginBottom: 20,
+    lineHeight: 20,
+    fontWeight: '400',
+    opacity: 0.7,
+    fontStyle: 'italic',
   },
   viewToggle: {
     flexDirection: 'row',
